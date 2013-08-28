@@ -1,0 +1,42 @@
+# -*- mode: python; -*-
+
+#
+# Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+#
+
+Import('SandeshEnv')
+
+env = SandeshEnv.Clone();
+
+INSTALL_PATH = '#/src/sandesh/library/python/pysandesh/test/'
+
+test_depend_modules = [ 
+                        '__init__.py',
+                        'test_utils.py' 
+                      ]
+test_depend_modules_rules = []
+for module in test_depend_modules:
+    test_depend_modules_rules.append(env.Install('', INSTALL_PATH + module))
+env.Depends(test_depend_modules_rules, env['pysandesh_target'])
+
+test_modules = [
+                 'sandesh_encode_decode_test.py',
+                 'sandesh_msg_test.py',
+                 'sandesh_session_test.py',
+                 'sandesh_trace_test.py',
+                ]
+
+test_modules_rules = []
+for module in test_modules:
+    test_modules_rules.append(env.Install('', INSTALL_PATH + module))
+env.Depends(test_modules_rules, test_depend_modules_rules)
+
+gen_test_pkg = env.SandeshGenPy('encode_decode_test.sandesh')
+gen_test_pkg += env.SandeshGenPy('msg_test.sandesh')
+pysandesh_ut = env.PyTestSuite('pysandesh-ut', 
+                               ['sandesh_encode_decode_test.py', 
+                                'sandesh_msg_test.py',
+                                'sandesh_session_test.py',
+                                'sandesh_trace_test.py'
+                               ])
+env.Alias('src/sandesh/library/python:pysandesh_ut', pysandesh_ut)

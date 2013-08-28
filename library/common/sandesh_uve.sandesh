@@ -1,0 +1,46 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+ 
+/*
+ *  sandesh_uve.sandesh
+ *
+ *  Sandesh UVE definitions
+ */
+
+request sandesh SandeshUVECacheReq {
+    1: string tname;
+}
+
+response sandesh SandeshUVECacheResp {
+    1: u32 returned;
+}
+
+request sandesh SandeshUVETypesReq {
+}
+
+struct SandeshUVETypeInfo {
+    1: string type_name (link="SandeshUVECacheReq")
+    2: u32 seq_num;
+}
+
+response sandesh SandeshUVETypesResp {
+    1: list<SandeshUVETypeInfo> type_info;    
+}
+
+struct SandeshStateMachineEvStats {
+    1: string                     generator;
+    2: u64                        enqueues;
+    3: u64                        count;
+}
+struct SandeshStateMachineInfo_s {
+    1: string                              name (key="ObjectGeneratorInfo")
+    2: optional bool                       deleted
+    3: optional u64                        agg_count (aggtype="stats", hbin="50")
+    4: optional list<SandeshStateMachineEvStats> sm_stats
+}
+
+uve sandesh SandeshStateMachineInfo {
+    1: SandeshStateMachineInfo_s           data
+}
+

@@ -1,0 +1,24 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+ 
+/*
+ * sandesh_buffer_test.sandesh
+ *
+ * Buffer sandesh definitions
+ */
+
+buffer sandesh BufferTest {
+    1: i32                         i32Elem1;
+    2: string                      stringElem1;
+    3: list<byte>                  listElem1;
+    4: i64                         i64Elem1;
+    5: u16                         u16Elem1;
+    6: u32                         u32Elem1;
+    7: list<u32>                   listElem2;
+    8: u64                         u64Elem1;
+    9: xml                         xmlElem1;
+}
+
+buffer sandesh BufferUpdateTest {
+}

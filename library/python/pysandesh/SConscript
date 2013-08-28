@@ -1,0 +1,11 @@
+# -*- mode: python; -*-
+
+#
+# Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+#
+
+Import('env')
+SandeshEnv = env.Clone()
+
+SConscript('example/SConscript', exports='SandeshEnv', duplicate = 0)
+SConscript('test/SConscript', exports='SandeshEnv', duplicate = 0)

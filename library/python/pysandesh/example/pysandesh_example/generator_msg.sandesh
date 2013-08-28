@@ -1,0 +1,44 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+
+systemlog sandesh GeneratorMsg {
+    1: "Hello Collector!"
+}
+
+systemlog sandesh msg1 {
+    1: i16 i1;
+    2: i32 i2;
+    3: i64 i3;
+    4: string s1;
+    5: byte b1;
+}
+
+struct struct1 {
+    1: i16 i1;
+    2: string s1;
+}
+
+objectlog sandesh msg2 {
+    1: struct1 st1;
+    2: struct1 st2;
+}
+
+struct struct2 {
+    1: "Struct start";
+    2: list<struct1> st1_list;
+    3: i32 i1;
+    4: "Struct End";
+}
+
+objectlog sandesh msg3 {
+    1: list<string> str_list;
+    2: list<i32>    i_list;
+    3: struct2      st2;
+    4: bool         boolean;
+}
+
+trace sandesh msg4 {
+    1: "Pysandesh example sending:"
+    2: string name;
+}

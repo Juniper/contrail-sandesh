@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+ 
+/*
+ * sandesh_http_test.sandesh
+ *
+ * Sandesh definitions for route test
+ */
+
+struct VNSRoute {
+        1: i32                           prefix;
+        2: string                        desc;
+}
+ 
+response sandesh VNSwitchRouteResp {        
+       2: i32                           vnId;
+       3: list<VNSRoute>                vnRoutes;
+       4: VNSRoute                      vnMarkerRoute;                                                                                    
+} 
+
+response sandesh SandeshHttpTestResp {
+        1: i32                          testId;
+        2: i32                          param;
+}
+
+request sandesh SandeshHttpTestRequest {
+        1: i32                          testId;
+        2: i32                          param;
+}

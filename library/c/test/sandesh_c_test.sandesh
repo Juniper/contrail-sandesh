@@ -1,0 +1,35 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+ 
+/*
+ * sandesh_c_test.sandesh
+ *
+ * Sandesh definitions for C test
+ */
+
+enum abc_enum {
+    VAL0,
+    VAL1,
+    VAL2
+}
+
+struct abc_inner {
+    1:i32 inner_a;
+    2:i16 inner_b;
+    3:i64 inner_c;
+    4:abc_enum inner_d;
+    5:u16 inner_e;
+    6:u32 inner_f;
+    7:u64 inner_g;
+    8:xml inner_h;
+}
+ 
+struct abc {
+    1:abc_inner nested;     
+}
+
+systemlog sandesh abc_sandesh {
+    1:abc elem;
+    2:list<byte> rwinfo;
+}

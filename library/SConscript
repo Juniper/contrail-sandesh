@@ -1,0 +1,12 @@
+# -*- mode: python; -*-
+
+#
+# Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+#
+
+Import('SandeshEnv');
+
+SConscript('common/SConscript', exports='SandeshEnv', duplicate = 0)
+SConscript('cpp/SConscript', exports='SandeshEnv', duplicate = 0)
+SConscript('c/SConscript', exports='SandeshEnv', duplicate = 0)
+SConscript('python/SConscript', exports='SandeshEnv', duplicate = 0)

@@ -1,0 +1,35 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+ 
+/*
+ * sandesh_rw_test.sandesh
+ *
+ * Sandesh definitions for Read-Write test
+ */
+
+struct SandeshListTestElement {
+    1: i32                           i32Elem;
+}
+    
+struct SandeshStructTest {
+    1: "Const static string is";
+    2: i32                           i32Test;
+    3: list<SandeshListTestElement>  listTest;
+    4: list<i32>                     basicTypeListTest;
+    5: map<i32, string>              basicTypeMapTest;
+    6: map<i32, SandeshListTestElement> complexTypeMapTest;
+    7: u16                           u16Test;
+    8: u32                           u32Test;
+    9: u64                           u64Test;
+    10: xml                          xmlTest;
+    11: xml                          xmlTest1;
+    12: xml                          xmlTest2;
+    13: xml                          xmlTest3;
+}
+
+struct SandeshLogTest {
+    1: byte                          byteTest;
+    2: byte                          byteTest1;
+    3: bool                          boolTest;
+}

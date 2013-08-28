@@ -1,0 +1,159 @@
+# -*- mode: python; -*-
+
+#
+# Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+#
+
+Import('SandeshEnv')
+
+env = SandeshEnv.Clone();
+
+env.AppendUnique(CCFLAGS='-fno-exceptions')
+env.Append(CPPPATH = [Dir('.').abspath])
+
+# Generate the source files
+SandeshGenFiles  = env.SandeshGenCpp('../common/sandesh.sandesh')
+SandeshGenFiles += env.SandeshGenCpp('../common/sandesh_req.sandesh')
+SandeshGenFiles += env.SandeshGenCpp('../common/sandesh_uve.sandesh')
+SandeshGenFiles += env.SandeshGenOnlyCpp('../common/sandesh_ctrl.sandesh')
+SandeshGenSrcs = env.ExtractCpp(SandeshGenFiles)
+SandeshGenHdrs = env.ExtractHeader(SandeshGenFiles)
+
+SandeshTraceGenFiles = env.SandeshGenCpp('../common/sandesh_trace.sandesh')
+SandeshTraceGenSrcs = env.ExtractCpp(SandeshTraceGenFiles)
+SandeshTraceGenHdrs = env.ExtractHeader(SandeshTraceGenFiles)
+
+SandeshLibs = ['boost_system',
+               'boost_date_time',
+               'http',
+               'io',
+               'base']
+
+env.Prepend(LIBS = SandeshLibs)
+
+def WebServerBuild(wenv, abs_pth, loc, inp):
+  if len(inp.rsplit("/",1)) == 1:
+    hpath = ""
+    hfile = inp.rsplit("/",1)[0]
+  else:
+    hpath = inp.rsplit("/",1)[0]
+    hfile = inp.rsplit("/",1)[1]
+
+  ofile = inp.replace(".","_").replace('-',"_").replace("/","_") + ".cpp"
+  mname = hfile.replace(".","_").replace('-',"_")
+  mval = mname + "_len"
+
+  wenv.Command(ofile , ('#/%s/%s/' % (loc,hpath)) + hfile,\
+    '%s ; (%s ; %s); %s ; %s ; %s ; %s' %
+    ('echo "namespace {" > ' + abs_pth + "/" + ofile,
+      'cd ' + abs_pth + '/../../../../../' + loc + "/" + hpath,
+      'xxd -i ' + hfile + ' >> ' + abs_pth + "/" + ofile,
+      'echo "}" >> ' + abs_pth + "/" + ofile,
+      'echo "#include \\"sandesh/sandesh_http.h\\"" >> ' + abs_pth + "/" + ofile,
+      'echo "static SandeshHttp::HtmlInfo h_info' + mname + '(' + mname + ", " + mval + ');" >> ' + abs_pth + "/" + ofile,
+      'echo "static SandeshHttp sr' + mname + '(\\"' + inp + '\\", h_info' + mname + ');" >> ' + abs_pth + "/" + ofile))
+  wenv.Depends('sandesh_http.cc', ofile)
+  return 
+
+
+
+WebServerSpec = [
+('src/sandesh/library/common/webs','css/bootstrap.min.css'),
+('src/sandesh/library/common/webs','css/DT_bootstrap.css'),
+('src/sandesh/library/common/webs','css/images/sort_asc.png'),
+('src/sandesh/library/common/webs','css/images/sort_asc_disabled.png'),
+('src/sandesh/library/common/webs','css/images/sort_both.png'),
+('src/sandesh/library/common/webs','css/images/sort_desc.png'),
+('src/sandesh/library/common/webs','css/images/sort_desc_disabled.png'),
+('src/sandesh/library/common/webs','css/style.css'),
+('src/sandesh/library/common/webs','js/bootstrap.min.js'),
+('src/sandesh/library/common/webs','js/DT_bootstrap.js'),
+('src/sandesh/library/common/webs','js/jquery-2.0.3.min.js'),
+('src/sandesh/library/common/webs','js/jquery.dataTables.min.js'),
+('src/sandesh/library/common/webs','js/util.js'),
+('src/sandesh/library/common/webs','universal_parse.xsl')]
+
+abs_path = Dir('.').abspath
+WebServerOutput = []
+for elem in WebServerSpec:
+  WebServerBuild(env, abs_path, elem[0], elem[1])
+  
+libsandesh = env.Library(target = 'sandesh',
+                         source = SandeshGenSrcs +
+                                  SandeshTraceGenSrcs +
+                                  ['sandesh.cc',
+                                   'sandesh_http.cc',
+                                   'sandesh_client.cc',
+                                   'sandesh_client_sm.cc',
+                                   'sandesh_session.cc',
+                                   'request_pipeline.cc',
+                                   'sandesh_trace.cc',
+                                   'sandesh_req.cc',
+                                   'sandesh_state_machine.cc',
+                                   'sandesh_connection.cc',
+                                   'sandesh_server.cc',
+                                   'sandesh_uve.cc',
+                                   'protocol/TXMLProtocol.cpp',
+                                   'transport/TFDTransport.cpp',
+                                   'transport/TSimpleFileTransport.cpp',
+                                   'transport/TBufferTransports.cpp',
+                                  ])
+
+env.Requires(libsandesh, '#/build/include/boost')
+env.Requires(libsandesh, '#/build/include/sandesh')
+env.Install(env['TOP_LIB'], libsandesh)                                  
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh.h')                                  
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_uve.h')                                  
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'Thrift.h') 
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_client.h')
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_client_sm.h')
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_session.h')
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_server.h')
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_http.h')
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_trace.h')
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_state_machine.h')
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'request_pipeline.h')
+env.Install(env['TOP_INCLUDE'] + '/sandesh', SandeshGenHdrs)
+env.Install(env['TOP_INCLUDE'] + '/sandesh', SandeshTraceGenHdrs)
+env.Install(env['TOP_INCLUDE'] + '/sandesh/protocol', 'protocol/TProtocol.h')                                  
+env.Install(env['TOP_INCLUDE'] + '/sandesh/protocol', 'protocol/TVirtualProtocol.h')                                  
+env.Install(env['TOP_INCLUDE'] + '/sandesh/protocol', 'protocol/TXMLProtocol.h')                                  
+env.Install(env['TOP_INCLUDE'] + '/sandesh/protocol', 'protocol/TBinaryProtocol.h')                                  
+env.Install(env['TOP_INCLUDE'] + '/sandesh/transport', 'transport/TTransport.h')                                  
+env.Install(env['TOP_INCLUDE'] + '/sandesh/transport', 'transport/TVirtualTransport.h')                           
+env.Install(env['TOP_INCLUDE'] + '/sandesh/transport', 'transport/TFDTransport.h')                                  
+env.Install(env['TOP_INCLUDE'] + '/sandesh/transport', 'transport/TSimpleFileTransport.h')                                  
+env.Install(env['TOP_INCLUDE'] + '/sandesh/transport', 'transport/TBufferTransports.h')
+
+test_suite = SandeshEnv.SConscript('test/SConscript', exports='SandeshEnv SandeshTraceGenSrcs', duplicate = 0)
+
+def code_coverage(target, source, env):
+    # rm -rf sandesh/library/cpp/test_coverage
+    import shutil
+    shutil.rmtree(target[0].path, ignore_errors = True)
+
+    # lcov --base-directory $ROOT -- directory . --zerocounters -q
+    import os
+    os.system('lcov --base-directory . --directory ' + Dir('.').path +
+              ' --zerocounters -q')
+    # execute tests
+    import subprocess
+    ShEnv = {env['ENV_SHLIB_PATH']: 'build/lib'}
+
+    for test in test_suite:
+        cmd = test[0].path
+        logfile = open(cmd + '.log', 'w')
+        subprocess.call([cmd], stdout=logfile, env=ShEnv)
+
+    # lcov --base-directory $ROOT -- directory . -c -o bgp_test.info
+    os.system('lcov --base-directory . --directory ' + Dir('.').path +
+              ' -c -o sandesh_cpp_test.info')
+
+    # genhtml -o bgp/test_coverage sandesh_cpp_test.info
+    os.system('genhtml -o ' + target[0].path +
+              ' -t "test coverage" --num-spaces 4 sandesh_cpp_test.info')
+
+if env['OPT'] == 'coverage':
+    test_coverage = env.Command(Dir('test_coverage'), '', code_coverage)
+    env.AlwaysBuild(test_coverage)
+    env.Alias('src/sandesh:test_coverage', test_coverage)

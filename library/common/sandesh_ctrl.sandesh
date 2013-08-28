@@ -1,0 +1,29 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+ 
+/*
+ *  sandesh_ctrl.sandesh
+ *
+ *  Sandesh Control Message definitions
+ */
+
+request sandesh SandeshCtrlClientToServer {
+    1: string source;
+    2: string module_name;
+    3: u32 sucessful_connections;
+    4: list<string> uve_types;
+    5: u32 pid;
+    6: u32 http_port;
+}
+
+struct UVETypeInfo {
+    1: string type_name;
+    2: u32 seq_num;
+}
+
+request sandesh SandeshCtrlServerToClient {
+    1: list<UVETypeInfo> type_info;
+    2: bool success;
+}
+

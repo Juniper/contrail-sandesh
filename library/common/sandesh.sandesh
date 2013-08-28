@@ -1,0 +1,73 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+ 
+/*
+ *  sandesh.sandesh
+ *
+ *  Sandesh definitions
+ */
+
+enum SandeshType {
+    INVALID = 0,
+    SYSTEM = 1,
+    REQUEST = 2,
+    RESPONSE = 3,
+    TRACE = 4,
+    BUFFER = 5,
+    UVE = 6,
+    OBJECT = 7,
+    FLOW = 8,
+    TRACE_OBJECT = 9,
+}
+
+enum SandeshLevel {
+    /*
+     * Syslog severity levels
+     */
+    SYS_EMERG = 0, 
+    SYS_ALERT = 1,
+    SYS_CRIT = 2,
+    SYS_ERR = 3,
+    SYS_WARN = 4,
+    SYS_NOTICE = 5,
+    SYS_INFO = 6,
+    SYS_DEBUG = 7,
+    /*
+     * User defined levels
+     */ 
+    /*
+     * Unit test levels
+     */
+     UT_START = 200,
+     UT_EMERG = 200,
+     UT_ALERT = 201,
+     UT_CRIT = 202,
+     UT_ERR = 203,
+     UT_WARN = 204,
+     UT_NOTICE = 205,
+     UT_INFO = 206,
+     UT_DEBUG = 207,
+     UT_END = 207,
+     /*
+      * Invalid
+      */
+      INVALID = 0x7fffffff  
+}
+
+const i32 SANDESH_KEY_HINT = 0x1
+const i32 SANDESH_CONTROL_HINT = 0x2
+    
+struct SandeshHeader {
+    1: string Namespace;
+    2: i64 Timestamp;
+    3: string Module;
+    4: string Source;
+    5: string Context;
+    6: i32 SequenceNum;
+    7: i32 VersionSig;
+    8: SandeshType Type;
+    9: i32 Hints;
+    10: i32 Level;
+    11: string Category;
+}

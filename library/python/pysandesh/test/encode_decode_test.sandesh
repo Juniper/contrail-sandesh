@@ -1,0 +1,70 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+
+/*
+ * encode_decode_test.sandesh
+ *
+ * Sandesh definitions for python sandesh encode decode test
+ */
+
+systemlog sandesh BasicTypesTest {
+    1: bool bool_1;
+    2: byte byte_1;
+    3: i16 i16_1;
+    4: i32 i32_1;
+    5: i64 i64_1;
+    6: double double_1;
+    7: string string_1;
+    8: "Last field";
+    9: u16 u16_1;
+    10:u32 u32_1;
+    11:u64 u64_1;
+    12: xml xml_1;
+    13: xml xml_2;
+    14: xml xml_3;
+    15: xml xml_4;
+}
+
+struct StructBasicTypes {
+    1: "First field";
+    2: bool bool_1;
+    3: i16 i16_1;
+    4: "Last field";
+    5: u16 u16_1;
+    6: u32 u32_1;
+    7: u64 u64_1;
+    8: xml xml_1;
+    9: xml xml_2;
+    10: xml xml_3;
+    11: xml xml_4;
+}
+
+objectlog sandesh StructTest {
+    1: StructBasicTypes st_1;
+    2: StructBasicTypes st_2;
+}
+
+struct StructContainerTypes {
+    1: list<i32> li32_1;
+    2: list<string> lstring_1;
+    3: list<StructBasicTypes> lbst_1;
+}
+
+objectlog sandesh ContainerTypesTest {
+    1: list<bool> lbool_1;
+    2: list<byte> lbyte_1;
+    3: list<StructBasicTypes> lbst_1;
+    4: list<StructContainerTypes> lcst_1;
+}
+
+struct StructAnnotation {
+    1: string string_1 (key="Test");
+    2: i16 i16_1 (format="%x");
+}
+
+objectlog sandesh AnnotationsTest {
+    1: StructAnnotation st1_1;
+    2: i32 i32_1 (format="%d");
+    3: string string_1 (key="Contrail");
+}

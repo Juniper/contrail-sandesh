@@ -1,0 +1,64 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+
+request sandesh VirtualNetwork {
+    1: string name;
+    2: i32    id;
+}
+
+struct VNStats {
+    1: i32 in_pkts;
+    2: i32 out_pkts;
+    3: i32 in_bytes;
+    4: i32 out_bytes;
+}
+
+struct VNInfo {
+    1: string name;
+    2: i32    id;
+    3: list<string> vm_list;
+    4: VNStats stats;
+}
+
+response sandesh VirtualNetworkResp {
+    1: VNInfo vn_info;
+}
+
+request sandesh VirtualNetworkAll {
+}
+
+response sandesh VirtualNetworkAllResp {
+    1: VNInfo vn_info;
+}
+
+struct UveVirtualNetworkCtrl {  
+    1: string         name (key="ObjectVNTable")
+    2: optional bool  deleted
+} (type = "object")
+
+uve sandesh UveVirtualNetworkCtrlTrace {
+    1: UveVirtualNetworkCtrl    data;
+}
+
+struct VnPolicy {
+    1: i32 vnp_major;
+    2: i32 vnp_minor;
+    3: string vnp_name (aggtype="listkey")
+}
+
+struct UveVirtualNetworkConfig {
+    1: string                           name (key="ObjectVNTable")
+    2: optional bool                    deleted
+    3: optional list<VnPolicy>          attached_policies;
+    4: optional list<string>            connected_networks (aggtype="union")
+    5: optional list<string>            partially_connected_networks (aggtype="union")
+    6: optional list<string>            routing_instance_list (aggtype="union")
+    7: optional i32                     total_interfaces (aggtype="sum")
+    8: optional i32                     total_virtual_machines (aggtype="sum")
+    9: optional i32                     total_acl_rules;
+} (type = "object")
+
+uve sandesh UveVirtualNetworkConfigTrace {
+    1: UveVirtualNetworkConfig              data
+}

@@ -1,0 +1,42 @@
+# -*- mode: python; -*-
+
+#
+# Created by Megh Bhatt on 07/16/12.
+# Copyright (c) 2012 Contrail Systems. All rights reserved.
+#
+
+Import('SandeshEnv')
+
+env = SandeshEnv.Clone();
+
+cflags = env['CCFLAGS']
+cflags.remove('-Wsign-compare')
+cflags.remove('-Werror')
+if '-fno-exceptions' in cflags:
+    cflags.remove('-fno-exceptions')
+env['CCFLAGS'] = cflags
+
+env.Append(CPPPATH = ['#src/sandesh/compiler',
+                     ])
+
+# Lex and Yacc
+env.Append(YACCFLAGS = '-d')
+env['YACCHXXFILESUFFIX'] = '.hh'
+#env.Append(LEXFLAGS = '-DSANDESH')
+env.CXXFile(target = 'sandeshy.cc', source = 'sandeshy.yy')
+env.CXXFile(target = 'sandeshl.cc', source = 'sandeshl.ll')
+
+sandesh = env.Program(target = 'sandesh',
+                      source = ['main.cc',
+                                'md5.c',
+                                'sandeshy.cc',
+                                'sandeshl.cc',
+                                'generate/t_cpp_generator.cc',
+                                'generate/t_html_generator.cc',
+                                'generate/t_generator.cc',
+                                'generate/t_xsd_generator.cc',
+                                'generate/t_c_generator.cc',
+                                'generate/t_py_generator.cc',
+                                'parse/parse.cc',
+                               ])
+env.Install(env['TOP_BIN'], sandesh)

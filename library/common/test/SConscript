@@ -1,0 +1,20 @@
+# -*- mode: python; -*-
+
+#
+# Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+#
+
+Import('SandeshEnv');
+
+env = SandeshEnv.Clone();
+
+SandeshBufferTestGenCppFiles = env.SandeshGenCpp('sandesh_buffer_test.sandesh')
+SandeshBufferTestGenCppSrcs = env.ExtractCpp(SandeshBufferTestGenCppFiles)
+SandeshBufferTestGenCppObjs = env.Object(SandeshBufferTestGenCppSrcs)
+
+SandeshBufferTestGenCFiles = env.SandeshGenC('sandesh_buffer_test.sandesh')
+SandeshBufferTestGenCSrcs = env.ExtractC(SandeshBufferTestGenCFiles)
+SandeshBufferTestGenCObjs = env.Object(SandeshBufferTestGenCSrcs)
+
+SandeshEnv['SandeshBufferTestGenCppObjs'] = SandeshBufferTestGenCppObjs
+SandeshEnv['SandeshBufferTestGenCObjs'] = SandeshBufferTestGenCObjs

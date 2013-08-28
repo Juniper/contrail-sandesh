@@ -1,0 +1,85 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+ 
+/*
+ *  sandesh_req.sandesh
+ *
+ *  Sandesh Request definitions
+ */
+
+struct SandeshGenStatsElem {
+    1: string message_type;
+    3: i64 messages_sent;
+    4: i64 bytes_sent;
+    5: i64 messages_received;
+    6: i64 bytes_received;
+}
+
+struct SandeshGenStats {
+    6: string hostname              
+    1: list<SandeshGenStatsElem> stats_list;
+    2: i64 total_sandesh_sent;
+    3: i64 total_bytes_sent;
+    4: i64 total_sandesh_received;
+    5: i64 total_bytes_received;
+}
+
+request sandesh SandeshGenStatsReq {
+}
+
+response sandesh SandeshGenStatsResp {
+    1: SandeshGenStats stats;
+}
+
+request sandesh SandeshLoggingParamsSet {
+    1: optional bool enable;
+    2: optional string category;
+    3: optional string level;
+    4: optional bool trace_print;
+}
+
+request sandesh SandeshLoggingParamsStatus {
+}
+
+response sandesh SandeshLoggingParams {
+    1: bool enable;
+    2: string category;
+    3: string level;
+    4: bool trace_print;
+}
+
+request sandesh CollectorInfoRequest {
+}
+
+response sandesh CollectorInfoResponse {
+    1: string ip;
+    2: i32 port;
+    3: string status;
+}
+
+struct SandeshClientInfo {
+    2: string status
+    3: u32 successful_connections
+    4: u32 pid
+    5: u32 http_port
+    6: u64 start_time
+    7: string collector_name
+    8: string primary
+    9: string secondary
+}
+
+struct ModuleClientState {
+    1: string                              name (key="ObjectGeneratorInfo")
+    2: optional bool                       deleted
+    3: optional SandeshClientInfo          client_info
+    4: optional SandeshGenStats            msg_stats
+}
+
+uve sandesh SandeshModuleClientTrace {
+    1: ModuleClientState                data
+}
+
+
+
+

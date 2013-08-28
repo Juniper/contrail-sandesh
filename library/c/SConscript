@@ -1,0 +1,26 @@
+# -*- mode: python; -*-
+
+#
+# Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+#
+
+Import('SandeshEnv')
+
+env = SandeshEnv.Clone();
+
+env.Append(CPPPATH = [Dir('.').abspath,
+                      ])
+
+libsandeshc = env.Library(target = 'sandesh-c',
+                          source = ['sandesh.c',
+                                    'protocol/thrift_protocol.c',
+                                    'protocol/thrift_binary_protocol.c',
+                                    'transport/thrift_transport.c',
+                                    'transport/thrift_memory_buffer.c',
+                                    'transport/thrift_fake_transport.c',
+                                   ])
+
+tgt = env.Install(env['TOP_LIB'], libsandeshc)
+env.Default(tgt)
+
+SandeshEnv.SConscript('test/SConscript', exports='SandeshEnv', duplicate = 0)

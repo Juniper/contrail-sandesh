@@ -1,0 +1,24 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+ 
+/*
+ * sandesh_trace_test.sandesh
+ *
+ * Sandesh definitions for trace test
+ */
+
+trace sandesh SandeshTraceTest1 {
+    1: i32  magicNo;
+    2: i32  test1; 
+}
+
+trace sandesh SandeshTraceTest2 {
+    1: i32  magicNo;
+    2: i32  test2;
+}
+
+trace sandesh SandeshTraceTest3 {
+    1: i32  magicNo;
+    2: i32  test3; 
+}

@@ -1,0 +1,33 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+
+/*
+ * msg_test.sandesh
+ *
+ * Sandesh definitions for python sandesh message test
+ */
+
+systemlog sandesh SystemLogTest {
+    1: "Async Test";
+}
+
+struct StructObject {
+    1: "Object"; 
+} 
+
+objectlog sandesh ObjectLogTest {
+    1: StructObject object; 
+} 
+
+struct StructKeyHint {
+    1: string str_1 (key="VM");
+}
+
+objectlog sandesh ObjectLogAnnTest {
+    1: StructKeyHint key;
+}
+
+trace sandesh TraceTest {
+    1: i32 magicNo;
+}

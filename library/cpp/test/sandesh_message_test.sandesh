@@ -1,0 +1,58 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+ 
+/*
+ * sandesh_message_test.sandesh
+ *
+ * Sandesh definitions for message test
+ */
+
+systemlog sandesh SystemLogTest {
+    1: "Const static string is",
+    2: i32 f2,
+    3: string f3,
+}
+
+struct SAT2_struct {
+    1: string f1,
+    2: i32 f2,
+}
+
+objectlog sandesh ObjectLogTest {
+    1: SAT2_struct f1,
+    2: i32 f2,
+}
+
+struct SAT3_struct {
+    1: string f1 (key="ObjectVNTable")
+    2: i32 f2 (format="%x")
+}
+
+objectlog sandesh ObjectLogAnnTest {
+    1: i32 f1 (key="ObjectIPTable", format="%i")
+}
+
+objectlog sandesh ObjectLogInnerAnnTest {
+    1: SAT3_struct f1
+}
+
+flowlog sandesh FlowLogTest {
+    1: i32 prefix;
+}
+
+request sandesh SandeshRequestTest1 {
+    1: string                       xmldata;
+    2: i32                          i32Elem;
+}
+
+struct SandeshResponseElem {
+    1: i32                          i32Elem;
+}
+
+response sandesh SandeshResponseTest {
+    1: list<SandeshResponseElem>    listElem;
+}
+
+request sandesh SandeshRequestEmptyTest {
+}

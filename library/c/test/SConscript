@@ -1,0 +1,78 @@
+# -*- mode: python; -*-
+
+#
+# Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+#
+
+Import('SandeshEnv')
+import sys
+
+env = SandeshEnv.Clone();
+
+env.Append(CPPPATH = [Dir('.').abspath,
+                      '../../common/test/',
+                      './gen-c/'
+                      ])
+
+# Generate the source files
+SandeshCTestGenFiles = env.SandeshGenC('sandesh_c_test.sandesh')
+SandeshCTestGenSrcs = env.ExtractC(SandeshCTestGenFiles)
+
+SandeshLibPath = ['#/build/lib',
+                  Dir(env['TOP']).abspath + '/base',
+                  Dir(env['TOP']).abspath + '/base/test',
+                  Dir(env['TOP']).abspath + '/io',
+                  ]
+
+SandeshLibs = ['gunit',
+               'sandesh',
+               'sandesh-c',
+               'http',
+               'http_parser',
+               'curl',
+               'io',
+               'sandeshvns',
+               'base',
+               'boost_system',
+               'boost_date_time',
+               'log4cplus',
+               'tbb_debug',
+               'pthread',
+               'curl',
+               'xml2',
+               'xslt',
+               'task_test',
+               ]
+
+env.Append(LIBPATH = SandeshLibPath)
+
+env.Prepend(LIBS = SandeshLibs)
+
+if sys.platform != 'darwin':
+    env.Append(LIBS = ['rt'])
+
+sandesh_pre_c_test = env.UnitTest('sandesh_pre_c_test',
+                                  env['SandeshBufferTestGenCppObjs'] +
+                                  ['sandesh_pre_c_test.cc']
+                                  )
+
+env.Alias('src/sandesh:sandesh_pre_c_test', sandesh_pre_c_test)
+
+sandesh_c_test = env.UnitTest('sandesh_c_test',  
+                              SandeshCTestGenSrcs +
+                              env['SandeshBufferTestGenCObjs'] +  
+                              ['sandesh_c_test.cc']
+                              )
+
+env.Alias('src/sandesh:sandesh_c_test', sandesh_c_test)
+
+pre_test = env.TestSuite('sandesh-prectest',
+                         [sandesh_pre_c_test])
+
+env.Alias('src/sandesh:prectest', pre_test) 
+
+test = env.TestSuite('sandesh-ctest',
+                     [sandesh_c_test])
+
+env.Depends(sandesh_c_test, env.Alias('src/sandesh:prectest'))
+env.Alias('src/sandesh:ctest', test) 

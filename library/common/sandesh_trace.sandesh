@@ -1,0 +1,62 @@
+/*
+ * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+ */
+ 
+/*
+ *  sandesh_trace.sandesh
+ *
+ *  Sandesh trace definitions
+ */
+
+request sandesh SandeshTraceRequest {
+    1: string buf_name;
+    2: optional i32 count;
+}
+
+request sandesh SandeshTraceBufferListRequest { 
+}
+
+struct SandeshTraceBufInfo {
+    1: string trace_buf_name  (link="SandeshTraceRequest");
+}
+
+response sandesh SandeshTraceBufferListResponse {
+    1: list<SandeshTraceBufInfo> trace_buffer_list;
+}
+
+trace sandesh SandeshTraceText {
+    1: string tracemsg;
+}
+
+response sandesh SandeshTraceTextResponse {
+    1: list<string> traces;
+}
+
+request sandesh SandeshTraceEnableDisableReq {
+    1: optional bool enable;
+}
+
+response sandesh SandeshTraceEnableDisableRes {
+    1: string enable_disable_status;
+}
+
+request sandesh SandeshTraceBufStatusReq {
+}
+
+struct SandeshTraceBufStatusInfo {
+    1: string trace_buf_name  (link="SandeshTraceBufferEnableDisableReq");
+    2: string enable_disable; 
+}
+
+response sandesh SandeshTraceBufStatusRes {
+    1: list<SandeshTraceBufStatusInfo>  trace_buf_status_list;
+}
+
+request sandesh SandeshTraceBufferEnableDisableReq {
+    1: string trace_buf_name;
+    2: optional bool enable
+}
+
+response sandesh SandeshTraceBufferEnableDisableRes {
+    1: string enable_disable_status; 
+}

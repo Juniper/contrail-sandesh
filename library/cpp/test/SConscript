@@ -1,0 +1,127 @@
+# -*- mode: python; -*-
+
+#
+# Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+#
+
+Import('SandeshEnv')
+import sys
+
+env = SandeshEnv.Clone()
+
+env.Append(CPPPATH = [Dir('.').abspath,
+                      '#/build/include/libxml2',
+                      '../',
+                      '../../common/test/',
+                      ])
+    
+# Generate the source files
+SandeshRWTestGenFiles  = env.SandeshGenCpp('sandesh_rw_test.sandesh')
+SandeshMessageTestGenFiles  = env.SandeshGenCpp('sandesh_message_test.sandesh')
+SandeshTraceTestGenFiles = env.SandeshGenCpp('sandesh_trace_test.sandesh')
+SandeshHttpTestGenFiles = env.SandeshGenCpp('sandesh_http_test.sandesh')
+
+SandeshRWTestGenSrcs = env.ExtractCpp(SandeshRWTestGenFiles)
+SandeshMessageTestGenSrcs = env.ExtractCpp(SandeshMessageTestGenFiles)
+SandeshTraceTestGenSrcs = env.ExtractCpp(SandeshTraceTestGenFiles)
+SandeshTraceTestGenObjs = env.Object(SandeshTraceTestGenSrcs)
+SandeshHttpTestGenSrcs = env.ExtractCpp(SandeshHttpTestGenFiles)
+
+SandeshLibPath = ['#/build/lib',
+                  Dir(env['TOP']).abspath + '/base',
+                  Dir(env['TOP']).abspath + '/base/test',
+                  Dir(env['TOP']).abspath + '/io',
+                  ]
+
+SandeshLibs = ['gunit',
+               'sandesh',
+               'http',
+               'http_parser',
+               'curl',
+               'io',
+               'sandeshvns',
+               'base',
+               'boost_system',
+               'boost_date_time',
+               'log4cplus',
+               'tbb_debug',
+               'pthread',
+               'curl',
+               'xml2',
+               'xslt',
+               'task_test',
+               ]
+
+env.Append(LIBPATH = SandeshLibPath)
+
+if env['OPT'] == 'coverage':
+    env.Prepend(LIBS = 'gcov')
+
+env.Prepend(LIBS = SandeshLibs)
+
+if sys.platform != 'darwin':
+    env.Append(LIBS = ['rt'])
+
+sandesh_session_test = env.UnitTest('sandesh_session_test',
+                                    ['sandesh_session_test.cc'],
+                                    )
+env.Alias('src/sandesh:sandesh_session_test', sandesh_session_test)
+
+sandesh_rw_test = env.UnitTest('sandesh_rw_test',
+                               SandeshRWTestGenSrcs +
+                               ['sandesh_rw_test.cc']
+                               )
+env.Alias('src/sandesh:sandesh_rw_test', sandesh_rw_test)
+
+sandesh_message_test = env.UnitTest('sandesh_message_test',
+                                   SandeshMessageTestGenSrcs +
+                                   env['SandeshBufferTestGenCppObjs'] +
+                                   ['sandesh_message_test.cc']
+                                   )
+env.Alias('src/sandesh:sandesh_message_test', sandesh_message_test)
+
+sandesh_trace_test = env.UnitTest('sandesh_trace_test',
+                                  SandeshTraceTestGenObjs +
+                                  ['sandesh_trace_test.cc']
+                                  )
+env.Alias('src/sandesh:sandesh_trace_test', sandesh_trace_test)
+
+sandesh_show_trace_test = env.UnitTest('sandesh_show_trace_test',
+                                      SandeshTraceTestGenObjs +
+                                      ['sandesh_show_trace_test.cc']
+                                      )
+env.Alias('src/sandesh:sandesh_show_trace_test', sandesh_show_trace_test)
+
+sandesh_http_test = env.UnitTest('sandesh_http_test',
+                                  SandeshHttpTestGenSrcs +
+                                  ['sandesh_http_test.cc']
+                                  )
+env.Alias('src/sandesh:sandesh_http_test', sandesh_http_test)
+env.Requires(sandesh_http_test, '#/build/include/libxml2/libxml/tree.h')
+
+sandesh_state_machine_test = env.UnitTest('sandesh_state_machine_test',
+                                          ['sandesh_state_machine_test.cc']
+                                          )
+env.Alias('src/sandesh:sandesh_state_machine_test', sandesh_state_machine_test)
+
+'''
+sandesh_client_test = env.UnitTest('sandesh_client_test',
+                                          ['sandesh_client_test.cc']
+                                          )
+env.Alias('src/sandesh:sandesh_client_test', sandesh_client_test)
+'''
+
+test_suite = [sandesh_message_test,
+           sandesh_rw_test,
+           sandesh_session_test,
+           sandesh_trace_test,
+           sandesh_http_test,
+           sandesh_state_machine_test,
+#                      sandesh_client_test,
+           ]
+
+test = env.TestSuite('sandesh-test', test_suite)
+
+env.Alias('src/sandesh:test', test)
+
+Return('test_suite')
