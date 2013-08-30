@@ -58,20 +58,20 @@ def WebServerBuild(wenv, abs_pth, loc, inp):
 
 
 WebServerSpec = [
-('src/sandesh/library/common/webs','css/bootstrap.min.css'),
-('src/sandesh/library/common/webs','css/DT_bootstrap.css'),
-('src/sandesh/library/common/webs','css/images/sort_asc.png'),
-('src/sandesh/library/common/webs','css/images/sort_asc_disabled.png'),
-('src/sandesh/library/common/webs','css/images/sort_both.png'),
-('src/sandesh/library/common/webs','css/images/sort_desc.png'),
-('src/sandesh/library/common/webs','css/images/sort_desc_disabled.png'),
-('src/sandesh/library/common/webs','css/style.css'),
-('src/sandesh/library/common/webs','js/bootstrap.min.js'),
-('src/sandesh/library/common/webs','js/DT_bootstrap.js'),
-('src/sandesh/library/common/webs','js/jquery-2.0.3.min.js'),
-('src/sandesh/library/common/webs','js/jquery.dataTables.min.js'),
-('src/sandesh/library/common/webs','js/util.js'),
-('src/sandesh/library/common/webs','universal_parse.xsl')]
+('tools/sandesh/library/common/webs','css/bootstrap.min.css'),
+('tools/sandesh/library/common/webs','css/DT_bootstrap.css'),
+('tools/sandesh/library/common/webs','css/images/sort_asc.png'),
+('tools/sandesh/library/common/webs','css/images/sort_asc_disabled.png'),
+('tools/sandesh/library/common/webs','css/images/sort_both.png'),
+('tools/sandesh/library/common/webs','css/images/sort_desc.png'),
+('tools/sandesh/library/common/webs','css/images/sort_desc_disabled.png'),
+('tools/sandesh/library/common/webs','css/style.css'),
+('tools/sandesh/library/common/webs','js/bootstrap.min.js'),
+('tools/sandesh/library/common/webs','js/DT_bootstrap.js'),
+('tools/sandesh/library/common/webs','js/jquery-2.0.3.min.js'),
+('tools/sandesh/library/common/webs','js/jquery.dataTables.min.js'),
+('tools/sandesh/library/common/webs','js/util.js'),
+('tools/sandesh/library/common/webs','universal_parse.xsl')]
 
 abs_path = Dir('.').abspath
 WebServerOutput = []
@@ -156,4 +156,4 @@ def code_coverage(target, source, env):
 if env['OPT'] == 'coverage':
     test_coverage = env.Command(Dir('test_coverage'), '', code_coverage)
     env.AlwaysBuild(test_coverage)
-    env.Alias('src/sandesh:test_coverage', test_coverage)
+    env.Alias('tools/sandesh:test_coverage', test_coverage)

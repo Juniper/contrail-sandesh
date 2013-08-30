@@ -9,15 +9,16 @@ Import('SandeshEnv')
 
 env = SandeshEnv.Clone();
 
+rmflags = ['-Wsign-compare', '-Werror', '-fno-exceptions']
+
 cflags = env['CCFLAGS']
-cflags.remove('-Wsign-compare')
-cflags.remove('-Werror')
-if '-fno-exceptions' in cflags:
-    cflags.remove('-fno-exceptions')
+for flag in rmflags:
+    if flag in cflags:
+        cflags.remove(flag)
+
 env['CCFLAGS'] = cflags
 
-env.Append(CPPPATH = ['#src/sandesh/compiler',
-                     ])
+env.Append(CPPPATH = ['#tools/sandesh/compiler'])
 
 # Lex and Yacc
 env.Append(YACCFLAGS = '-d')

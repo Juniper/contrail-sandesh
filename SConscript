@@ -2,16 +2,19 @@
 # Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
 #
 
-# -*- mode: python; -*-
-
-Import('BuildEnv');
-
-SandeshEnv = BuildEnv.Clone()
+SandeshEnv = DefaultEnvironment().Clone()
 
 SandeshEnv.Append(CPPDEFINES='SANDESH')
 SandeshEnv.Replace(LIBS='')
 
-if BuildEnv['OPT'] != 'coverage':
-    SandeshEnv.SConscript('compiler/SConscript', exports='SandeshEnv', duplicate = 0)
-SandeshEnv.SConscript('library/SConscript', exports='SandeshEnv', duplicate = 0)
-SandeshEnv.SConscript('common/SConscript', exports='SandeshEnv', duplicate = 0)
+subdirs = ['compiler', 'library']
+for dir in subdirs:
+    if dir == 'compiler' and SandeshEnv['OPT'] == 'coverage':
+        continue
+    SConscript(dir + '/SConscript', exports = 'SandeshEnv',
+               variant_dir = SandeshEnv['TOP'] + '/tools/sandesh/' + dir,
+               duplicate = 0)
+
+# Local Variables:
+# mode: python
+# End:

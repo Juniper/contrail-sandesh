@@ -8,8 +8,7 @@ Import('SandeshEnv')
 
 env = SandeshEnv.Clone();
 
-LOCAL_PATH = '#/src/sandesh/library/python/pysandesh/example/'
-SRC_PATH = LOCAL_PATH + 'pysandesh_example/'
+SRC_PATH = 'pysandesh_example/'
 INSTALL_PATH = 'pysandesh_example/'
 
 local_modules = [
@@ -18,7 +17,7 @@ local_modules = [
 
 local_modules_rules = []
 for module in local_modules:
-    local_modules_rules.append(env.Install('', LOCAL_PATH + module))
+    local_modules_rules.append(env.Install(Dir('.'), module))
 
 pysandesh_example_modules = [
                              '__init__.py',
@@ -28,7 +27,7 @@ pysandesh_example_modules = [
 
 pysandesh_example_modules_rules = []
 for module in pysandesh_example_modules:
-    pysandesh_example_modules_rules.append(env.Install(INSTALL_PATH, SRC_PATH + module))
+    pysandesh_example_modules_rules.append(env.Install(Dir(INSTALL_PATH), SRC_PATH + module))
 
 gen_msg_pkg = env.SandeshGenPy('pysandesh_example/generator_msg.sandesh', INSTALL_PATH)
 gen_msg_pkg+= env.SandeshGenPy('pysandesh_example/vn.sandesh', INSTALL_PATH)

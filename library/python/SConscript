@@ -8,8 +8,7 @@ Import('SandeshEnv');
 
 env = SandeshEnv.Clone();
 
-LOCAL_PATH = "#/src/sandesh/library/python/"
-PYSANDESH_PATH = LOCAL_PATH + 'pysandesh/'
+PYSANDESH_PATH = 'pysandesh/'
 PYSANDESH_INSTALL_PATH = 'pysandesh/'
 
 local_modules = [ 
@@ -19,24 +18,24 @@ local_modules = [
 
 local_modules_rules = []
 for module in local_modules:
-    local_modules_rules.append(env.Install('', LOCAL_PATH + module))
+    local_modules_rules.append(env.Install(Dir('.'), module))
 
 web_srv_rules = []
 web_srv_files = [
-('#/src/sandesh/library/common/webs','css/bootstrap.min.css'),
-('#/src/sandesh/library/common/webs','css/DT_bootstrap.css'),
-('#/src/sandesh/library/common/webs','css/images/sort_asc.png'),
-('#/src/sandesh/library/common/webs','css/images/sort_asc_disabled.png'),
-('#/src/sandesh/library/common/webs','css/images/sort_both.png'),
-('#/src/sandesh/library/common/webs','css/images/sort_desc.png'),
-('#/src/sandesh/library/common/webs','css/images/sort_desc_disabled.png'),
-('#/src/sandesh/library/common/webs','css/style.css'),
-('#/src/sandesh/library/common/webs','js/bootstrap.min.js'),
-('#/src/sandesh/library/common/webs','js/DT_bootstrap.js'),
-('#/src/sandesh/library/common/webs','js/jquery-2.0.3.min.js'),
-('#/src/sandesh/library/common/webs','js/jquery.dataTables.min.js'),
-('#/src/sandesh/library/common/webs','js/util.js'),
-('#/src/sandesh/library/common/webs','universal_parse.xsl')]
+('#/tools/sandesh/library/common/webs','css/bootstrap.min.css'),
+('#/tools/sandesh/library/common/webs','css/DT_bootstrap.css'),
+('#/tools/sandesh/library/common/webs','css/images/sort_asc.png'),
+('#/tools/sandesh/library/common/webs','css/images/sort_asc_disabled.png'),
+('#/tools/sandesh/library/common/webs','css/images/sort_both.png'),
+('#/tools/sandesh/library/common/webs','css/images/sort_desc.png'),
+('#/tools/sandesh/library/common/webs','css/images/sort_desc_disabled.png'),
+('#/tools/sandesh/library/common/webs','css/style.css'),
+('#/tools/sandesh/library/common/webs','js/bootstrap.min.js'),
+('#/tools/sandesh/library/common/webs','js/DT_bootstrap.js'),
+('#/tools/sandesh/library/common/webs','js/jquery-2.0.3.min.js'),
+('#/tools/sandesh/library/common/webs','js/jquery.dataTables.min.js'),
+('#/tools/sandesh/library/common/webs','js/util.js'),
+('#/tools/sandesh/library/common/webs','universal_parse.xsl')]
 
 for elem in web_srv_files:
     terms = elem[1].rsplit("/",1)
@@ -47,7 +46,8 @@ for elem in web_srv_files:
         hpath = "/" + terms[0]
         hfile = terms[1]
 
-    web_srv_rules.append(env.Install(PYSANDESH_INSTALL_PATH + '/webs' + hpath, elem[0] + "/" + elem[1]))
+    web_srv_rules.append(env.Install(
+            Dir(PYSANDESH_INSTALL_PATH + '/webs' + hpath), elem[0] + "/" + elem[1]))
 
 pysandesh_modules = [
                      '__init__.py',
@@ -71,10 +71,14 @@ pysandesh_modules = [
 
 pysandesh_modules_rules = []
 for module in pysandesh_modules:
-    pysandesh_modules_rules.append(env.Install(PYSANDESH_INSTALL_PATH, PYSANDESH_PATH + module))
+    pysandesh_modules_rules.append(
+        env.Install(PYSANDESH_INSTALL_PATH,
+                    str(File(PYSANDESH_PATH + module).srcnode)))
 
 fysom_sources_rules = []
-fysom_sources_rules.append(env.Install(PYSANDESH_INSTALL_PATH, "#/third_party/fysom/fysom.py"))       
+fysom_sources_rules.append(
+    env.Install(PYSANDESH_INSTALL_PATH + '/fysom.py',
+                "#/third_party/fysom-1.0.8/fysom/__init__.py"))       
 
 bottle_sources_rules = []
 bottle_sources_rules.append(env.Install(PYSANDESH_INSTALL_PATH, '#/third_party/bottle-0.11.6/bottle.py'))    
@@ -100,15 +104,15 @@ for module in protocol_modules:
     protocol_modules_rules.append(env.Install(PYSANDESH_INSTALL_PATH + 'protocol/', PYSANDESH_PATH + 'protocol/' + module))
 
 # Auto-generated SandeshHeader package 
-sandesh_hdr_pkg = env.SandeshGenPy('#src/sandesh/library/common/sandesh.sandesh', 'pysandesh/')
+sandesh_hdr_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh.sandesh', 'pysandesh/')
 # Auto-generated Sandesh Ctrl package
-sandesh_ctrl_pkg = env.SandeshGenPy('#src/sandesh/library/common/sandesh_ctrl.sandesh', 'pysandesh/') 
+sandesh_ctrl_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_ctrl.sandesh', 'pysandesh/') 
 # Auto-generated Sandesh UVE package 
-sandesh_uve_pkg = env.SandeshGenPy('#src/sandesh/library/common/sandesh_uve.sandesh', 'pysandesh/')
+sandesh_uve_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_uve.sandesh', 'pysandesh/')
 # Auto-generated Sandesh Req package
-sandesh_req_pkg = env.SandeshGenPy('#src/sandesh/library/common/sandesh_req.sandesh', 'pysandesh/')
+sandesh_req_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_req.sandesh', 'pysandesh/')
 # Auto-generated Sandesh Trace package
-sandesh_trace_pkg = env.SandeshGenPy('#src/sandesh/library/common/sandesh_trace.sandesh', 'pysandesh/')
+sandesh_trace_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_trace.sandesh', 'pysandesh/')
 
 sdist_depends = [local_modules_rules, web_srv_rules,
                  pysandesh_modules_rules, transport_modules_rules, 
