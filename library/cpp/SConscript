@@ -9,7 +9,12 @@ Import('SandeshEnv')
 env = SandeshEnv.Clone();
 
 env.AppendUnique(CCFLAGS='-fno-exceptions')
-env.Append(CPPPATH = [Dir('.').abspath])
+env.Append(CPPPATH = [
+    '#build/include',
+    '#controller/src',
+    Dir('.').abspath,
+    '#tools',
+])
 
 # Generate the source files
 SandeshGenFiles  = env.SandeshGenCpp('../common/sandesh.sandesh')
@@ -46,7 +51,7 @@ def WebServerBuild(wenv, abs_pth, loc, inp):
   wenv.Command(ofile , ('#/%s/%s/' % (loc,hpath)) + hfile,\
     '%s ; (%s ; %s); %s ; %s ; %s ; %s' %
     ('echo "namespace {" > ' + abs_pth + "/" + ofile,
-      'cd ' + abs_pth + '/../../../../../' + loc + "/" + hpath,
+      'cd ' + loc + "/" + hpath,
       'xxd -i ' + hfile + ' >> ' + abs_pth + "/" + ofile,
       'echo "}" >> ' + abs_pth + "/" + ofile,
       'echo "#include \\"sandesh/sandesh_http.h\\"" >> ' + abs_pth + "/" + ofile,
