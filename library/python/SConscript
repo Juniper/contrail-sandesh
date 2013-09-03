@@ -18,7 +18,8 @@ local_modules = [
 
 local_modules_rules = []
 for module in local_modules:
-    local_modules_rules.append(env.Install(Dir('.'), module))
+    local_modules_rules.append(
+        env.Install(Dir('.'), '#tools/sandesh/library/python/' + module))
 
 web_srv_rules = []
 web_srv_files = [
@@ -73,12 +74,13 @@ pysandesh_modules_rules = []
 for module in pysandesh_modules:
     pysandesh_modules_rules.append(
         env.Install(PYSANDESH_INSTALL_PATH,
-                    str(File(PYSANDESH_PATH + module).srcnode)))
+                    str(File(PYSANDESH_PATH + module).srcnode())))
 
 fysom_sources_rules = []
 fysom_sources_rules.append(
-    env.Install(PYSANDESH_INSTALL_PATH + '/fysom.py',
-                "#/third_party/fysom-1.0.8/fysom/__init__.py"))       
+    env.Command(PYSANDESH_INSTALL_PATH + '/fysom.py',
+                "#/third_party/fysom-1.0.8/fysom/__init__.py",
+                Copy("$TARGET", "$SOURCE")))
 
 bottle_sources_rules = []
 bottle_sources_rules.append(env.Install(PYSANDESH_INSTALL_PATH, '#/third_party/bottle-0.11.6/bottle.py'))    
@@ -90,7 +92,9 @@ transport_modules = [
 
 transport_modules_rules = []
 for module in transport_modules:
-    transport_modules_rules.append(env.Install(PYSANDESH_INSTALL_PATH + 'transport/', PYSANDESH_PATH + 'transport/' + module))
+    transport_modules_rules.append(
+            env.Install(PYSANDESH_INSTALL_PATH + 'transport/',
+                        File(PYSANDESH_PATH + 'transport/' + module).srcnode()))
 
 protocol_modules = [
                     '__init__.py',
@@ -101,7 +105,9 @@ protocol_modules = [
 
 protocol_modules_rules = []
 for module in protocol_modules:
-    protocol_modules_rules.append(env.Install(PYSANDESH_INSTALL_PATH + 'protocol/', PYSANDESH_PATH + 'protocol/' + module))
+    protocol_modules_rules.append(
+        env.Install(PYSANDESH_INSTALL_PATH + 'protocol/',
+                    File(PYSANDESH_PATH + 'protocol/' + module).srcnode()))
 
 # Auto-generated SandeshHeader package 
 sandesh_hdr_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh.sandesh', 'pysandesh/')

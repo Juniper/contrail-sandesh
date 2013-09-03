@@ -8,15 +8,14 @@ Import('SandeshEnv')
 
 env = SandeshEnv.Clone();
 
-INSTALL_PATH = '#/src/sandesh/library/python/pysandesh/test/'
-
 test_depend_modules = [ 
                         '__init__.py',
                         'test_utils.py' 
                       ]
 test_depend_modules_rules = []
 for module in test_depend_modules:
-    test_depend_modules_rules.append(env.Install('', INSTALL_PATH + module))
+    test_depend_modules_rules.append(
+        env.Install('', File(module).srcnode()))
 env.Depends(test_depend_modules_rules, env['pysandesh_target'])
 
 test_modules = [
@@ -28,7 +27,7 @@ test_modules = [
 
 test_modules_rules = []
 for module in test_modules:
-    test_modules_rules.append(env.Install('', INSTALL_PATH + module))
+    test_modules_rules.append(env.Install('', File(module).srcnode()))
 env.Depends(test_modules_rules, test_depend_modules_rules)
 
 gen_test_pkg = env.SandeshGenPy('encode_decode_test.sandesh')
@@ -39,4 +38,4 @@ pysandesh_ut = env.PyTestSuite('pysandesh-ut',
                                 'sandesh_session_test.py',
                                 'sandesh_trace_test.py'
                                ])
-env.Alias('src/sandesh/library/python:pysandesh_ut', pysandesh_ut)
+env.Alias('tools/sandesh/library/python:pysandesh_ut', pysandesh_ut)

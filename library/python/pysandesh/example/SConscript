@@ -17,7 +17,7 @@ local_modules = [
 
 local_modules_rules = []
 for module in local_modules:
-    local_modules_rules.append(env.Install(Dir('.'), module))
+    local_modules_rules.append(env.Install(Dir('.'), File(module).srcnode()))
 
 pysandesh_example_modules = [
                              '__init__.py',
@@ -27,7 +27,8 @@ pysandesh_example_modules = [
 
 pysandesh_example_modules_rules = []
 for module in pysandesh_example_modules:
-    pysandesh_example_modules_rules.append(env.Install(Dir(INSTALL_PATH), SRC_PATH + module))
+    pysandesh_example_modules_rules.append(
+        env.Install(Dir(INSTALL_PATH), File(SRC_PATH + module).srcnode()))
 
 gen_msg_pkg = env.SandeshGenPy('pysandesh_example/generator_msg.sandesh', INSTALL_PATH)
 gen_msg_pkg+= env.SandeshGenPy('pysandesh_example/vn.sandesh', INSTALL_PATH)
