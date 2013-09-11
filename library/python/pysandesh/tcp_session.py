@@ -25,15 +25,18 @@ class TcpSession(object):
 
     # Public functions
 
-    def connect(self):
+    def connect(self, timeout=None):
         if not self._connected:
             try:
-                self._socket = socket.create_connection(self._server)
+                self._socket = socket.create_connection(self._server, timeout)
             except socket.error as err_msg:
                 self._socket = None
+                self._handle_event(self.SESSION_ERROR)
                 return -1
             else:
                 self._connected = True
+                self._socket.settimeout(None)
+                self._set_socket_options()
                 self._handle_event(self.SESSION_ESTABLISHED)
                 return 0
         return 0
@@ -73,6 +76,10 @@ class TcpSession(object):
     #end write
 
     # Private functions
+
+    def _set_socket_options(self):
+        pass
+    #end _set_socket_options
 
     def _handle_event(self, event):
         pass

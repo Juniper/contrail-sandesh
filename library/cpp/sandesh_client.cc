@@ -102,6 +102,19 @@ void SandeshClient::Shutdown() {
     sm_->SetAdminState(true);
 }
 
+bool SandeshClient::SendSandesh(Sandesh *snh) {
+    if (!sm_->session()) {
+        return false;
+    }
+    SandeshClientSM::State state = sm_->state();
+    if (state != SandeshClientSM::CLIENT_INIT && 
+        state != SandeshClientSM::ESTABLISHED) {
+        return false;
+    }
+    // XXX No bounded work queue
+    sm_->session()->send_queue()->Enqueue(snh);
+    return true; 
+}
 
 bool SandeshClient::ReceiveCtrlMsg(const std::string &msg,
         const SandeshHeader &header, const std::string &sandesh_name,
@@ -196,9 +209,9 @@ SandeshSession *SandeshClient::CreateSMSession(
         DeleteSession(session);
         return NULL;
     }
-    socket->non_blocking(true, ec);
+    ec = session->SetSocketOptions();
     if (ec) {
-        LOG(ERROR, __func__ << " Unable to set the socket as non-blocking: " << ec.message());
+        LOG(ERROR, __func__ << " Unable to set socket options: " << ec.message());
         DeleteSession(session);
         return NULL;
     }

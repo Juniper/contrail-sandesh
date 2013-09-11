@@ -50,13 +50,14 @@ class Sandesh(object):
 
     # Public functions
 
-    def init_generator(self, module, source, server,
-                       client_context, http_port, sandesh_req_uve_pkg_list=None):
+    def init_generator(self, module, source, collectors, client_context, 
+                       http_port, sandesh_req_uve_pkg_list=None,
+                       discovery_client=None):
         self._role = self.SandeshRole.GENERATOR
         self._module = module
         self._source = source
         self._client_context = client_context
-        self._collector = server
+        self._collectors = collectors
         self._rcv_queue = WorkQueue(self._process_rx_sandesh)
         self._init_logger(module)
         self._stats = SandeshStats()
@@ -73,8 +74,16 @@ class Sandesh(object):
         for pkg_name in sandesh_req_uve_pkg_list:
             self._create_sandesh_request_and_uve_lists(pkg_name)
         self._http_server = SandeshHttp(self, module, http_port, sandesh_req_uve_pkg_list)
+        primary_collector = None
+        secondary_collector = None
+        if self._collectors is not None:
+            if len(self._collectors) > 0:
+                primary_collector = self._collectors[0]
+            if len(self._collectors) > 1:
+                secondary_collector = self._collectors[1]
         gevent.spawn(self._http_server.start_http_server)
-        self._client = SandeshClient(self, self._collector)
+        self._client = SandeshClient(self, primary_collector, secondary_collector, 
+                                     discovery_client)
         self._client.initiate()
     #end init_generator
 
@@ -249,6 +258,16 @@ class Sandesh(object):
             client_info.status = self._client.connection().state() 
             client_info.successful_connections = \
                 self._client.connection().statemachine().connect_count() 
+            primary_collector = self._client.connection().primary_collector()
+            if primary_collector:
+                client_info.primary = primary_collector[0]
+            else:
+                client_info.primary = ''
+            secondary_collector = self._client.connection().secondary_collector()
+            if secondary_collector:
+                client_info.secondary = secondary_collector[0]
+            else:
+                client_info.secondary = ''
             module_state = ModuleClientState(name=self._source+':'+self._module, 
                                              client_info=client_info)
             generator_info = SandeshModuleClientTrace(data=module_state, sandesh=self)

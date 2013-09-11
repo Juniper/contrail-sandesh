@@ -23,7 +23,7 @@ class SandeshTraceTest(unittest.TestCase):
         self._sandesh = Sandesh()
         http_port = test_utils.get_free_port()
         self._sandesh.init_generator('sandesh_trace_test', socket.gethostname(),
-                                     ('127.0.0.1', 8086), 'trace_test_ctxt', http_port)
+            [('127.0.0.1', 8086)], 'trace_test_ctxt', http_port)
         self._trace_read_list = []
     #end setUp
 

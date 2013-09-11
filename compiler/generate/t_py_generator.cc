@@ -1806,7 +1806,7 @@ void t_py_generator::generate_py_sandesh_http_request_handler(ofstream& out,
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
     t_type *ftype = (*f_iter)->get_type();
     if (f_iter == fields.begin()) {
-      generate_py_sandesh_http_attr(out, ftype, (*f_iter)->get_name(), "_x");
+      generate_py_sandesh_http_attr(out, ftype, (*f_iter)->get_name(), "x");
     }
     generate_py_sandesh_http_attr(out, ftype, (*f_iter)->get_name(), (*f_iter)->get_name());
   }

@@ -40,7 +40,8 @@ static const std::string kXMLType("type");
 static const std::string kXMLIdentifier("identifier");
 static const std::string kXMLName("name");
 static const std::string kXMLKey("key");
-static const std::string kXMLElement("element");
+static const std::string kXMLElementTagO("<element>");
+static const std::string kXMLElementTagC("</element>");
 static const std::string kXMLValue("value");
 static const std::string kXMLSize("size");
 static const std::string kXMLBoolTrue("true");
@@ -65,6 +66,14 @@ static const std::string kTypeNameList("list");
 static const std::string kTypeNameSet("set");
 static const std::string kTypeNameSandesh("sandesh");
 static const std::string kTypeNameUnknown("unknown");
+
+static const std::string kAttrTypeSandesh("type=\"sandesh\"");
+static const std::string kXMLListTagO("<list ");
+static const std::string kXMLListTagC("</list>" + endl);
+static const std::string kXMLSetTagO("<set ");
+static const std::string kXMLSetTagC("</set>" + endl);
+static const std::string kXMLMapTagO("<map ");
+static const std::string kXMLMapTagC("</map>" + endl);
 
 const std::string& TXMLProtocol::fieldTypeName(TType type) {
   switch (type) {
@@ -168,10 +177,12 @@ TType TXMLProtocol::getTypeIDForTypeName(const std::string &name) {
   return result;
 }
 
-static const std::string formXMLAttr(const std::string& name,
-                                     const std::string& value) {
-  string attr(name + "=\"" + value + "\"");
-  return attr;
+static inline void formXMLAttr(std::string &dest, const std::string& name, 
+                               const std::string & value) {
+  dest += name;
+  dest += "=\"";
+  dest += value; 
+  dest += "\"";
 }
 
 void TXMLProtocol::indentUp() {
@@ -229,12 +240,21 @@ int32_t TXMLProtocol::writeMessageEnd() {
 
 int32_t TXMLProtocol::writeStructBegin(const char* name) {
   int32_t size = 0, ret;
-  if ((ret = writeIndented(kXMLTagO + string(name) + kXMLTagC + endl)) < 0) {
-    LOG(ERROR, __func__ << ": " << string(name) << " FAILED");
+  string sname(name);
+  string xml;
+  xml.reserve(512);
+  // Form the xml tag
+  xml += kXMLTagO;
+  xml += sname;
+  xml += kXMLTagC;
+  xml += endl;
+  // Write to transport
+  if ((ret = writeIndented(xml)) < 0) {
+    LOG(ERROR, __func__ << ": " << sname << " FAILED");
     return ret;
   }
   size += ret;
-  xml_state_.push_back(string(name));
+  xml_state_.push_back(sname);
   indentUp(); 
   return size;
 }
@@ -242,9 +262,17 @@ int32_t TXMLProtocol::writeStructBegin(const char* name) {
 int32_t TXMLProtocol::writeStructEnd() {
   indentDown();
   int32_t size = 0, ret;
-  string etag = xml_state_.back();
+  string etag(xml_state_.back());
   xml_state_.pop_back();
-  if ((ret = writeIndented(kXMLEndTagO + etag + kXMLTagC + endl)) < 0) {
+  string xml;
+  xml.reserve(128);
+  // Form the xml tag
+  xml += kXMLEndTagO;
+  xml += etag;
+  xml += kXMLTagC;
+  xml += endl;
+  // Write to transport
+  if ((ret = writeIndented(xml)) < 0) {
     LOG(ERROR, __func__ << ": " << etag << " FAILED");
     return ret;
   }
@@ -254,15 +282,24 @@ int32_t TXMLProtocol::writeStructEnd() {
 
 int32_t TXMLProtocol::writeSandeshBegin(const char* name) {
   int32_t size = 0, ret;
-  ret = writeIndented(kXMLTagO + string(name) + " " +
-        formXMLAttr(kXMLType, kTypeNameSandesh) +
-        kXMLTagC + endl);
+  string sname(name);
+  string xml;
+  xml.reserve(512);
+  // Form the xml tag
+  xml += kXMLTagO;
+  xml += sname;
+  xml += " ";
+  xml += kAttrTypeSandesh;
+  xml += kXMLTagC;
+  xml += endl;
+  // Write to transport
+  ret = writeIndented(xml);
   if (ret < 0) {
-    LOG(ERROR, __func__ << ": " << string(name) << " FAILED");
+    LOG(ERROR, __func__ << ": " << sname << " FAILED");
     return ret;
   }
   size += ret;
-  xml_state_.push_back(string(name));
+  xml_state_.push_back(sname);
   indentUp();
   return size;
 }
@@ -270,9 +307,17 @@ int32_t TXMLProtocol::writeSandeshBegin(const char* name) {
 int32_t TXMLProtocol::writeSandeshEnd() {
   indentDown();
   int32_t size = 0, ret;
-  string etag = xml_state_.back();
+  string etag(xml_state_.back());
   xml_state_.pop_back();
-  if ((ret = writeIndented(kXMLEndTagO + etag + kXMLTagC + endl)) < 0) {
+  string exml;
+  exml.reserve(128);
+  // Form the xml tag
+  exml += kXMLEndTagO;
+  exml += etag;
+  exml += kXMLTagC;
+  exml += endl;
+  // Write to transport
+  if ((ret = writeIndented(exml)) < 0) {
     LOG(ERROR, __func__ << ": " << etag << " FAILED");
     return ret;
   }
@@ -281,11 +326,11 @@ int32_t TXMLProtocol::writeSandeshEnd() {
 }
 
 int32_t TXMLProtocol::writeContainerElementBegin() {
-  return writeIndented(kXMLTagO + kXMLElement + kXMLTagC);
+  return writeIndented(kXMLElementTagO);
 }
 
 int32_t TXMLProtocol::writeContainerElementEnd() {
-  return writeIndented(kXMLEndTagO + kXMLElement + kXMLTagC);
+  return writeIndented(kXMLElementTagC);
 }
 
 int32_t TXMLProtocol::writeFieldBegin(const char *name,
@@ -293,72 +338,77 @@ int32_t TXMLProtocol::writeFieldBegin(const char *name,
                                       const int16_t fieldId,
                                       const std::map<std::string, std::string> *const amap) {
   int32_t size = 0, ret;
-  string id_str = integerToString(fieldId);
-
-  ret = writeIndented(kXMLTagO + string(name) + " " +
-        formXMLAttr(kXMLType, fieldTypeName(fieldType)) + " " +
-        formXMLAttr(kXMLIdentifier, id_str));
-  if (ret < 0) {
-    LOG(ERROR, __func__ << ": " << string(name) << " " <<
-        fieldTypeName(fieldType) << " " << " " << id_str <<
-        " FAILED");
-    return ret;
-  }
-  size += ret;
+  string sname(name);
+  string xml;
+  xml.reserve(512);
+  // Form the xml tag
+  xml += kXMLTagO;
+  xml += sname;
+  xml += " ";
+  formXMLAttr(xml, kXMLType, fieldTypeName(fieldType));
+  xml += " ";
+  formXMLAttr(xml, kXMLIdentifier, integerToString(fieldId));
   if (amap != NULL) {
-      std::map<string, string>::const_iterator iter;
-      for (iter = amap->begin(); iter != amap->end(); iter++) {
-          if ((ret = writeIndented(" " + formXMLAttr((*iter).first,
-                                   (*iter).second))) < 0) {
-            LOG(ERROR, __func__ << ": " << (*iter).first << " " <<
-                (*iter).second << " FAILED");
-            return ret;
-          }
-          size += ret;
-      }
+    for (std::map<string, string>::const_iterator iter = amap->begin(); 
+         iter != amap->end(); iter++) {
+      xml += " ";
+      formXMLAttr(xml, (*iter).first, (*iter).second);
+    }
   }
-  if ((ret = writeIndented(kXMLTagC)) < 0) {
-    LOG(ERROR, __func__ << ": " << kXMLTagC << " FAILED");
+  xml += kXMLTagC;
+  // Write to transport
+  if ((ret = writeIndented(xml)) < 0) {
+    LOG(ERROR, __func__ << ": " << xml << " FAILED");
     return ret;
   }
   size += ret;
-  xml_state_.push_back(string(name));
+  xml_state_.push_back(sname);
   if (fieldType == T_STRUCT) {
 	write_state_.push_back(STRUCT);
+#ifdef TXMLPROTOCOL_DEBUG_PRETTY_PRINT
 	if ((ret = writePlain(endl)) < 0) {
 	  LOG(ERROR, __func__ << ": " << fieldTypeName(fieldType) << " FAILED");
 	  return ret;
 	}
 	size += ret;
 	indentUp();
+#endif // !TXMLPROTOCOL_DEBUG_PRETTY_PRINT
   } else if (fieldType == T_SANDESH) {
 	write_state_.push_back(SNDESH);
+#ifdef TXMLPROTOCOL_DEBUG_PRETTY_PRINT
     if ((ret = writePlain(endl)) < 0) {
       LOG(ERROR, __func__ << ": " << fieldTypeName(fieldType) << " FAILED");
       return ret;
     }
     size += ret;
+#endif // !TXMLPROTOCOL_DEBUG_PRETTY_PRINT
   } else if (fieldType == T_LIST) {
 	write_state_.push_back(LIST);
+#ifdef TXMLPROTOCOL_DEBUG_PRETTY_PRINT
     if ((ret = writePlain(endl)) < 0) {
       LOG(ERROR, __func__ << ": " << fieldTypeName(fieldType) << " FAILED");
       return ret;
     }
     size += ret;
+#endif // !TXMLPROTOCOL_DEBUG_PRETTY_PRINT
   } else if (fieldType == T_MAP) {
 	write_state_.push_back(MAP);
+#ifdef TXMLPROTOCOL_DEBUG_PRETTY_PRINT
     if ((ret = writePlain(endl)) < 0) {
       LOG(ERROR, __func__ << ": " << fieldTypeName(fieldType) << " FAILED");
       return ret;
     }
     size += ret;
+#endif // !TXMLPROTOCOL_DEBUG_PRETTY_PRINT
   } else if (fieldType == T_SET) {
 	write_state_.push_back(SET);
+#ifdef TXMLPROTOCOL_DEBUG_PRETTY_PRINT
     if ((ret = writePlain(endl)) < 0) {
       LOG(ERROR, __func__ << ": " << fieldTypeName(fieldType) << " FAILED");
       return ret;
     }
     size += ret;
+#endif // !TXMLPROTOCOL_DEBUG_PRETTY_PRINT
   } else {
     write_state_.push_back(UNINIT);
   }
@@ -367,29 +417,38 @@ int32_t TXMLProtocol::writeFieldBegin(const char *name,
 
 int32_t TXMLProtocol::writeFieldEnd() {
   int32_t size = 0, ret;
-  string etag = xml_state_.back();
+  string etag(xml_state_.back());
   xml_state_.pop_back();
-  if (write_state_.back() != STRUCT &&
-	  write_state_.back() != SNDESH &&
-	  write_state_.back() != LIST   &&
-	  write_state_.back() != MAP    &&
-	  write_state_.back() != SET) {
-	if ((ret = writePlain(kXMLEndTagO + etag + kXMLTagC + endl)) < 0) {
-	  LOG(ERROR, __func__ << ": " << etag << " " << write_state_.back() <<
-	      " FAILED");
-	  return ret;
-	}
-	size += ret;
+  string exml;
+  exml.reserve(128);
+  // Form the xml tag
+  exml += kXMLEndTagO;
+  exml += etag;
+  exml += kXMLTagC;
+  exml += endl;
+  // Write to transport
+  write_state_t state = write_state_.back();
+  if (state != STRUCT &&
+      state != SNDESH &&
+      state != LIST   &&
+      state != MAP    &&
+      state != SET) {
+    if ((ret = writePlain(exml)) < 0) {
+      LOG(ERROR, __func__ << ": " << etag << " " << state <<
+          " FAILED");
+      return ret;
+    }
+    size += ret;
   } else {
-    if (write_state_.back() == STRUCT) {
-	  indentDown();
-	}
-	if ((ret = writeIndented(kXMLEndTagO + etag + kXMLTagC + endl)) < 0) {
-	  LOG(ERROR, __func__ << ": " << etag << " " << write_state_.back() <<
-	      " FAILED");
-	  return ret;
-	}
-	size += ret;
+    if (state == STRUCT) {
+      indentDown();
+    }
+    if ((ret = writeIndented(exml)) < 0) {
+      LOG(ERROR, __func__ << ": " << etag << " " << state <<
+          " FAILED");
+      return ret;
+    }
+    size += ret;
   }
   write_state_.pop_back();
   return size;
@@ -403,11 +462,19 @@ int32_t TXMLProtocol::writeMapBegin(const TType keyType,
                                     const TType valType,
                                     const uint32_t size) {
   int32_t bsize = 0, ret;
-  ret = writeIndented(kXMLTagO + kTypeNameMap + " " +
-        formXMLAttr(kXMLKey, fieldTypeName(keyType)) + " " +
-        formXMLAttr(kXMLValue, fieldTypeName(valType)) + " " +
-        formXMLAttr(kXMLSize, integerToString(size)) +
-        kXMLTagC + endl);
+  string xml;
+  xml.reserve(256);
+  // Form the xml tag
+  xml += kXMLMapTagO;
+  formXMLAttr(xml, kXMLKey, fieldTypeName(keyType));
+  xml += " ";
+  formXMLAttr(xml, kXMLValue, fieldTypeName(valType));
+  xml += " ";
+  formXMLAttr(xml, kXMLSize, integerToString(size));
+  xml += kXMLTagC;
+  xml += endl;
+  // Write to transport
+  ret = writeIndented(xml);
   if (ret < 0) {
     LOG(ERROR, __func__ << ": Key: " << fieldTypeName(keyType) <<
         " Value: " << fieldTypeName(valType) << " FAILED");
@@ -421,7 +488,7 @@ int32_t TXMLProtocol::writeMapBegin(const TType keyType,
 int32_t TXMLProtocol::writeMapEnd() {
   int32_t size = 0, ret;
   indentDown();
-  if ((ret = writeIndented(kXMLEndTagO + kTypeNameMap + kXMLTagC + endl)) < 0) {
+  if ((ret = writeIndented(kXMLMapTagC)) < 0) {
     LOG(ERROR, __func__ << " FAILED");
     return ret;
   }
@@ -432,10 +499,17 @@ int32_t TXMLProtocol::writeMapEnd() {
 int32_t TXMLProtocol::writeListBegin(const TType elemType,
                                      const uint32_t size) {
   int32_t bsize = 0, ret;
-  ret = writeIndented(kXMLTagO + kTypeNameList + " " +
-        formXMLAttr(kXMLType, fieldTypeName(elemType)) + " " +
-		formXMLAttr(kXMLSize, integerToString(size)) +
-		kXMLTagC + endl);
+  string xml;
+  xml.reserve(256);
+  // Form the xml tag
+  xml += kXMLListTagO;
+  formXMLAttr(xml, kXMLType, fieldTypeName(elemType));
+  xml += " ";
+  formXMLAttr(xml, kXMLSize, integerToString(size));
+  xml += kXMLTagC;
+  xml += endl;
+  // Write to transport
+  ret = writeIndented(xml);
   if (ret < 0) {
     LOG(ERROR, __func__ << ": " << fieldTypeName(elemType) <<
         " FAILED");
@@ -449,7 +523,7 @@ int32_t TXMLProtocol::writeListBegin(const TType elemType,
 int32_t TXMLProtocol::writeListEnd() {
   int32_t size = 0, ret;
   indentDown();
-  ret = writeIndented(kXMLEndTagO + kTypeNameList + kXMLTagC + endl);
+  ret = writeIndented(kXMLListTagC);
   if (ret < 0) {
     LOG(ERROR, __func__ << " FAILED");
     return ret;
@@ -461,10 +535,17 @@ int32_t TXMLProtocol::writeListEnd() {
 int32_t TXMLProtocol::writeSetBegin(const TType elemType,
                                     const uint32_t size) {
   int32_t bsize = 0, ret;
-  ret = writeIndented(kXMLTagO + kTypeNameSet + " " +
-        formXMLAttr(kXMLType, fieldTypeName(elemType)) + " " +
-		formXMLAttr(kXMLSize, integerToString(size)) +
-		kXMLTagC + endl);
+  string xml;
+  xml.reserve(256);
+  // Form the xml tag
+  xml += kXMLSetTagO;
+  formXMLAttr(xml, kXMLType, fieldTypeName(elemType));
+  xml += " ";
+  formXMLAttr(xml, kXMLSize, integerToString(size));
+  xml += kXMLTagC;
+  xml += endl;
+  // Write to transport
+  ret = writeIndented(xml);
   if (ret < 0) {
     LOG(ERROR, __func__ << ": " << fieldTypeName(elemType) <<
         " FAILED");
@@ -478,7 +559,7 @@ int32_t TXMLProtocol::writeSetBegin(const TType elemType,
 int32_t TXMLProtocol::writeSetEnd() {
   int32_t size = 0, ret;
   indentDown();
-  if ((ret = writeIndented(kXMLEndTagO + kTypeNameSet + kXMLTagC + endl)) < 0) {
+  if ((ret = writeIndented(kXMLSetTagC)) < 0) {
     LOG(ERROR, __func__ << " FAILED");
     return ret;
   }
@@ -544,10 +625,12 @@ int32_t TXMLProtocol::writeBinary(const string& str) {
 }
 
 int32_t TXMLProtocol::writeXML(const string& str) {
-    std::string xmlstr;
-    xmlstr.reserve(str.length() + kXMLCDATAO.length() + kXMLCDATAC.length());
-    xmlstr += kXMLCDATAO + str + kXMLCDATAC;
-    return writePlain(xmlstr);
+  std::string xmlstr;
+  xmlstr.reserve(str.length() + kXMLCDATAO.length() + kXMLCDATAC.length());
+  xmlstr += kXMLCDATAO;
+  xmlstr += str;
+  xmlstr += kXMLCDATAC;
+  return writePlain(xmlstr);
 }
 
 /**

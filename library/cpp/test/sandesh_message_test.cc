@@ -81,15 +81,6 @@ private:
     ReceiveMsgCb cb_;
 };
 
-#define WAIT_FOR(Cond)                  \
-do {                                    \
-    for (int i = 0; i < 5000; i++) {    \
-        if (Cond) break;                \
-        usleep(1000);                   \
-    }                                   \
-    EXPECT_TRUE(Cond);                  \
-} while (0)
-
 class SandeshAsyncTest : public ::testing::Test {
 protected:
     SandeshAsyncTest() {
@@ -107,13 +98,11 @@ protected:
         task_util::WaitForIdle();
         Sandesh::Uninit();
         task_util::WaitForIdle();
-        WAIT_FOR(!server_->HasSessions());
+        TASK_UTIL_EXPECT_FALSE(server_->HasSessions());
         task_util::WaitForIdle();
         server_->Shutdown();
         task_util::WaitForIdle();
         TcpServerManager::DeleteServer(server_);
-        task_util::WaitForIdle();
-        SandeshHttp::Uninit();
         task_util::WaitForIdle();
         evm_->Shutdown();
         if (thread_.get() != NULL) {
@@ -241,7 +230,7 @@ TEST_F(SandeshAsyncTest, Async) {
     Sandesh::ConnectToCollector("127.0.0.1", port);
     Sandesh::SetLoggingParams(true, "", "UT_DEBUG");
 
-    WAIT_FOR(Sandesh::client()->state() == SandeshClientSM::ESTABLISHED);
+    TASK_UTIL_EXPECT_TRUE(Sandesh::client()->state() == SandeshClientSM::ESTABLISHED);
 
     // Set the logging parameters
     Sandesh::SetLoggingParams(true, "SystemLogTest", SandeshLevel::SYS_INFO);
@@ -269,7 +258,7 @@ TEST_F(SandeshAsyncTest, Async) {
     ObjectLogInnerAnnTest::Send("ObjectLogInnerAnnTest", SandeshLevel::SYS_INFO, "", 0, s3); // case 5
 
     // Wait server is done receiving msgs
-    WAIT_FOR(asyncserver_done);
+    TASK_UTIL_EXPECT_TRUE(asyncserver_done);
 
     {
         tbb::mutex::scoped_lock lock(Sandesh::stats_mutex_);
@@ -364,13 +353,11 @@ protected:
         task_util::WaitForIdle();
         Sandesh::Uninit();
         task_util::WaitForIdle();
-        WAIT_FOR(!server_->HasSessions());
+        TASK_UTIL_EXPECT_FALSE(server_->HasSessions());
         task_util::WaitForIdle();
         server_->Shutdown();
         task_util::WaitForIdle();
         TcpServerManager::DeleteServer(server_);
-        task_util::WaitForIdle();
-        SandeshHttp::Uninit();
         task_util::WaitForIdle();
         evm_->Shutdown();
         if (thread_.get() != NULL) {
@@ -400,12 +387,12 @@ TEST_F(SandeshRequestTest, Request) {
     Sandesh::InitGenerator("SandeshRequestTest-Client", "localhost",
             evm_.get(), 0, NULL);
     Sandesh::ConnectToCollector("127.0.0.1", port);
-    WAIT_FOR(Sandesh::client()->state() == SandeshClientSM::ESTABLISHED);
+    TASK_UTIL_EXPECT_TRUE(Sandesh::client()->state() == SandeshClientSM::ESTABLISHED);
     // Send the request
     std::string context;
     SandeshRequestTest1::Request(xmldata, test_i32, context);
     // Wait server is done receiving msgs
-    WAIT_FOR(requestserver_done);
+    TASK_UTIL_EXPECT_TRUE(requestserver_done);
 }
 
 class SandeshBufferTest : public ::testing::Test {

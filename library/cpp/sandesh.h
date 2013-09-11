@@ -300,6 +300,8 @@ protected:
     static SandeshClient *client_;
 
 private:
+    friend class SandeshTracePerfTest;
+
     static void InitReceive(int recv_task_inst = -1);
     static void InitClient(EventManager *evm, Endpoint server);
     static bool ProcessRecv(SandeshRequest *);
@@ -332,9 +334,6 @@ private:
     SandeshLevel::type level_;
     std::string category_;
     std::string name_;
-
-    friend void boost::checked_delete<Sandesh>(Sandesh * x);
-    boost::shared_ptr<Sandesh> self_;
 };
 
 class SandeshRequest : public Sandesh,
@@ -389,6 +388,7 @@ public:
     const uint32_t seqnum() { return xseqnum_; }
     virtual void SendTrace(const std::string& context, bool more) = 0;
     const bool get_more() const { return more_; }
+    virtual ~SandeshTrace() {}
 protected:
     SandeshTrace(const std::string& name, uint32_t seqno) :
         Sandesh(SandeshType::TRACE, name, 0), xseqnum_(0), more_(true) {}

@@ -40,7 +40,7 @@ class SandeshMsgTest(unittest.TestCase):
     def setUpClass(cls):
         http_port = test_utils.get_free_port()
         sandesh_global.init_generator('sandesh_msg_test', socket.gethostname(), 
-                                      ('127.0.0.1', 8086), 'sandesh_msg_test_ctxt', http_port)
+                [('127.0.0.1', 8086)], 'sandesh_msg_test_ctxt', http_port)
 
     def setUp(self):
         self._session = SandeshMsgTestHelper()

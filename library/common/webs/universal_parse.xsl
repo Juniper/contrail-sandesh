@@ -36,7 +36,7 @@
                                     <span class="icon-bar"></span>
                                 </a>
                                 <a class="brand" href="#">
-                                    JunosV Contrail
+                                    Contrail
                                 </a>
                                 <div class="nav-collapse collapse navbar-responsive-collapse">
                                     <ul class="nav pull-right">

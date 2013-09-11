@@ -40,8 +40,8 @@ using boost::system::error_code;
 namespace mpl = boost::mpl;
 namespace sc = boost::statechart;
 
-#define SM_LOG(_Level, _Msg) \
-    do { \
+#define SM_LOG(_Level, _Msg)                                                   \
+    do {                                                                       \
         if (LoggingDisabled()) break;                                          \
         log4cplus::Logger _Xlogger = log4cplus::Logger::getRoot();             \
         if (_Xlogger.isEnabledFor(log4cplus::_Level##_LOG_LEVEL)) {            \
@@ -73,7 +73,7 @@ struct EvStop : sc::event<EvStop> {
 };
 
 struct EvIdleHoldTimerExpired : sc::event<EvIdleHoldTimerExpired> {
-    EvIdleHoldTimerExpired(Timer *timer)  : timer_(timer){
+    EvIdleHoldTimerExpired(Timer *timer)  : timer_(timer) {
     }
     static const char * Name() {
         return "EvIdleHoldTimerExpired";
@@ -111,6 +111,7 @@ struct EvTcpClose : sc::event<EvTcpClose> {
 // Used to defer the session delete after all events currently on the queue.
 struct EvTcpDeleteSession : sc::event<EvTcpDeleteSession> {
     EvTcpDeleteSession(SandeshSession *session) : session(session) {
+        SESSION_LOG(session);
     }
     static const char *Name() {
         return "EvTcpDeleteSession";
@@ -184,9 +185,9 @@ struct DeleteTcpSession {
 };
 
 template <class Ev>
-struct HandleMessage {
+struct ProcessMessage {
     typedef sc::in_state_reaction<Ev, SandeshStateMachine,
-            &SandeshStateMachine::HandleMessage<Ev> > reaction;
+            &SandeshStateMachine::ProcessMessage<Ev> > reaction;
 };
 
 struct Idle : public sc::state<Idle, SandeshStateMachine> {
@@ -269,7 +270,7 @@ struct Active : public sc::state<Active, SandeshStateMachine> {
         SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name());
         state_machine->set_session(NULL);
-        return discard_event();
+        return transit<Idle>();
     }
 };
 
@@ -294,16 +295,18 @@ struct ServerInit : public sc::state<ServerInit, SandeshStateMachine> {
     sc::result react(const EvTcpClose &event) {
         SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name());
-        return ResetSession(state_machine);
+        state_machine->set_session(NULL);
+        return transit<Idle>();
     }
 
     sc::result react(const EvSandeshCtrlMessageRecv &event) {
         SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name());
         SandeshConnection *connection = state_machine->connection();
-        if (!connection->HandleSandeshCtrlMessage(event.msg, event.header,
+        if (!connection->ProcessSandeshCtrlMessage(event.msg, event.header,
                 event.msg_type, event.header_offset)) {
-            return ResetSession(state_machine);
+            state_machine->set_session(NULL);
+            return transit<Idle>();
         }
         return transit<Established>();
     }
@@ -312,23 +315,11 @@ struct ServerInit : public sc::state<ServerInit, SandeshStateMachine> {
         SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name());
         SandeshConnection *connection = state_machine->connection();
-        if (!connection->HandleSandeshMessage(event.msg, event.header,
+        if (!connection->ProcessSandeshMessage(event.msg, event.header,
                 event.msg_type, event.header_offset)) {
-            return ResetSession(state_machine);
+            state_machine->set_session(NULL);
+            return transit<Idle>();
         }
-        return discard_event();
-    }
-    //
-    // Reset established session
-    //
-    // Bring down the state to IDLE, notify interested parties, cleanup and
-    // reset the state machine
-    //
-    sc::result ResetSession(SandeshStateMachine *state_machine) {
-        // session in the connection will be reset to NULL
-        // asynchronously  after cleanup is complete
-        state_machine->set_session(NULL);
-        state_machine->set_state(ssm::IDLE);
         return discard_event();
     }
 };
@@ -339,7 +330,7 @@ struct Established : public sc::state<Established, SandeshStateMachine> {
         sc::custom_reaction<EvTcpClose>,
         sc::custom_reaction<EvSandeshMessageRecv>,
         DeleteTcpSession<EvTcpDeleteSession>::reaction,
-        HandleMessage<EvMessageRecv>::reaction
+        ProcessMessage<EvMessageRecv>::reaction
     > reactions;
 
     Established(my_context ctx) : my_base(ctx) {
@@ -351,29 +342,22 @@ struct Established : public sc::state<Established, SandeshStateMachine> {
     sc::result react(const EvTcpClose &event) {
         SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name());
+        // Process disconnect
         SandeshConnection *connection = state_machine->connection();
-        SandeshSession *sess = static_cast<SandeshSession *>(state_machine->session());
-        connection->HandleDisconnect(sess);
-        return ResetSession(state_machine);
+        connection->ProcessDisconnect(state_machine->session());
+        // Reset the session
+        state_machine->set_session(NULL);
+        return transit<Idle>();
     }
 
     sc::result react(const EvSandeshMessageRecv &event) {
         SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
         SandeshConnection *connection = state_machine->connection();
-        if (!connection->HandleSandeshMessage(event.msg, event.header,
+        if (!connection->ProcessSandeshMessage(event.msg, event.header,
                 event.msg_type, event.header_offset)) {
-            return ResetSession(state_machine);
+            state_machine->set_session(NULL);
+            return transit<Idle>();
         }
-        return discard_event();
-    }
-
-    //
-    // Reset established session
-    //
-    sc::result ResetSession(SandeshStateMachine *state_machine) {
-        // Release all resources
-        state_machine->set_session(NULL);
-        state_machine->set_state(ssm::IDLE);
         return discard_event();
     }
 };
@@ -382,47 +366,40 @@ struct Established : public sc::state<Established, SandeshStateMachine> {
 
 SandeshStateMachine::SandeshStateMachine(const char *prefix, SandeshConnection *connection)
     : prefix_(prefix),
-      work_queue_(TaskScheduler::GetInstance()->GetTaskId("sandesh::StateMachine"),
-                  connection->GetIndex(),
+      work_queue_(connection->GetTaskId(),
+                  connection->GetTaskInstance(),
                   boost::bind(&SandeshStateMachine::DequeueEvent, this, _1)),
       connection_(connection),
       session_(),
-      idle_hold_timer_(TimerManager::CreateTimer(*connection->server()->event_manager()->io_service(), "Idle hold timer")),
-      periodic_timer_(TimerManager::CreateTimer(*connection->server()->event_manager()->io_service(), "Periodic timer")),
+      idle_hold_timer_(TimerManager::CreateTimer(
+              *connection->server()->event_manager()->io_service(),
+              "Idle hold timer", 
+              connection->GetTaskId(),
+              connection->GetTaskInstance())),
+      statistics_timer_(TimerManager::CreateTimer(
+              *connection->server()->event_manager()->io_service(),
+              "Statistics timer",
+              connection->GetTaskId(),
+              connection->GetTaskInstance())),
       idle_hold_time_(0),
+      statistics_timer_interval_(kStatisticsSendInterval),
       deleted_(false),
-      in_dequeue_(false),
-      tot_enqueues_(0),
-      tot_dequeues_(0) {
+      enqueues_(0),
+      enqueue_fails_(0),
+      dequeues_(0),
+      dequeue_fails_(0) {
     state_ = ssm::IDLE;
     initiate();
-    periodic_timer_->Start(PeriodicTimeSec * 1000,
-            boost::bind(&SandeshStateMachine::PeriodicTimerExpired, this),
-            boost::bind(&SandeshStateMachine::PeriodicTimerErrorHandler, this, _1, _2));
+    StartStatisticsTimer();
 }
 
 SandeshStateMachine::~SandeshStateMachine() {
-    tbb::mutex::scoped_lock lock(mutex_);
-    TcpSession *sess = session();
-
     assert(!deleted_);
     deleted_ = true;
 
-    //
-    // XXX Temporary hack until config task is made to run exclusively wrt
-    // all other threads including main()
-    //
-    while (in_dequeue_) usleep(100);
-
     work_queue_.Shutdown();
 
-    //
-    // If there is a session assigned to this state machine, reset the observer
-    // so that tcp does not have a reference to 'this' which is going away
-    //
-    if (sess) {
-        set_session(NULL);
-    }
+    assert(session() == NULL);
 
     //
     // Explicitly call the state destructor before the state machine itself.
@@ -436,7 +413,7 @@ SandeshStateMachine::~SandeshStateMachine() {
     // possible reference to the timers being deleted any more
     //
     TimerManager::DeleteTimer(idle_hold_timer_);
-    TimerManager::DeleteTimer(periodic_timer_);
+    TimerManager::DeleteTimer(statistics_timer_);
 }
 
 void SandeshStateMachine::Initialize() {
@@ -458,6 +435,16 @@ void SandeshStateMachine::SetAdminState(bool down) {
     }
 }
 
+// Note this api does not enqueue the deletion of TCP session
+void SandeshStateMachine::clear_session() {
+    if (session_ != NULL) {
+        session_->set_observer(NULL);
+        session_->Close();
+        connection_->set_session(NULL);
+        session_ = NULL;
+    }
+}
+
 void SandeshStateMachine::set_session(SandeshSession *session) {
     if (session_ != NULL) {
         DeleteSession(session_);
@@ -472,7 +459,7 @@ void SandeshStateMachine::DeleteSession(SandeshSession *session) {
     Enqueue(ssm::EvTcpDeleteSession(session));
 }
 
-TcpSession *SandeshStateMachine::session() {
+SandeshSession *SandeshStateMachine::session() {
     return session_;
 }
 
@@ -489,11 +476,15 @@ void SandeshStateMachine::OnIdle(const Ev &event) {
 template <class Ev>
 void SandeshStateMachine::DeleteTcpSession(const Ev &event) {
     event.session->connection()->server()->DeleteSession(event.session);
+    SandeshConnection *connection = this->connection();
+    if (connection) {
+        connection->ManagedDelete();
+    }
 }
 
 template <class Ev>
-void SandeshStateMachine::HandleMessage(const Ev &event) {
-    connection()->HandleMessage(event.msg.get());
+void SandeshStateMachine::ProcessMessage(const Ev &event) {
+    connection()->ProcessMessage(event.msg.get());
 }
 
 void SandeshStateMachine::StartIdleHoldTimer() {
@@ -502,7 +493,15 @@ void SandeshStateMachine::StartIdleHoldTimer() {
 
     idle_hold_timer_->Start(idle_hold_time_,
             boost::bind(&SandeshStateMachine::IdleHoldTimerExpired, this),
-            boost::bind(&SandeshStateMachine::TimerErrorHanlder, this, _1, _2));
+            boost::bind(&SandeshStateMachine::TimerErrorHandler, this, _1,
+                    _2));
+}
+
+void SandeshStateMachine::StartStatisticsTimer() {
+    statistics_timer_->Start(statistics_timer_interval_,
+            boost::bind(&SandeshStateMachine::StatisticsTimerExpired, this),
+            boost::bind(&SandeshStateMachine::TimerErrorHandler, this, _1,
+                    _2));
 }
 
 void SandeshStateMachine::CancelIdleHoldTimer() {
@@ -523,37 +522,39 @@ void SandeshStateMachine::IdleHoldTimerFired() {
 // Test Only API : End
 //
 
-void SandeshStateMachine::TimerErrorHanlder(std::string name, std::string error) {
+void SandeshStateMachine::TimerErrorHandler(std::string name, std::string error) {
     SM_LOG(ERROR, name + " error: " + error);
 }
 
-/* TBD restart timer on error */
-void SandeshStateMachine::PeriodicTimerErrorHandler(std::string name, std::string error) {
-    SM_LOG(ERROR, name + " error: " + error);
-}
-
-bool SandeshStateMachine::PeriodicTimerExpired() {
-    if (!deleted_ && !state_machine_key_.empty()) {
-        std::vector<SandeshStateMachineEvStats> sm_stats;
-
-        tbb::mutex::scoped_lock lock(stats_mutex_);
-        EventStatsMap::iterator it;
-        for (it = event_stats_.begin(); it != event_stats_.end(); it++) {
-            EventStats *es = it->second;
-            SandeshStateMachineEvStats ev_stats;
-            ev_stats.generator = it->first;
-            ev_stats.enqueues = es->enqueues;
-            ev_stats.count = es->enqueues - es->dequeues;
-            sm_stats.push_back(ev_stats);
-        }
-
-        SandeshStateMachineInfo_s sm_info;
-        sm_info.set_agg_count(tot_enqueues_ - tot_dequeues_);
-        sm_info.set_name(state_machine_key_);
-        sm_info.set_sm_stats(sm_stats);
-        SandeshStateMachineInfo::Send(sm_info);
+bool SandeshStateMachine::StatisticsTimerExpired() {
+    if (deleted_ || generator_key_.empty()) {
+        return true;
     }
-
+    std::vector<SandeshStateMachineEvStats> sm_stats;
+    tbb::mutex::scoped_lock lock(stats_mutex_);
+    for (EventStatsMap::const_iterator it = event_stats_.begin();
+            it != event_stats_.end(); ++it) {
+        const EventStats *es = it->second;
+        SandeshStateMachineEvStats ev_stats;
+        ev_stats.event = it->first;
+        ev_stats.enqueues = es->enqueues;
+        ev_stats.dequeues = es->dequeues;
+        ev_stats.enqueue_fails = es->enqueue_fails;
+        ev_stats.dequeue_fails = es->dequeue_fails;
+        sm_stats.push_back(ev_stats);
+    }
+    lock.release();
+    // Send the message
+    SandeshStateMachineData sm_info;
+    sm_info.set_agg_count(enqueues_ - dequeues_);
+    sm_info.set_name(generator_key_);
+    sm_info.set_sm_stats(sm_stats);
+    sm_info.set_state(StateName());
+    sm_info.set_last_state(LastStateName());
+    sm_info.set_last_event(last_event());
+    sm_info.set_state_since(state_since_);
+    sm_info.set_last_event_at(last_event_at_);
+    SandeshStateMachineInfo::Send(sm_info);
     return true;
 }
 
@@ -600,10 +601,13 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
     SandeshReader::ExtractMsgHeader(msg, header, message_type, xml_offset);
     
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
-        SM_LOG(DEBUG, "OnMessage control in state: " << StateName() << " session " << session->ToString());
-        Enqueue(ssm::EvSandeshCtrlMessageRecv(msg, header, message_type, xml_offset));
+        SM_LOG(DEBUG, "OnMessage control in state: " << StateName() <<
+                " session " << session->ToString());
+        Enqueue(ssm::EvSandeshCtrlMessageRecv(msg, header,
+                message_type, xml_offset));
     } else {
-        Enqueue(ssm::EvSandeshMessageRecv(msg, header, message_type, xml_offset));
+        Enqueue(ssm::EvSandeshMessageRecv(msg, header, message_type,
+                xml_offset));
     }
 }
 
@@ -626,9 +630,6 @@ const string &SandeshStateMachine::LastStateName() const {
     return state_names[last_state_];
 }
 
-const int SandeshStateMachine::kConnectInterval;
-
- 
 bool SandeshStateMachine::LogEvent(const sc::event_base *event) {
     if (state_ == ssm::ESTABLISHED) {
         const ssm::EvSandeshMessageRecv *snh_rcv = 
@@ -640,39 +641,74 @@ bool SandeshStateMachine::LogEvent(const sc::event_base *event) {
     return true;
 }
 
+void SandeshStateMachine::UpdateEventEnqueue(const sc::event_base &event) {
+    UpdateEventStats(event, true, false);
+}
+
+void SandeshStateMachine::UpdateEventDequeue(const sc::event_base &event) {
+    UpdateEventStats(event, false, false);
+}
+
+void SandeshStateMachine::UpdateEventEnqueueFail(const sc::event_base &event) {
+    UpdateEventStats(event, true, true);
+}
+
+void SandeshStateMachine::UpdateEventDequeueFail(const sc::event_base &event) {
+    UpdateEventStats(event, false, true);
+}
+
+void SandeshStateMachine::UpdateEventStats(const sc::event_base &event,
+        bool enqueue, bool fail) {
+    tbb::mutex::scoped_lock lock(stats_mutex_);
+    std::string event_name(TYPE_NAME(event));
+    EventStatsMap::iterator it = event_stats_.find(event_name);
+    if (it == event_stats_.end()) {
+        it = (event_stats_.insert(event_name, new EventStats)).first;
+    }
+    EventStats *es = it->second;
+    if (enqueue) {
+        if (fail) {
+            es->enqueue_fails++;
+            enqueue_fails_++;
+        } else {
+            es->enqueues++;
+            enqueues_++;
+        }
+    } else {
+        if (fail) {
+            es->dequeue_fails++;
+            dequeue_fails_++;
+        } else {
+            es->dequeues++;
+            dequeues_++;
+        }
+    }
+}
 
 bool SandeshStateMachine::DequeueEvent(SandeshStateMachine::EventContainer ec) {
-    if (deleted_) return true;
-    in_dequeue_ = true;
-
-    // update stats
-      {
-        tbb::mutex::scoped_lock lock(stats_mutex_);
-        std::string event_name(TYPE_NAME(*ec.event));
-        EventStatsMap::iterator it = event_stats_.find(event_name);
-        if (it == event_stats_.end()) {
-            it = (event_stats_.insert(event_name, new EventStats)).first;
-        }
-        EventStats *es = it->second;
-        es->dequeues++;
-        tot_dequeues_++;
-      }
-
+    if (deleted_) {
+        // Update event stats
+        UpdateEventDequeueFail(*ec.event);
+        ec.event.reset();
+        return true;
+    }
     set_last_event(TYPE_NAME(*ec.event));
     if (ec.validate.empty() || ec.validate(this)) {
         // Log only relevant events and states
         if (LogEvent(ec.event.get())) {
             SM_LOG(DEBUG, "Processing " << TYPE_NAME(*ec.event) << " in state "
                    << StateName());
-        } 
+        }
+        // Update event stats
+        UpdateEventDequeue(*ec.event);
         process_event(*ec.event);
     } else {
         SM_LOG(DEBUG, "Discarding " << TYPE_NAME(*ec.event) << " in state "
                 << StateName());
+        // Update event stats
+        UpdateEventDequeueFail(*ec.event);
     }
-
     ec.event.reset();
-    in_dequeue_ = false;
     return true;
 }
 
@@ -705,20 +741,20 @@ struct ValidateFn<Ev, true> {
 
 template <typename Ev>
 void SandeshStateMachine::Enqueue(const Ev &event) {
-    if (deleted_) return;
-
+    if (deleted_) {
+        // Update event stats
+        UpdateEventEnqueueFail(event);
+        return;
+    }
     EventContainer ec;
     ec.event = event.intrusive_from_this();
     ec.validate = ValidateFn<Ev, HasValidate<Ev>::Has>()(static_cast<const Ev *>(ec.event.get()));
-    work_queue_.Enqueue(ec);
-
-    tbb::mutex::scoped_lock lock(stats_mutex_);
-    std::string event_name(TYPE_NAME(*ec.event));
-    EventStatsMap::iterator it = event_stats_.find(event_name);
-    if (it == event_stats_.end()) {
-        it = (event_stats_.insert(event_name, new EventStats)).first;
+    if (!work_queue_.Enqueue(ec)) {
+        // Update event stats
+        UpdateEventEnqueueFail(event);
+        return;
     }
-    EventStats *es = it->second;
-    es->enqueues++;
-    tot_enqueues_++;
+    // Update event stats
+    UpdateEventEnqueue(event);
+    return;
 }

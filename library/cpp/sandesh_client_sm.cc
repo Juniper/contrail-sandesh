@@ -217,6 +217,7 @@ struct Idle : public sc::state<Idle, SandeshClientSMImpl> {
         SandeshClientSMImpl *state_machine = &context<SandeshClientSMImpl>();
         state_machine->set_state(SandeshClientSM::IDLE);
         SM_LOG(DEBUG, state_machine->StateName());
+        state_machine->SendUVE();
     }
 
     ~Idle() {
@@ -271,6 +272,7 @@ struct Disconnect : public sc::state<Disconnect, SandeshClientSMImpl> {
         SandeshClientSMImpl *state_machine = &context<SandeshClientSMImpl>();
         state_machine->set_state(SandeshClientSM::DISCONNECT);
         SM_LOG(DEBUG, state_machine->StateName());
+        state_machine->SendUVE();
     }
 
     sc::result react(const EvDiscUpdate &event) {
@@ -308,10 +310,7 @@ struct Connect : public sc::state<Connect, SandeshClientSMImpl> {
         SM_LOG(DEBUG, state_machine->StateName() << " : " << "Start Connect timer " <<
             state_machine->server());
         state_machine->StartConnectTimer(state_machine->GetConnectTime());
-        TcpServer::Endpoint pri,sec;
-        state_machine->GetCandidates(pri, sec);
-        state_machine->GetMgr()->SendUVE(state_machine->connects(), state_machine->StateName(), "",
-            pri, sec);
+        state_machine->SendUVE();
     }
 
     ~Connect() {
@@ -400,10 +399,7 @@ struct ClientInit : public sc::state<ClientInit, SandeshClientSMImpl> {
         state_machine->CancelConnectTimer();
         state_machine->StartConnectTimer(state_machine->GetConnectTime());
         state_machine->GetMgr()->InitializeSMSession(state_machine->connects_inc());
-        TcpServer::Endpoint pri,sec;
-        state_machine->GetCandidates(pri, sec);
-        state_machine->GetMgr()->SendUVE(state_machine->connects(), state_machine->StateName(), "",
-            pri, sec);
+        state_machine->SendUVE();
     }
 
     ~ClientInit() {
@@ -487,10 +483,12 @@ struct Established : public sc::state<Established, SandeshClientSMImpl> {
         state_machine->set_state(SandeshClientSM::ESTABLISHED);
         SM_LOG(DEBUG, state_machine->StateName());
         state_machine->connect_attempts_clear();
-        TcpServer::Endpoint pri,sec;
-        state_machine->GetCandidates(pri, sec);
-        state_machine->GetMgr()->SendUVE(state_machine->connects(), state_machine->StateName(),
-            state_machine->collector_name(), pri, sec);
+        state_machine->SendUVE();
+    }
+
+    ~Established() {
+        SandeshClientSMImpl *state_machine = &context<SandeshClientSMImpl>();
+        state_machine->set_collector_name(string());
     }
 
     sc::result react(const EvTcpClose &event) {
@@ -680,12 +678,9 @@ void SandeshClientSMImpl::OnSessionEvent(
     }
 }
 
-bool SandeshClientSMImpl::SendSandesh(Sandesh * snh) {
-    if ((state_ == CLIENT_INIT) || (state_ == ESTABLISHED))  {
-        Enqueue(scm::EvSandeshSend(snh));
-        return true;
-    }
-    return false;
+bool SandeshClientSMImpl::SendSandeshUVE(Sandesh * snh) {
+    Enqueue(scm::EvSandeshSend(snh));
+    return true;
 }
 
 void SandeshClientSMImpl::OnMessage(SandeshSession *session,
@@ -788,6 +783,8 @@ void SandeshClientSMImpl::Enqueue(const Ev &event) {
 SandeshClientSMImpl::SandeshClientSMImpl(EventManager *evm, Mgr *mgr,
         int sm_task_instance, int sm_task_id)
     :   SandeshClientSM(mgr),
+        active_(TcpServer::Endpoint()),
+        backup_(TcpServer::Endpoint()),
         work_queue_(sm_task_id, sm_task_instance,
                 boost::bind(&SandeshClientSMImpl::DequeueEvent, this, _1)),
         connect_timer_(TimerManager::CreateTimer(*evm->io_service(), "Client Connect timer")),
@@ -796,7 +793,8 @@ SandeshClientSMImpl::SandeshClientSMImpl(EventManager *evm, Mgr *mgr,
         attempts_(0),
         deleted_(false),
         in_dequeue_(false),
-        connects_(0) {
+        connects_(0),
+        coll_name_(string()) {
     state_ = IDLE;
     initiate();
 }
@@ -849,6 +847,7 @@ void SandeshClientSMImpl::SetCandidates(
 
 bool SandeshClientSMImpl::DiscUpdate(State from_state, bool update,
         TcpServer::Endpoint active, TcpServer::Endpoint backup) {
+
     if (update) {
         active_ = active;
         backup_ = backup;        
@@ -856,6 +855,7 @@ bool SandeshClientSMImpl::DiscUpdate(State from_state, bool update,
     if ((from_state == DISCONNECT) ||
         ((from_state == IDLE) && (!update))) {
             set_server(active_);
+            SendUVE();
             return true;
     }
     if ((from_state == ESTABLISHED)||(from_state == CONNECT)) {
@@ -865,11 +865,13 @@ bool SandeshClientSMImpl::DiscUpdate(State from_state, bool update,
                 backup_ = active_;
                 active_ = temp; 
                 set_server(active_);
+                SendUVE();
                 return true;
             }
         } else {
             if (server()!=active_) {
                 set_server(active_);
+                SendUVE();
                 return true;                
             }
         }
@@ -877,9 +879,11 @@ bool SandeshClientSMImpl::DiscUpdate(State from_state, bool update,
     if (from_state == CLIENT_INIT) {
         if (server()!=active_) {
             set_server(active_);
+            SendUVE();
             return true;                
         }
     }
+    SendUVE();
     return false;
 }
 

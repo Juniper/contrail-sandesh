@@ -848,8 +848,7 @@ Sandesh:
       if ($1 == g_type_sandesh_response) {
           $5->append(new t_field(g_type_bool, "more", 0, true));
       } else if ($1 == g_type_sandesh_request) {
-      } else if ($1 == g_type_sandesh_system || $1 == g_type_sandesh_object ||
-                 $1 == g_type_sandesh_flow) {   
+      } else if ($1 == g_type_sandesh_system || $1 == g_type_sandesh_object) {
           $5->append(new t_field(g_type_string, "file", SHRT_MIN, true));
           $5->append(new t_field(g_type_i32, "line", SHRT_MIN + 1, true));
       } else if ($1 == g_type_sandesh_trace || $1 == g_type_sandesh_trace_object) {

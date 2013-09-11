@@ -14,29 +14,29 @@ from sandesh_uve import SandeshUVETypeMaps
 
 class SandeshClient(object):
 
-    def __init__(self, sandesh, server):
-        self._server = server
-        self._connection = None
-        self._retry_count = 0
+    def __init__(self, sandesh, primary_collector, secondary_collector,
+                 discovery_client):
         self._sandesh_instance = sandesh
+        self._primary_collector  = primary_collector
+        self._secondary_collector = secondary_collector
+        self._discovery_client = discovery_client
         self._logger = sandesh._logger
+        self._connection = None
     #end __init__
 
     # Public functions
 
     def initiate(self):
         self._connection = SandeshConnection(self._sandesh_instance,
-                                             self._server,
-                                             self)
+                                             self,
+                                             self._primary_collector,
+                                             self._secondary_collector,
+                                             self._discovery_client)
     #end initiate
 
     def connection(self):
         return self._connection
     #end connection
-
-    def server(self):
-        return self._server
-    #end server
 
     def send_sandesh(self, sandesh):
         if (self._connection.session() is not None) and \

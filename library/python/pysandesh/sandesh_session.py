@@ -6,6 +6,7 @@
 # Sandesh Session
 #
 
+import socket
 from transport import TTransport
 from protocol import TXMLProtocol
 from work_queue import WorkQueue
@@ -216,7 +217,10 @@ class SandeshWriter(object):
 #end class SandeshWriter
 
 class SandeshSession(TcpSession):
-
+    _KEEPALIVE_IDLE_TIME = 45 # in secs
+    _KEEPALIVE_INTERVAL = 3 # in secs
+    _KEEPALIVE_PROBES = 5
+    
     def __init__(self, sandesh_instance, server, event_handler, sandesh_msg_handler):
         self._sandesh_instance = sandesh_instance
         self._logger = sandesh_instance._logger
@@ -229,10 +233,6 @@ class SandeshSession(TcpSession):
     #end __init__
 
     # Public functions
-
-    def set_connection(self, connection):
-        self._connection = connection
-    #end set_connection
 
     def sandesh_instance(self):
         return self._sandesh_instance
@@ -252,6 +252,10 @@ class SandeshSession(TcpSession):
 
     # Overloaded functions from TcpSession
 
+    def connect(self):
+        TcpSession.connect(self, timeout=5)
+    #end connect
+
     def _on_read(self, buf):
         if self._reader.read_msg(buf) < 0:
             self._logger.error('SandeshReader Error. Close Collector session')
@@ -261,6 +265,18 @@ class SandeshSession(TcpSession):
     def _handle_event(self, event):
         self._event_handler(self, event)
     #end _handle_event
+
+    def _set_socket_options(self):
+        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            self._socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, self._KEEPALIVE_IDLE_TIME)
+        if hasattr(socket, 'TCP_KEEPALIVE'):
+            self._socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPALIVE, self._KEEPALIVE_IDLE_TIME)
+        if hasattr(socket, 'TCP_KEEPINTVL'):
+            self._socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, self._KEEPALIVE_INTERVAL)
+        if hasattr(socket, 'TCP_KEEPCNT'):
+            self._socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, self._KEEPALIVE_PROBES)
+    #end _set_socket_options
 
     # Private functions
 

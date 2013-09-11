@@ -134,8 +134,8 @@ class SandeshConnection;
 class SandeshSession : public TcpSession {
 public:
     typedef boost::function<void(const std::string&, SandeshSession *)> ReceiveMsgCb;
-    SandeshSession(TcpServer *client, Socket *socket, int sendq_task_instance,
-            int sendq_task_id);
+    SandeshSession(TcpServer *client, Socket *socket, int task_instance, 
+        int task_id);
     virtual ~SandeshSession();
     virtual void OnRead(Buffer buffer);
     virtual void WriteReady(const boost::system::error_code &ec) {
@@ -163,17 +163,27 @@ public:
     ReceiveMsgCb receive_msg_cb() {
         return cb_;
     }
-    static Sandesh * 
-    DecodeCtrlSandesh(const std::string& msg, const SandeshHeader& header,
+    virtual int GetSessionInstance() const {
+        return instance_;
+    }
+    virtual boost::system::error_code SetSocketOptions();
+    virtual std::string ToString() const;
+    static Sandesh * DecodeCtrlSandesh(const std::string& msg, const SandeshHeader& header,
         const std::string& sandesh_name, const uint32_t& header_offset);
 
 private:
     friend class SandeshSessionTest;
 
+    // 60 seconds - 45s + (3*5)s
+    static const int kSessionKeepaliveIdleTime = 45; // in seconds
+    static const int kSessionKeepaliveInterval = 3; // in seconds
+    static const int kSessionKeepaliveProbes = 5; // count
+
     bool SendMsg(Sandesh *sandesh);
     bool SendBuffer(boost::shared_ptr<TMemoryBuffer> sbuffer);
     bool SessionSendReady();
 
+    int instance_;
     boost::scoped_ptr<SandeshWriter> writer_;
     boost::scoped_ptr<SandeshReader> reader_;
     boost::scoped_ptr<Sandesh::SandeshQueue> send_queue_;
@@ -181,6 +191,9 @@ private:
     SandeshConnection *connection_;
     ReceiveMsgCb cb_;
     tbb::mutex smutex_;
+    int keepalive_idle_time_;
+    int keepalive_interval_;
+    int keepalive_probes_;
 
     DISALLOW_COPY_AND_ASSIGN(SandeshSession);
 };

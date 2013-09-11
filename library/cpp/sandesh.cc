@@ -51,10 +51,6 @@ Sandesh::SandeshCallback Sandesh::response_callback_ = 0;
 SandeshLevel::type Sandesh::logging_level_ = SandeshLevel::INVALID;
 std::string Sandesh::logging_category_;
 EventManager* Sandesh::event_manager_ = NULL;
-
-template<> Trace<boost::shared_ptr<Sandesh> > 
-        *Trace<boost::shared_ptr<Sandesh> >::trace_ = NULL;
-
 SandeshGenStatsCollection Sandesh::stats_;
 tbb::mutex Sandesh::stats_mutex_;
 
@@ -236,6 +232,7 @@ void Sandesh::Uninit() {
         if (HttpSession::GetPendingTaskCount() == 0) break;
         usleep(1000);
     }
+    SandeshHttp::Uninit();
     role_ = Invalid;
     if (recv_queue_.get() != NULL) {
         recv_queue_->Shutdown();
@@ -332,38 +329,6 @@ bool Sandesh::ProcessRecv(SandeshRequest *rsnh) {
 }
 
 void SandeshRequest::Release() { self_.reset(); }
-
-bool Sandesh::SendReady(SandeshConnection * connection) {
-
-    assert(connection);
-
-    SandeshSession *session = connection->session();
-    if (!session) {
-        return false;
-    }
-    if ((connection->GetStateMachineState() != ssm::ESTABLISHED) &&
-        (connection->GetStateMachineState() != ssm::SERVER_INIT)) {
-        return false;
-    }    
-
-    return true;
-}
-
-bool Sandesh::SendEnqueue() {
-    if (!client_) {
-        LOG(INFO, __func__ << " Cannot Send : No client");
-        Log();
-        Release();
-        return false;        
-    } 
-    if (!client_->SendSandesh(this)) {
-        LOG(INFO, __func__ << " Cannot Send : No session");
-        Log();
-        Release();
-        return false;
-    }
-    return true;
-}
 
 int32_t Sandesh::WriteBinary(u_int8_t *buf, u_int32_t buf_len,
         int *error) {
@@ -474,21 +439,30 @@ bool Sandesh::HandleTest() {
     return false;
 }
 
+bool Sandesh::SendEnqueue() {
+    if (!client_) {
+        LOG(INFO, __func__ << " Cannot Send : No client");
+        Log();
+        Release();
+        return false;        
+    } 
+    if (!client_->SendSandesh(this)) {
+        LOG(INFO, __func__ << " Cannot Send : No session");
+        Log();
+        Release();
+        return false;
+    }
+    return true;
+}
+
 bool Sandesh::Dispatch(SandeshConnection * sconn) {
     // Handle unit test
     if (HandleTest()) {
         return true;
     }
-
+    // Sandesh client does not have a connection
     if (sconn) {
-        if (!Sandesh::SendReady(sconn)) {
-            Log();
-            Release();
-            return false;
-        } else {
-            SandeshSession *session = sconn->session();
-            return Enqueue(session->send_queue());
-        }
+        return sconn->SendSandesh(this);
     } else {
         return SendEnqueue();
     }
@@ -503,11 +477,7 @@ bool SandeshResponse::Dispatch(SandeshConnection * sconn) {
     if (response_callback_) {
         response_callback_(this);
     }
-    // Handle unit test
-    if (HandleTest()) {
-        return true;
-    }
-    return SendEnqueue();
+    return Sandesh::Dispatch(sconn);
 }
 
 bool SandeshTrace::Dispatch(SandeshConnection * sconn) {
@@ -529,7 +499,19 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
     if (HandleTest()) {
         return true;
     }
-    return SendEnqueue();
+    if (client_) {
+        if (!client_->SendSandeshUVE(this)) {
+            LOG(ERROR, "SandeshClient UVE enqueue FAILED");
+            Log();
+            Release();
+            return false;
+        }
+        return true;
+    }
+    LOG(ERROR, "Not Ready to Dispatch SandeshUVE");
+    Log();
+    Release();
+    return false;
 }
 
 bool SandeshRequest::Enqueue(SandeshRxQueue *queue) {

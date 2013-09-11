@@ -1,0 +1,11 @@
+//
+//  sandesh_perf_test.sandesh
+//
+//  Sandesh definitions for performance test
+//
+//  Created by Megh Bhatt on 08/24/13.
+//  Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
+//
+
+response sandesh PerfTestSandesh {
+}

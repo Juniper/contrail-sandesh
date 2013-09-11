@@ -20,12 +20,14 @@ SandeshRWTestGenFiles  = env.SandeshGenCpp('sandesh_rw_test.sandesh')
 SandeshMessageTestGenFiles  = env.SandeshGenCpp('sandesh_message_test.sandesh')
 SandeshTraceTestGenFiles = env.SandeshGenCpp('sandesh_trace_test.sandesh')
 SandeshHttpTestGenFiles = env.SandeshGenCpp('sandesh_http_test.sandesh')
+SandeshPerfTestGenFiles = env.SandeshGenCpp('sandesh_perf_test.sandesh')
 
 SandeshRWTestGenSrcs = env.ExtractCpp(SandeshRWTestGenFiles)
 SandeshMessageTestGenSrcs = env.ExtractCpp(SandeshMessageTestGenFiles)
 SandeshTraceTestGenSrcs = env.ExtractCpp(SandeshTraceTestGenFiles)
 SandeshTraceTestGenObjs = env.Object(SandeshTraceTestGenSrcs)
 SandeshHttpTestGenSrcs = env.ExtractCpp(SandeshHttpTestGenFiles)
+SandeshPerfTestGenSrcs = env.ExtractCpp(SandeshPerfTestGenFiles)
 
 SandeshLibPath = ['#/build/lib',
                   Dir(env['TOP']).abspath + '/base',
@@ -61,6 +63,12 @@ env.Prepend(LIBS = SandeshLibs)
 
 if sys.platform != 'darwin':
     env.Append(LIBS = ['rt'])
+
+sandesh_perf_test = env.UnitTest('sandesh_perf_test',
+                                 SandeshPerfTestGenSrcs + 
+                                 ['sandesh_perf_test.cc'],
+                                )
+env.Alias('src/sandesh:sandesh_perf_test', sandesh_perf_test)
 
 sandesh_session_test = env.UnitTest('sandesh_session_test',
                                     ['sandesh_session_test.cc'],
@@ -112,12 +120,13 @@ env.Alias('src/sandesh:sandesh_client_test', sandesh_client_test)
 '''
 
 test_suite = [sandesh_message_test,
-           sandesh_rw_test,
-           sandesh_session_test,
-           sandesh_trace_test,
-           sandesh_http_test,
-           sandesh_state_machine_test,
-#                      sandesh_client_test,
+              sandesh_rw_test,
+              sandesh_session_test,
+              sandesh_trace_test,
+              sandesh_http_test,
+              sandesh_state_machine_test,
+              sandesh_perf_test,
+#             sandesh_client_test,
            ]
 
 test = env.TestSuite('sandesh-test', test_suite)

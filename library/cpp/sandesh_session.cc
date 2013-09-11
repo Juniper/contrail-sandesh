@@ -9,7 +9,6 @@
 //
 
 #include <boost/bind.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <base/logging.h>
@@ -30,6 +29,7 @@ using namespace contrail::sandesh::transport;
 
 using boost::asio::mutable_buffer;
 using boost::asio::buffer_cast;
+using boost::system::error_code;
 
 const std::string SandeshWriter::sandesh_open_ = sXML_SANDESH_OPEN;
 const std::string SandeshWriter::sandesh_open_attr_length_ =
@@ -96,15 +96,10 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
     uint8_t *buffer;
     int32_t xfer = 0, ret;
     uint32_t offset;
-
-
-    boost::shared_ptr<TMemoryBuffer> btrans =
-            boost::shared_ptr<TMemoryBuffer>(
+    boost::shared_ptr<TMemoryBuffer> btrans(
                     new TMemoryBuffer(kEncodeBufferSize));
-    boost::shared_ptr<TXMLProtocol> prot =
-            boost::shared_ptr<TXMLProtocol>(
+    boost::shared_ptr<TXMLProtocol> prot(
                     new TXMLProtocol(btrans));
-
     // Populate the header
     header.set_Namespace(sandesh->scope());
     header.set_Timestamp(sandesh->timestamp());
@@ -182,7 +177,7 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
 // send_buf_ => unsent data (partial/complete message).
 // buf => new message
 // buf_len => buf's len
-inline void SandeshWriter::SendMsgMore(boost::shared_ptr<TMemoryBuffer>
+void SandeshWriter::SendMsgMore(boost::shared_ptr<TMemoryBuffer>
                                             send_buffer) {
     uint8_t *buf;
     uint32_t buf_len;
@@ -231,8 +226,7 @@ inline void SandeshWriter::SendMsgMore(boost::shared_ptr<TMemoryBuffer>
 
 // sandesh->send_queue_ is empty. 
 // Flush unsent data (if any) and this message. 
-inline void SandeshWriter::SendMsgAll(boost::shared_ptr<TMemoryBuffer>
-                                           send_buffer) {
+void SandeshWriter::SendMsgAll(boost::shared_ptr<TMemoryBuffer> send_buffer) {
     uint8_t *buf;
     uint32_t buf_len;
 
@@ -307,17 +301,21 @@ bool SandeshSession::SessionSendReady() {
 }
 
 SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
-        int sendq_task_instance, int sendq_task_id) :
+        int task_instance, int task_id) :
     TcpSession(client, socket),
+    instance_(task_instance),
     writer_(new SandeshWriter(this)), 
     reader_(new SandeshReader(this)),
-    send_queue_(new Sandesh::SandeshQueue(sendq_task_id,
-            sendq_task_instance,
+    send_queue_(new Sandesh::SandeshQueue(task_id,
+            task_instance,
             boost::bind(&SandeshSession::SendMsg, this, _1),
-            boost::bind(&SandeshSession::SessionSendReady, this))) {
+            boost::bind(&SandeshSession::SessionSendReady, this))),
+    keepalive_idle_time_(kSessionKeepaliveIdleTime),
+    keepalive_interval_(kSessionKeepaliveInterval),
+    keepalive_probes_(kSessionKeepaliveProbes) {
     if (Sandesh::role() == Sandesh::Collector) {
-        send_buffer_queue_.reset(new Sandesh::SandeshBufferQueue(sendq_task_id,
-                sendq_task_instance,
+        send_buffer_queue_.reset(new Sandesh::SandeshBufferQueue(task_id,
+                task_instance,
                 boost::bind(&SandeshSession::SendBuffer, this, _1),
                 boost::bind(&SandeshSession::SessionSendReady, this)));
     }
@@ -328,6 +326,21 @@ SandeshSession::~SandeshSession() {
         send_buffer_queue_->Shutdown();
     }
     send_queue_->Shutdown();
+}
+
+std::string SandeshSession::ToString() const {
+    std::stringstream out;
+    out << TcpSession::ToString() << "(" << instance_ << ")";
+    return out.str();
+}
+
+error_code SandeshSession::SetSocketOptions() {
+    error_code ec = TcpSession::SetSocketOptions();
+    if (ec) {
+        return ec;
+    }
+    return SetSocketKeepaliveOptions(keepalive_idle_time_, keepalive_interval_,
+            keepalive_probes_);
 }
 
 void SandeshSession::OnRead(Buffer buffer) {

@@ -21,6 +21,8 @@ using std::vector;
 
 int PullSandeshTraceReq = 0;
 
+template<> TraceSandeshType *TraceSandeshType::trace_ = NULL;
+
 class SandeshTraceRequestRunner {
 public:
     SandeshTraceRequestRunner(SandeshTraceBufferPtr trace_buf,
@@ -53,9 +55,8 @@ public:
     }
 
 private:
-    void SandeshTraceRead(boost::shared_ptr<Sandesh> trace_sandesh, bool more) {
+    void SandeshTraceRead(SandeshTrace *tsnh, bool more) {
         read_count_++;
-        SandeshTrace * tsnh = dynamic_cast<SandeshTrace *>(trace_sandesh.get());
         assert(tsnh);
         vector<string>& tracebuf = const_cast<vector<string>&>(sttr_->get_traces());
         

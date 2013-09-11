@@ -29,18 +29,26 @@ response sandesh SandeshUVETypesResp {
 }
 
 struct SandeshStateMachineEvStats {
-    1: string                     generator;
+    1: string                     event;
     2: u64                        enqueues;
-    3: u64                        count;
+    3: u64                        dequeues;
+    4: u64                        enqueue_fails;
+    5: u64                        dequeue_fails;
 }
-struct SandeshStateMachineInfo_s {
+
+struct SandeshStateMachineData {
     1: string                              name (key="ObjectGeneratorInfo")
     2: optional bool                       deleted
     3: optional u64                        agg_count (aggtype="stats", hbin="50")
     4: optional list<SandeshStateMachineEvStats> sm_stats
+    5: optional string                     state
+    6: optional u64                        state_since
+    7: optional string                     last_state
+    8: optional string                     last_event
+    9: optional u64                        last_event_at
 }
 
 uve sandesh SandeshStateMachineInfo {
-    1: SandeshStateMachineInfo_s           data
+    1: SandeshStateMachineData           data
 }
 

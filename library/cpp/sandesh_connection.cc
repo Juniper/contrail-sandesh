@@ -27,19 +27,38 @@
 using namespace std;
 using boost::system::error_code;
 
-SandeshConnection::SandeshConnection(const char *prefix, TcpServer *server, Endpoint endpoint)
-    : server_(server),
+#define CONNECTION_LOG(_Level, _Msg)                                           \
+    do {                                                                       \
+        if (LoggingDisabled()) break;                                          \
+        log4cplus::Logger _Xlogger = log4cplus::Logger::getRoot();             \
+        if (_Xlogger.isEnabledFor(log4cplus::_Level##_LOG_LEVEL)) {            \
+            log4cplus::tostringstream _Xbuf;                                   \
+            if (!state_machine()->generator_key().empty()) {                   \
+                _Xbuf << state_machine()->generator_key() << " (" <<           \
+                    GetTaskInstance() << ") ";                                 \
+            }                                                                  \
+            if (session()) {                                                   \
+                _Xbuf << session()->ToString() << " ";                         \
+            }                                                                  \
+            _Xbuf << _Msg;                                                     \
+            _Xlogger.forcedLog(log4cplus::_Level##_LOG_LEVEL,                  \
+                               _Xbuf.str());                                   \
+        }                                                                      \
+    } while (false)
+
+SandeshConnection::SandeshConnection(const char *prefix, TcpServer *server,
+        Endpoint endpoint, int task_instance, int task_id)
+    : is_deleted_(false),
+      server_(server),
       endpoint_(endpoint),
       admin_down_(false),
       session_(NULL),
+      task_instance_(task_instance),
+      task_id_(task_id),
       state_machine_(new SandeshStateMachine(prefix, this)) {
 }
 
 SandeshConnection::~SandeshConnection() {
-    if (session_ != NULL) {
-        state_machine_->set_session(NULL);
-        session_ = NULL;
-    }
 }
 
 void SandeshConnection::set_session(SandeshSession *session) {
@@ -54,6 +73,18 @@ void SandeshConnection::ReceiveMsg(const std::string &msg, SandeshSession *sessi
     state_machine_->OnSandeshMessage(session, msg);
 }
 
+bool SandeshConnection::SendSandesh(Sandesh *snh) {
+    if (!session_) {
+        return false;
+    }
+    ssm::SsmState state = state_machine_->get_state();
+    if (state != ssm::SERVER_INIT && state != ssm::ESTABLISHED) {
+        return false;
+    }
+    // XXX No bounded work queue
+    session_->send_queue()->Enqueue(snh);
+    return true;
+}
 
 SandeshSession *SandeshConnection::CreateSession() {
     TcpSession *session = server_->CreateSession();
@@ -65,22 +96,10 @@ SandeshSession *SandeshConnection::CreateSession() {
     return sandesh_session;
 }
 
-ssm::SsmState SandeshConnection::GetStateMachineState() const {
-    SandeshStateMachine *sm = state_machine();
-    assert(sm);
-    return sm->get_state();
-}
-
 void SandeshConnection::AcceptSession(SandeshSession *session) {
     session->SetReceiveMsgCb(boost::bind(&SandeshConnection::ReceiveMsg, this, _1, _2));
     session->SetConnection(this);
     state_machine_->PassiveOpen(session);
-}
-
-bool SandeshConnection::Send(const uint8_t *data, size_t size) {
-    if (session_ == NULL) return false;
-    // Session send
-    return true;
 }
 
 SandeshStateMachine *SandeshConnection::state_machine() const {
@@ -94,25 +113,74 @@ void SandeshConnection::SetAdminState(bool down) {
     }
 }
 
-SandeshServerConnection::SandeshServerConnection(TcpServer *server, Endpoint endpoint)
-    : SandeshConnection("SandeshServer: ", server, endpoint) {
+void SandeshConnection::Shutdown() {
+    is_deleted_ = true;
+    deleter()->Delete();
+}
+
+bool SandeshConnection::MayDelete() const {
+    // XXX Do we have any dependencies?
+    return true;
+}
+
+class SandeshServerConnection::DeleteActor : public LifetimeActor {
+public:
+    DeleteActor(SandeshServer *server, SandeshServerConnection *parent)
+        : LifetimeActor(server->lifetime_manager()),
+          server_(server), parent_(parent) {
+    }
+    virtual bool MayDelete() const {
+        return parent_->MayDelete();
+    }
+    virtual void Shutdown() {
+        SandeshSession *session = NULL;
+        if (parent_->state_machine()) {
+            session = parent_->state_machine()->session();
+            parent_->state_machine()->clear_session();
+        }
+        if (session) {
+            server_->DeleteSession(session);
+        }
+        parent_->is_deleted_ = true;
+    }
+    virtual void Destroy() {
+        parent_->Destroy();
+    }
+
+private:
+    SandeshServer *server_;
+    SandeshServerConnection *parent_;
+};
+
+SandeshServerConnection::SandeshServerConnection(
+        TcpServer *server, Endpoint endpoint, int task_instance, int task_id)
+    : SandeshConnection("SandeshServer: ", server, endpoint, task_instance, task_id),
+      deleter_(new DeleteActor(dynamic_cast<SandeshServer *>(server), this)),
+      server_delete_ref_(this, dynamic_cast<SandeshServer *>(server)->deleter()) {
 }
 
 SandeshServerConnection::~SandeshServerConnection() {
 }
 
-bool SandeshServerConnection::IsClient() const {
-    return false;
+void SandeshServerConnection::ManagedDelete() {
+    SandeshServer *sserver = dynamic_cast<SandeshServer *>(server());
+    if (!sserver) {
+        CONNECTION_LOG(ERROR, __func__ << " No Server");
+        return;
+    }
+    sserver->lifetime_manager()->Enqueue(deleter_.get());
 }
 
-bool SandeshServerConnection::HandleSandeshCtrlMessage(const std::string &msg,
+bool SandeshServerConnection::ProcessSandeshCtrlMessage(const std::string &msg,
         const SandeshHeader &header, const std::string sandesh_name,
         const uint32_t header_offset) {
     SandeshServer *sserver = dynamic_cast<SandeshServer *>(server());
     if (!sserver) {
+        CONNECTION_LOG(ERROR, __func__ << " No Server");
         return false;
     }
     if (header_offset == 0) {
+        CONNECTION_LOG(ERROR, __func__ << " No Sandesh Header");
         return false;
     }
     Sandesh *ctrl_snh = SandeshSession::DecodeCtrlSandesh(msg, header, sandesh_name,
@@ -122,29 +190,62 @@ bool SandeshServerConnection::HandleSandeshCtrlMessage(const std::string &msg,
     return ret;
 }
 
-bool SandeshServerConnection::HandleSandeshMessage(const std::string &msg,
+bool SandeshServerConnection::ProcessSandeshMessage(const std::string &msg,
         const SandeshHeader &header, const std::string sandesh_name,
         const uint32_t header_offset) {
     SandeshServer *sserver = dynamic_cast<SandeshServer *>(server());
     if (!sserver) {
+        CONNECTION_LOG(ERROR, __func__ << " No Server");
         return false;
     }
     if (header_offset == 0) {
+        CONNECTION_LOG(ERROR, __func__ << " No Sandesh Header");
         return false;
     }
     sserver->ReceiveSandeshMsg(session(), msg, sandesh_name, header, header_offset);
     return true;
 }
 
-bool SandeshServerConnection::HandleMessage(ssm::Message *msg) {
+bool SandeshServerConnection::ProcessMessage(ssm::Message *msg) {
     SandeshServer *sserver = dynamic_cast<SandeshServer *>(server());
     if (!sserver) {
+        CONNECTION_LOG(ERROR, __func__ << " No Server");
         return false;
     }
     return sserver->ReceiveMsg(session(), msg);
 }
 
-void SandeshServerConnection::HandleDisconnect(SandeshSession * sess) {
+void SandeshServerConnection::ProcessDisconnect(SandeshSession * sess) {
     SandeshServer *sserver = dynamic_cast<SandeshServer *>(server());
+    if (!sserver) {
+        CONNECTION_LOG(ERROR, __func__ << " No Server");
+        return;
+    }
     sserver->DisconnectSession(sess);
+}
+
+LifetimeManager *SandeshServerConnection::lifetime_manager() {
+    SandeshServer *sserver = dynamic_cast<SandeshServer *>(server());
+    if (!sserver) {
+        CONNECTION_LOG(ERROR, __func__ << " No Server");
+        return NULL;
+    }
+    return sserver->lifetime_manager();
+}
+
+void SandeshServerConnection::Destroy() {
+    SandeshServer *sserver = dynamic_cast<SandeshServer *>(server());
+    if (!sserver) {
+        CONNECTION_LOG(ERROR, __func__ << " No Server");
+        return;
+    }
+    sserver->RemoveConnection(this);
+    int index = GetTaskInstance();
+    if (index != -1) {
+        sserver->FreeConnectionIndex(index);
+    }
+};
+
+LifetimeActor *SandeshServerConnection::deleter() {
+    return deleter_.get();
 }

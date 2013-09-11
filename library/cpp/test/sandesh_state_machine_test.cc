@@ -177,7 +177,9 @@ protected:
     SandeshServerStateMachineTest() :
         server_(new SandeshServerMock(&evm_)),
         timer_(TimerManager::CreateTimer(*evm_.io_service(), "Dummy timer")),
-        connection_(new SandeshServerConnection(server_, dummy_)) {
+        connection_(new SandeshServerConnection(server_, dummy_, 
+            Task::kTaskInstanceAny,
+            TaskScheduler::GetInstance()->GetTaskId("sandesh::Test::StateMachine"))) {
         task_util::WaitForIdle();
         sm_ = connection_->state_machine();
         sm_->set_idle_hold_time(1);
@@ -185,8 +187,9 @@ protected:
 
     ~SandeshServerStateMachineTest() {
         task_util::WaitForIdle();
-        sm_->Shutdown();
+        connection_->Shutdown();
         task_util::WaitForIdle();
+        delete connection_;
         server_->Shutdown();
         task_util::WaitForIdle();
         TcpServerManager::DeleteServer(server_);
@@ -327,7 +330,7 @@ protected:
     SandeshStateMachine *sm_;
     Timer *timer_;
     Endpoint dummy_;
-    std::auto_ptr<SandeshConnection> connection_;
+    SandeshConnection *connection_;
 };
 
 typedef boost::function<void(void)> EvGen;
@@ -353,14 +356,15 @@ TEST_F(SandeshServerStateMachineTest, Matrix) {
             SERVER_SSM_TRANSITION(EvStop, ssm::IDLE)
             SERVER_SSM_TRANSITION(EvAdminDown, ssm::IDLE)
             SERVER_SSM_TRANSITION(EvTcpPassiveOpen, ssm::SERVER_INIT)
-            SERVER_SSM_TRANSITION2(EvTcpClose, ssm::ACTIVE);
+            SERVER_SSM_TRANSITION2(EvTcpClose, ssm::IDLE);
 
     Transitions none = map_list_of
             SERVER_SSM_TRANSITION(EvStop, ssm::IDLE);
 
     Transitions server_init = map_list_of
             SERVER_SSM_TRANSITION2(EvTcpClose, ssm::IDLE)
-            SERVER_SSM_TRANSITION2(EvSandeshMessageRecv, ssm::SERVER_INIT);
+            SERVER_SSM_TRANSITION2(EvSandeshMessageRecv, ssm::SERVER_INIT)
+            SERVER_SSM_TRANSITION2(EvTcpClose, ssm::IDLE);
 
     Transitions matrix[] =
         { idle, active, none, server_init };

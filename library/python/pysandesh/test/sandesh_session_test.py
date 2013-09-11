@@ -71,8 +71,9 @@ class SandeshReaderTest(unittest.TestCase):
         global sandesh_test_started
         if (not sandesh_test_started):
             http_port = test_utils.get_free_port()
-            sandesh_global.init_generator('sandesh_session_test', socket.gethostname(), 
-                                      ('127.0.0.1', 8086), 'sandesh_msg_test_ctxt', http_port)
+            sandesh_global.init_generator('sandesh_session_test', 
+                socket.gethostname(), [('127.0.0.1', 8086)], 
+                'sandesh_msg_test_ctxt', http_port)
             sandesh_test_started = True
 
     def setUp(self):
@@ -139,8 +140,9 @@ class SandeshWriterTest(unittest.TestCase):
         global sandesh_test_started
         if (not sandesh_test_started):
             http_port = test_utils.get_free_port()
-            sandesh_global.init_generator('sandesh_session_test', socket.gethostname(), 
-                                      ('127.0.0.1', 8086), 'sandesh_msg_test_ctxt', http_port)
+            sandesh_global.init_generator('sandesh_session_test', 
+                socket.gethostname(), [('127.0.0.1', 8086)], 
+                'sandesh_msg_test_ctxt', http_port)
             sandesh_test_started = True
 
     def setUp(self):

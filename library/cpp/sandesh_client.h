@@ -61,8 +61,10 @@ public:
         const std::string & stateName, const std::string & server,
         Endpoint primary, Endpoint secondary);
 
-    bool SendSandesh(Sandesh* snh) {
-        return sm_->SendSandesh(snh);
+    bool SendSandesh(Sandesh *snh);
+
+    bool SendSandeshUVE(Sandesh *snh_uve) {
+        return sm_->SendSandeshUVE(snh_uve);
     }
     
     SandeshClientSM::State state() {
@@ -73,7 +75,7 @@ public:
         if (sm_->session()) return true;
         else return false;
     }
-    
+
     friend class CollectorInfoRequest;
 protected:
     virtual TcpSession *AllocSession(Socket *socket);

@@ -34,9 +34,11 @@ class SandeshReqImpl(object):
         resp = CollectorInfoResponse()
         client = self._sandesh.client()
         if client is not None:
-            resp.ip = client.server()[0]
-            resp.port = client.server()[1]
             if client.connection() is not None:
+                collector = client.connection().server()
+                if collector is not None:
+                    resp.ip = collector[0]
+                    resp.port = collector[1]
                 resp.status = client.connection().state()
         resp.response(sandesh_req.context())
     #end collector_info_handle_request

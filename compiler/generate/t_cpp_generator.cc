@@ -475,6 +475,7 @@ void t_cpp_generator::init_generator() {
     "#include <sandesh/sandesh.h>" << endl <<
     "#include <sandesh/sandesh_uve.h>" << endl <<
     "#include <sandesh/sandesh_http.h>" << endl <<
+    "#include <sandesh/sandesh_trace.h>" << endl <<
     "#include <curl/curl.h>" << endl << endl;
 #endif
   f_types_impl_ <<
@@ -713,7 +714,8 @@ void t_cpp_generator::generate_consts(std::vector<t_const*> consts) {
     "#include <base/trace.h>" << endl <<
     "#include <sandesh/sandesh_types.h>" << endl <<
     "#include <sandesh/sandesh_constants.h>" << endl <<
-    "#include <sandesh/sandesh.h>" << endl << endl;
+    "#include <sandesh/sandesh.h>" << endl << 
+    "#include <sandesh/sandesh_trace.h>" << endl << endl;
 #endif
   f_consts_impl <<
     "#include \"" << get_include_prefix(*get_program()) << program_name_ <<
@@ -1006,7 +1008,7 @@ std::string t_cpp_generator::generate_sandesh_no_static_const_string_function(t_
         result += "(";
         init_function = true;
         if (signature) {
-            result += "boost::shared_ptr<TraceBuffer<boost::shared_ptr<Sandesh> > > trace_buf, std::string file, int32_t line";
+            result += "SandeshTraceBufferPtr trace_buf, std::string file, int32_t line";
         } else {
             result += "trace_buf, file, line";
         }
@@ -1085,6 +1087,7 @@ std::string t_cpp_generator::generate_sandesh_async_creator(t_sandesh* tsandesh,
     string category_dec = "std::string " + category_def;
     string level_dec = "SandeshLevel::type " + level_def;
     string module_name = "\"\"";
+    bool is_flow = ((t_base_type *)tsandesh->get_type())->is_sandesh_flow();
     // Get members
     vector<t_field*>::const_iterator m_iter;
     const vector<t_field*>& members = tsandesh->get_members();
@@ -1092,12 +1095,15 @@ std::string t_cpp_generator::generate_sandesh_async_creator(t_sandesh* tsandesh,
 
     if (category_level_file_line_first) {
         if (signature) {
-            result += "(" + category_dec + ", " + level_dec + ", std::string file, int32_t line";
+            result += "(" + category_dec + ", " + level_dec;
+            if (!is_flow) result += ", std::string file, int32_t line";
         } else {
             if (!autogen_category_level) {
-                result += "(" + category_def + ", " + level_def + ", __FILE__, __LINE__";
+                result += "(" + category_def + ", " + level_def;
+                if (!is_flow) result += ", __FILE__, __LINE__";
             } else {
-                result += "(" + module_name + ", SandeshLevel::SYS_INFO, __FILE__, __LINE__";
+                result += "(" + module_name + ", SandeshLevel::SYS_INFO";
+                if (!is_flow) result += ", __FILE__, __LINE__";
             }
         }
         init_function = true;
@@ -1237,7 +1243,7 @@ std::string t_cpp_generator::generate_sandesh_trace_creator(t_sandesh *tsandesh,
 
     result += "(";
     if (signature) {
-        result += "boost::shared_ptr<TraceBuffer<boost::shared_ptr<Sandesh> > > tracebuf";
+        result += "SandeshTraceBufferPtr tracebuf";
         if (!skip_autogen) {
             result += ", std::string file, int32_t line";
         }
@@ -2682,7 +2688,7 @@ void t_cpp_generator::generate_sandesh_http_reader(ofstream& out,
 	        if (btype->is_string() || btype->is_xml()) {
 	            indent(out) << "char * unescaped = curl_easy_unescape(cr, (*it2).c_str(), 0, NULL);" << endl;
 	            indent(out) << "std::string tmpstr(unescaped);" << endl;
-	            indent(out) << (*f_iter)->get_name() << " = integerToString((tmpstr));" << endl;
+	            indent(out) << (*f_iter)->get_name() << " = boost::lexical_cast<std::string>((tmpstr));" << endl;
 	            indent(out) << "curl_free(unescaped);" << endl;
 	        } else {
 	            assert(btype->is_integer());
@@ -3258,7 +3264,7 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
                 out << indent() << "std::stringstream Xbuf;" << endl;
                 // Timestamp
                 out << indent() <<
-                        "Xbuf << boost::lexical_cast<std::string>(UTCUsecToPTime(timestamp())) << \" \";" <<
+                        "Xbuf << integerToString(UTCUsecToPTime(timestamp())) << \" \";" <<
                         endl;
             }
             prefix = "";
@@ -3317,16 +3323,14 @@ void t_cpp_generator::generate_sandesh_trace(ofstream& out,
             generate_sandesh_no_static_const_string_function(tsandesh, true, false, true) <<
             " {" << endl;
     indent_up();
-    out << indent() << "Trace<boost::shared_ptr<Sandesh> > *trace = " << 
-            "Trace<boost::shared_ptr<Sandesh> >::GetInstance();" << endl;
+    out << indent() << "TraceSandeshType *trace = " << 
+            "TraceSandeshType::GetInstance();" << endl;
     out << indent() << "if (trace != NULL && trace->IsTraceOn() && trace_buf->IsTraceOn()) {" << endl;
     indent_up();
-    out << indent() << "boost::shared_ptr<" << tsandesh->get_name() << "> " <<
-            creator_name << " = " <<
-            "boost::shared_ptr<" << tsandesh->get_name() << ">" << 
-            "(new " << tsandesh->get_name() <<
+    out << indent() << tsandesh->get_name() << " *" << creator_name << " = " <<
+            "new " << tsandesh->get_name() <<
             generate_sandesh_no_static_const_string_function(tsandesh, false, false, false, false, true) <<
-            ");" << endl;
+            ";" << endl;
     out << indent() << creator_name << "->set_category(trace_buf->Name());" << endl;
     out << indent() << "uint32_t seqnum = trace_buf->TraceWrite(" << creator_name << ");" << endl;
     out << indent() << creator_name << "->set_seqnum(seqnum);" << endl;

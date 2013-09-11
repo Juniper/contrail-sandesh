@@ -12,33 +12,36 @@
 #define __SANDESH_TRACE_H__
 
 #include <base/trace.h>
+#include <sandesh/sandesh_types.h>
+#include <sandesh/sandesh.h>
 
-class Sandesh;
+class SandeshTrace;
 
-typedef boost::shared_ptr<TraceBuffer<boost::shared_ptr<Sandesh> > > SandeshTraceBufferPtr;
+typedef boost::shared_ptr<TraceBuffer<SandeshTrace> > SandeshTraceBufferPtr;
+typedef Trace<SandeshTrace> TraceSandeshType;
 
 inline void SandeshTraceEnable() {
-    Trace<boost::shared_ptr<Sandesh> >::GetInstance()->TraceOn();
+    TraceSandeshType::GetInstance()->TraceOn();
 }
 
 inline void SandeshTraceDisable() {
-    Trace<boost::shared_ptr<Sandesh> >::GetInstance()->TraceOff();
+    TraceSandeshType::GetInstance()->TraceOff();
 }
 
 inline bool IsSandeshTraceEnabled() {
-    return Trace<boost::shared_ptr<Sandesh> >::GetInstance()->IsTraceOn();
+    return TraceSandeshType::GetInstance()->IsTraceOn();
 }
 
 inline SandeshTraceBufferPtr SandeshTraceBufferCreate(
         const std::string& buf_name,
         size_t buf_size,
         bool trace_enable = true) {
-    return Trace<boost::shared_ptr<Sandesh> >::GetInstance()->TraceBufAdd(
+    return TraceSandeshType::GetInstance()->TraceBufAdd(
             buf_name, buf_size, trace_enable);
 }
 
 inline SandeshTraceBufferPtr SandeshTraceBufferGet(const std::string& buf_name) {
-    return Trace<boost::shared_ptr<Sandesh> >::GetInstance()->TraceBufGet(buf_name);
+    return TraceSandeshType::GetInstance()->TraceBufGet(buf_name);
 }
 
 inline void SandeshTraceBufferEnable(SandeshTraceBufferPtr trace_buf) {
@@ -59,7 +62,7 @@ inline size_t SandeshTraceBufferSizeGet(SandeshTraceBufferPtr trace_buf) {
 
 inline void SandeshTraceBufferRead(SandeshTraceBufferPtr trace_buf,
         const std::string& read_context, const int count, 
-        boost::function<void (boost::shared_ptr<Sandesh>, bool)> cb) {
+        boost::function<void (SandeshTrace *, bool)> cb) {
     trace_buf->TraceRead(read_context, count, cb);
 }
 
@@ -69,7 +72,7 @@ inline void SandeshTraceBufferReadDone(SandeshTraceBufferPtr trace_buf,
 }
 
 inline void SandeshTraceBufferListGet(std::vector<std::string>& trace_buf_list) {
-    Trace<boost::shared_ptr<Sandesh> >::GetInstance()->TraceBufListGet(
+    TraceSandeshType::GetInstance()->TraceBufListGet(
             trace_buf_list);
 }
 

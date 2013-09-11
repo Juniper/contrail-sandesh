@@ -120,58 +120,6 @@ TEST_F(SandeshReadWriteUnitTest, StructBinaryReadWrite) {
     SandeshReadWriteProcess(btrans, prot);
 }
 
-class SandeshPerfTest : public ::testing::Test {
-protected:
-    SandeshPerfTest() :
-        xml_("str1 type=\"string\" identifier=\"1\""),
-        cmp_("nomatch") {
-    }
-
-    std::string xml_;
-    std::string cmp_;
-};
-
-TEST_F(SandeshPerfTest, DISABLED_PerfTestTokenizer) {
-    typedef boost::tokenizer<boost::char_separator<char> >
-        tokenizer;
-    for (int i = 0; i < 10000; i++) {
-        boost::char_separator<char> sep("=\" ");
-        tokenizer tokens(xml_, sep);
-        for (tokenizer::iterator it = tokens.begin();
-                it != tokens.end(); ++it) {
-            if (*it == cmp_) {
-            }
-        }
-    }
-}
-
-TEST_F(SandeshPerfTest, DISABLED_PerfTestSplit) {
-    typedef std::vector<boost::iterator_range<std::string::iterator> > split_vector_type;
-    for (int i = 0; i < 10000; i++) {
-        split_vector_type tokens;
-        boost::algorithm::split(tokens, xml_, boost::is_any_of("=\" "), boost::token_compress_on);
-        for (split_vector_type::const_iterator it = tokens.begin();
-                it != tokens.end(); ++it) {
-            if (boost::copy_range<std::string>(*it) == cmp_) {
-            }
-        }
-    }
-}
-
-
-TEST_F(SandeshPerfTest, DISABLED_PerfTestSplitIter) {
-    typedef boost::algorithm::split_iterator<std::string::iterator> string_split_iterator;
-    for (int i = 0; i < 10000; i++) {
-        for (string_split_iterator it = 
-                 make_split_iterator(xml_, 
-                                     token_finder(boost::is_any_of("=\" "), 
-                                                  boost::token_compress_on));
-             it != string_split_iterator(); ++it) {
-            if (*it == cmp_) {
-            }
-        }
-    }
-}
 
 class SandeshLogUnitTest : public ::testing::Test {
 protected:

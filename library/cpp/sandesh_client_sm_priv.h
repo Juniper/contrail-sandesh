@@ -61,7 +61,7 @@ public:
     void SetCandidates(TcpServer::Endpoint active, TcpServer::Endpoint backup);
     void GetCandidates(TcpServer::Endpoint& active,
             TcpServer::Endpoint &backup) const;
-    bool SendSandesh(Sandesh* snh);
+    bool SendSandeshUVE(Sandesh* snh);
     void EnqueDelSession(SandeshSession * session);
 
     // Feed session events into the state machine.
@@ -127,7 +127,9 @@ public:
     std::string collector_name() { return coll_name_; }
     
     void unconsumed_event(const sc::event_base &event);
-
+    void SendUVE () {
+        mgr_->SendUVE(connects(), StateName(), collector_name(), active_, backup_);
+    }
 private:
 
     struct EventContainer {

@@ -56,7 +56,6 @@ typedef boost::function<bool(SandeshStateMachine *)> EvValidate;
 class SandeshStateMachine :
         public sc::state_machine<SandeshStateMachine, ssm::Idle> {
 public:
-    static const int kConnectInterval = 30;
     static const int kIdleHoldTime = 5000; //5 sec .. specified in milliseconds
         
     SandeshStateMachine(const char *prefix, SandeshConnection *connection);
@@ -71,12 +70,7 @@ public:
     // In state reactions
     template <class Ev> void ReleaseSandesh(const Ev &event);
     template <class Ev> void DeleteTcpSession(const Ev &event);
-    template <class Ev> void HandleMessage(const Ev &event);
-
-    void StartConnectTimer(int seconds);
-    void CancelConnectTimer();
-    bool ConnectTimerRunning();
-    void FireConnectTimer();
+    template <class Ev> void ProcessMessage(const Ev &event);
 
     void StartIdleHoldTimer();
     void CancelIdleHoldTimer();
@@ -106,11 +100,13 @@ public:
 
     void DeleteSession(SandeshSession *session);
     void set_session(SandeshSession *session);
-    TcpSession *session();
+    void clear_session();
+    SandeshSession *session();
 
     void set_state(ssm::SsmState state) {
         last_state_ = state;
         state_ = state;
+        state_since_ = UTCTimestampUsec();
     }
     ssm::SsmState get_state() const { return state_; }
 
@@ -122,6 +118,7 @@ public:
 
     void set_last_event(const std::string &event) {
         last_event_ = event;
+        last_event_at_ = UTCTimestampUsec();
     }
     const std::string &last_event() const {
         return last_event_;
@@ -135,58 +132,73 @@ public:
     void unconsumed_event(const sc::event_base &event);
     const char *prefix() { return prefix_; }
 
-    void SetStateMachineKey(const std::string& state_machine_key) {
-        state_machine_key_ = state_machine_key;
+    void SetGeneratorKey(const std::string &generator) {
+        generator_key_ = generator;
+    }
+    const std::string &generator_key() const {
+        return generator_key_;
     }
 
 private:
     friend class SandeshServerStateMachineTest;
     friend class SandeshClientStateMachineTest;
 
-    static const int PeriodicTimeSec = 30;
+    static const int kStatisticsSendInterval = 30000; // 30 sec .. specified in milliseconds
 
     struct EventContainer {
         boost::intrusive_ptr<const sc::event_base> event;
         EvValidate validate;
     };
 
-    void TimerErrorHanlder(std::string name, std::string error);
-    bool ConnectTimerExpired();
+    void StartStatisticsTimer();
+    void TimerErrorHandler(std::string name, std::string error);
     bool IdleHoldTimerExpired();
-    bool PeriodicTimerExpired();
-    void PeriodicTimerErrorHandler(std::string name, std::string error);
+    bool StatisticsTimerExpired();
 
     template <typename Ev> void Enqueue(const Ev &event);
     bool DequeueEvent(EventContainer ec);
     bool LogEvent(const sc::event_base *event);
+    void UpdateEventDequeue(const sc::event_base &event);
+    void UpdateEventDequeueFail(const sc::event_base &event);
+    void UpdateEventEnqueue(const sc::event_base &event);
+    void UpdateEventEnqueueFail(const sc::event_base &event);
+    void UpdateEventStats(const sc::event_base &event, bool enqueue, bool fail);
 
     const char *prefix_;
     WorkQueue<EventContainer> work_queue_;
     SandeshConnection *connection_;
     SandeshSession *session_;
-    Timer *connect_timer_;
     Timer *idle_hold_timer_;
-    Timer *periodic_timer_;
+    Timer *statistics_timer_;
     int idle_hold_time_;
+    int statistics_timer_interval_;
     bool deleted_;
-    bool in_dequeue_;
-    bool isClient;
     tbb::atomic<ssm::SsmState> state_;
     ssm::SsmState last_state_;
+    uint64_t state_since_;
     std::string last_event_;
-    tbb::mutex mutex_;
+    uint64_t last_event_at_;
 
     struct EventStats {
-        EventStats() : enqueues(0), dequeues(0) {}
+        EventStats() :
+            enqueues(0),
+            enqueue_fails(0),
+            dequeues(0),
+            dequeue_fails(0) {
+        }
         uint64_t enqueues;
+        uint64_t enqueue_fails;
         uint64_t dequeues;
+        uint64_t dequeue_fails;
     };
     typedef boost::ptr_map<std::string, EventStats> EventStatsMap;
     EventStatsMap event_stats_;
-    uint64_t tot_enqueues_;
-    uint64_t tot_dequeues_;
+    uint64_t enqueues_;
+    uint64_t enqueue_fails_;
+    uint64_t dequeues_;
+    uint64_t dequeue_fails_;
     tbb::mutex stats_mutex_;
-    std::string state_machine_key_;
+    std::string generator_key_;
             
     DISALLOW_COPY_AND_ASSIGN(SandeshStateMachine);
 };
