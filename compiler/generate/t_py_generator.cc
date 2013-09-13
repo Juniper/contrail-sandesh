@@ -2217,7 +2217,7 @@ void t_py_generator::generate_py_sandesh_uve(std::ofstream& out,
   vector<t_field*>::const_iterator s_iter;
 
   for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
-    out << indent() << "if self.data." << (*s_iter)->get_name() << ":" << endl;
+    out << indent() << "if self.data." << (*s_iter)->get_name() << " is not None:" << endl;
     indent_up();
     out << indent() << "tdata." << (*s_iter)->get_name() << " = self.data." <<
         (*s_iter)->get_name() << endl;

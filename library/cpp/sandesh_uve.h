@@ -144,8 +144,11 @@ public:
         for (typename uve_type_map::const_iterator uit = map_.begin();
                 uit!=map_.end(); uit++) {
             if ((seqno < uit->second->seqno) || (seqno == 0)) {
-                if (!more)
-                    LOG(DEBUG, __func__ << " Syncing " << uit->first);
+                if (!more) {
+                    LOG(DEBUG, __func__ << " Syncing " << 
+                        " val " << uit->second->data.log() <<
+                        " seq " << uit->second->seqno);
+                }
                 T::Send(uit->second->data, true, uit->second->seqno, ctx, more);
                 count++;
             }
