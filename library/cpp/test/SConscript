@@ -10,7 +10,10 @@ import sys
 env = SandeshEnv.Clone()
 
 env.Append(CPPPATH = [Dir('.').abspath,
-                      '#/build/include/libxml2',
+                      Dir('#build/include').abspath,
+                      Dir('#build/include/libxml2').abspath,
+                      Dir('#controller/src').abspath,
+                      Dir('#tools').abspath,
                       '../',
                       '../../common/test/',
                       ])
@@ -129,8 +132,8 @@ test_suite = [sandesh_message_test,
 #             sandesh_client_test,
            ]
 
-test = env.TestSuite('sandesh-test', test_suite)
+#test = env.TestSuite('sandesh-test', test_suite)
 
-env.Alias('src/sandesh:test', test)
+#env.Alias('src/sandesh:test', test)
 
 Return('test_suite')

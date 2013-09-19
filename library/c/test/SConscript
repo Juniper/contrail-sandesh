@@ -9,10 +9,13 @@ import sys
 
 env = SandeshEnv.Clone();
 
-env.Append(CPPPATH = [Dir('.').abspath,
-                      '../../common/test/',
-                      './gen-c/'
-                      ])
+env.Append(CPPPATH = [
+        Dir('#build/include').abspath,
+        Dir('#controller/src').abspath,
+        Dir('#tools').abspath,
+        '../../common/test/',
+        './gen-c/',
+        ])
 
 # Generate the source files
 SandeshCTestGenFiles = env.SandeshGenC('sandesh_c_test.sandesh')
@@ -66,13 +69,13 @@ sandesh_c_test = env.UnitTest('sandesh_c_test',
 
 env.Alias('src/sandesh:sandesh_c_test', sandesh_c_test)
 
-pre_test = env.TestSuite('sandesh-prectest',
-                         [sandesh_pre_c_test])
+#pre_test = env.TestSuite('sandesh-prectest',
+#                         [sandesh_pre_c_test])
 
-env.Alias('src/sandesh:prectest', pre_test) 
+#env.Alias('src/sandesh:prectest', pre_test) 
 
-test = env.TestSuite('sandesh-ctest',
-                     [sandesh_c_test])
+#test = env.TestSuite('sandesh-ctest',
+#                     [sandesh_c_test])
 
-env.Depends(sandesh_c_test, env.Alias('src/sandesh:prectest'))
-env.Alias('src/sandesh:ctest', test) 
+#env.Depends(sandesh_c_test, env.Alias('src/sandesh:prectest'))
+#env.Alias('src/sandesh:ctest', test) 

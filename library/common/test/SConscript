@@ -4,9 +4,15 @@
 # Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
 #
 
-Import('SandeshEnv');
+Import('SandeshEnv')
 
-env = SandeshEnv.Clone();
+env = SandeshEnv.Clone()
+
+env.Append(CPPPATH = [
+        Dir('#build/include').abspath,
+        Dir('#controller/src').abspath,
+        Dir('#tools').abspath,
+        ])
 
 SandeshBufferTestGenCppFiles = env.SandeshGenCpp('sandesh_buffer_test.sandesh')
 SandeshBufferTestGenCppSrcs = env.ExtractCpp(SandeshBufferTestGenCppFiles)
