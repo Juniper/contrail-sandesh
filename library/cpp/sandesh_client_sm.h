@@ -90,7 +90,9 @@ protected:
     void set_session(SandeshSession * session, bool enq) {
         if (session_ != NULL) {
             session_->set_observer(NULL);
+            session_->SetReceiveMsgCb(NULL);
             session_->Close();
+            session_->Shutdown();
             if (enq) EnqueDelSession(session_);	
         }
         session_ = session;

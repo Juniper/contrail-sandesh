@@ -439,7 +439,10 @@ void SandeshStateMachine::SetAdminState(bool down) {
 void SandeshStateMachine::clear_session() {
     if (session_ != NULL) {
         session_->set_observer(NULL);
+        session_->SetReceiveMsgCb(NULL);
+        session_->SetConnection(NULL);
         session_->Close();
+        session_->Shutdown();
         connection_->set_session(NULL);
         session_ = NULL;
     }
@@ -455,7 +458,10 @@ void SandeshStateMachine::set_session(SandeshSession *session) {
 
 void SandeshStateMachine::DeleteSession(SandeshSession *session) {
     session->set_observer(NULL);
+    session->SetReceiveMsgCb(NULL);
+    session->SetConnection(NULL);
     session->Close();
+    session->Shutdown();
     Enqueue(ssm::EvTcpDeleteSession(session));
 }
 
@@ -475,7 +481,7 @@ void SandeshStateMachine::OnIdle(const Ev &event) {
 
 template <class Ev>
 void SandeshStateMachine::DeleteTcpSession(const Ev &event) {
-    event.session->connection()->server()->DeleteSession(event.session);
+    event.session->server()->DeleteSession(event.session);
     SandeshConnection *connection = this->connection();
     if (connection) {
         connection->ManagedDelete();

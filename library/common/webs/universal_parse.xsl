@@ -418,7 +418,7 @@
                                 <tbody>
                                     <tr>
                                         <td>
-                                            <table id="struct-or-list-table" border="1" class="table table-bordered table-condensed">
+                                            <table border="1" class="table table-bordered table-condensed">
                                                 <!--div data-collapse="accordion persist"-->
                                                 <!--h4><xsl:value-of select="name()"/></h4--><!--OOO-->
                                                 <xsl:apply-templates select="@type[.='struct']"/>

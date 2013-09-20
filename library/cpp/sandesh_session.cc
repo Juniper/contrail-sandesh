@@ -322,6 +322,9 @@ SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
 }
 
 SandeshSession::~SandeshSession() {
+}
+
+void SandeshSession::Shutdown() {
     if (Sandesh::role() == Sandesh::Collector) {
         send_buffer_queue_->Shutdown();
     }
@@ -344,6 +347,11 @@ error_code SandeshSession::SetSocketOptions() {
 }
 
 void SandeshSession::OnRead(Buffer buffer) {
+    // Check if session is being deleted, then drop the packet
+    if (cb_ == NULL) {
+        ReleaseBuffer(buffer);
+        return;
+    }
     reader_->OnRead(buffer);
 }
 
@@ -511,10 +519,7 @@ void SandeshReader::OnRead(Buffer buffer) {
             buf_.clear();
             offset_ = 0;
             // Enqueue a close on the state machine
-            if (session()->connection() && session()->connection()->state_machine()) {
-                session()->connection()->state_machine()->OnSessionEvent(session_,
-                        TcpSession::CLOSE);
-            }
+            session()->EnqueueClose();
             break;
         }
         if (done == true) {
@@ -527,8 +532,13 @@ void SandeshReader::OnRead(Buffer buffer) {
             std::string xml(st, end);
             offset_ += msg_length();
             reset_msg_length();
-            session()->receive_msg_cb()(xml, session());
-
+            SandeshSession *ssession = session();
+            if (ssession->receive_msg_cb()) {
+                ssession->receive_msg_cb()(xml, ssession);
+            } else {
+                // Receive message callback not set, session being deleted
+                break;
+            }
         } else {
             // Read more data.
             break;
@@ -553,8 +563,8 @@ SandeshSession * SandeshReader::session () {
     return static_cast<SandeshSession *>(session_);
 }
 
-Sandesh * 
-SandeshSession::DecodeCtrlSandesh(const string& msg, const SandeshHeader& header,
+Sandesh * SandeshSession::DecodeCtrlSandesh(const string& msg, 
+        const SandeshHeader& header,
         const string& sandesh_name, const uint32_t& header_offset) {
     namespace sandesh_prot = contrail::sandesh::protocol;
     namespace sandesh_trans = contrail::sandesh::transport;

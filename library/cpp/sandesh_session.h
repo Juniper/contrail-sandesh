@@ -137,6 +137,7 @@ public:
     SandeshSession(TcpServer *client, Socket *socket, int task_instance, 
         int task_id);
     virtual ~SandeshSession();
+    virtual void Shutdown();
     virtual void OnRead(Buffer buffer);
     virtual void WriteReady(const boost::system::error_code &ec) {
         writer_->WriteReady(ec);
@@ -165,6 +166,11 @@ public:
     }
     virtual int GetSessionInstance() const {
         return instance_;
+    }
+    virtual void EnqueueClose() {
+        if (observer()) {
+            observer()(this, TcpSession::CLOSE);
+        }
     }
     virtual boost::system::error_code SetSocketOptions();
     virtual std::string ToString() const;

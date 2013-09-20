@@ -191,13 +191,13 @@ struct TransitToIdle {
 };
 
 template <class Ev>
-struct InStateReleaseSandesh {
+struct ReleaseSandesh {
     typedef sc::in_state_reaction<Ev, SandeshClientSMImpl,
             &SandeshClientSMImpl::ReleaseSandesh<Ev> > reaction;
 };
 
 template <class Ev>
-struct InStateDeleteTcpSession {
+struct DeleteTcpSession {
     typedef sc::in_state_reaction<Ev, SandeshClientSMImpl,
             &SandeshClientSMImpl::DeleteTcpSession<Ev> > reaction;
 };
@@ -209,8 +209,8 @@ struct Idle : public sc::state<Idle, SandeshClientSMImpl> {
             sc::custom_reaction<EvStop>,
             sc::custom_reaction<EvIdleHoldTimerExpired>,
             sc::custom_reaction<EvDiscUpdate>,
-            InStateReleaseSandesh<EvSandeshSend>::reaction,
-            InStateDeleteTcpSession<EvTcpDeleteSession>::reaction
+            ReleaseSandesh<EvSandeshSend>::reaction,
+            DeleteTcpSession<EvTcpDeleteSession>::reaction
         > reactions;
 
     Idle(my_context ctx) : my_base(ctx) {
@@ -264,8 +264,8 @@ struct Disconnect : public sc::state<Disconnect, SandeshClientSMImpl> {
     typedef mpl::list<
             TransitToIdle<EvStop>::reaction,
             sc::custom_reaction<EvDiscUpdate>,
-            InStateReleaseSandesh<EvSandeshSend>::reaction,
-            InStateDeleteTcpSession<EvTcpDeleteSession>::reaction
+            ReleaseSandesh<EvSandeshSend>::reaction,
+            DeleteTcpSession<EvTcpDeleteSession>::reaction
         > reactions;
 
     Disconnect(my_context ctx) : my_base(ctx) {
@@ -296,8 +296,8 @@ struct Connect : public sc::state<Connect, SandeshClientSMImpl> {
             sc::custom_reaction<EvTcpConnectFail>,
             sc::custom_reaction<EvTcpClose>,
             sc::custom_reaction<EvDiscUpdate>,
-            InStateReleaseSandesh<EvSandeshSend>::reaction,
-            InStateDeleteTcpSession<EvTcpDeleteSession>::reaction
+            ReleaseSandesh<EvSandeshSend>::reaction,
+            DeleteTcpSession<EvTcpDeleteSession>::reaction
         > reactions;
 
     static const int kConnectTimeout = 60;  // seconds
@@ -389,7 +389,7 @@ struct ClientInit : public sc::state<ClientInit, SandeshClientSMImpl> {
         sc::custom_reaction<EvSandeshMessageRecv>,
         sc::custom_reaction<EvSandeshSend>,
         sc::custom_reaction<EvDiscUpdate>,
-        InStateDeleteTcpSession<EvTcpDeleteSession>::reaction
+        DeleteTcpSession<EvTcpDeleteSession>::reaction
     > reactions;
 
     ClientInit(my_context ctx) : my_base(ctx) {
@@ -475,7 +475,7 @@ struct Established : public sc::state<Established, SandeshClientSMImpl> {
         sc::custom_reaction<EvSandeshMessageRecv>,
         sc::custom_reaction<EvSandeshSend>,
         sc::custom_reaction<EvDiscUpdate>,
-        InStateDeleteTcpSession<EvTcpDeleteSession>::reaction
+        DeleteTcpSession<EvTcpDeleteSession>::reaction
     > reactions;
 
     Established(my_context ctx) : my_base(ctx) {

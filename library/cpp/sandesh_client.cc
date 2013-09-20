@@ -103,7 +103,7 @@ void SandeshClient::Shutdown() {
 }
 
 bool SandeshClient::SendSandesh(Sandesh *snh) {
-    if (!sm_->session()) {
+    if (!sm_->session() || sm_->session()->IsClosed()) {
         return false;
     }
     SandeshClientSM::State state = sm_->state();
