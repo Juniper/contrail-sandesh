@@ -69,7 +69,7 @@ public:
 
     virtual bool ReceiveSandeshMsg(SandeshSession *session,
                            const string& cmsg, const string& message_type,
-                           const SandeshHeader& header, uint32_t xml_offset) {
+                           const SandeshHeader& header, uint32_t xml_offset, bool rsc) {
         return cb_(session, cmsg, message_type, header, xml_offset);
     }
 

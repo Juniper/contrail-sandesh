@@ -160,6 +160,16 @@ struct EvMessageRecv : sc::event<EvMessageRecv> {
     boost::shared_ptr<ssm::Message> msg;
 };
 
+struct EvResourceUpdate : sc::event<EvResourceUpdate> {
+    EvResourceUpdate(bool rsc) :
+        rsc(rsc) {
+    };
+    static const char * Name() {
+        return "EvResourceUpdate";
+    }
+    bool rsc;
+};
+
 // states
 struct Idle;
 struct Active;
@@ -316,7 +326,7 @@ struct ServerInit : public sc::state<ServerInit, SandeshStateMachine> {
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name());
         SandeshConnection *connection = state_machine->connection();
         if (!connection->ProcessSandeshMessage(event.msg, event.header,
-                event.msg_type, event.header_offset)) {
+                event.msg_type, event.header_offset, true)) {
             state_machine->set_session(NULL);
             return transit<Idle>();
         }
@@ -330,13 +340,19 @@ struct Established : public sc::state<Established, SandeshStateMachine> {
         sc::custom_reaction<EvTcpClose>,
         sc::custom_reaction<EvSandeshMessageRecv>,
         DeleteTcpSession<EvTcpDeleteSession>::reaction,
-        ProcessMessage<EvMessageRecv>::reaction
+        sc::custom_reaction<EvResourceUpdate>
     > reactions;
 
     Established(my_context ctx) : my_base(ctx) {
         SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
         state_machine->set_state(ssm::ESTABLISHED);
+        state_machine->set_resource(true);
         SM_LOG(DEBUG, state_machine->StateName());
+    }
+
+    ~Established() {
+        SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
+        state_machine->set_resource(false);
     }
 
     sc::result react(const EvTcpClose &event) {
@@ -350,11 +366,25 @@ struct Established : public sc::state<Established, SandeshStateMachine> {
         return transit<Idle>();
     }
 
+    sc::result react(const EvResourceUpdate &event) {
+        SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
+        SandeshConnection *connection = state_machine->connection();
+     
+        state_machine->set_resource(event.rsc);
+
+        if (!connection->ProcessResourceUpdate(event.rsc)) {
+            state_machine->set_session(NULL);
+            return transit<Idle>();              
+        }
+        return discard_event();
+    }
+
     sc::result react(const EvSandeshMessageRecv &event) {
         SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
         SandeshConnection *connection = state_machine->connection();
         if (!connection->ProcessSandeshMessage(event.msg, event.header,
-                event.msg_type, event.header_offset)) {
+                event.msg_type, event.header_offset, 
+                state_machine->get_resource())) {
             state_machine->set_session(NULL);
             return transit<Idle>();
         }
@@ -384,6 +414,7 @@ SandeshStateMachine::SandeshStateMachine(const char *prefix, SandeshConnection *
       idle_hold_time_(0),
       statistics_timer_interval_(kStatisticsSendInterval),
       deleted_(false),
+      resource_(false),
       enqueues_(0),
       enqueue_fails_(0),
       dequeues_(0),
@@ -486,11 +517,6 @@ void SandeshStateMachine::DeleteTcpSession(const Ev &event) {
     if (connection) {
         connection->ManagedDelete();
     }
-}
-
-template <class Ev>
-void SandeshStateMachine::ProcessMessage(const Ev &event) {
-    connection()->ProcessMessage(event.msg.get());
 }
 
 void SandeshStateMachine::StartIdleHoldTimer() {
@@ -617,8 +643,8 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
     }
 }
 
-void SandeshStateMachine::OnMessage(ssm::Message *msg) {
-    Enqueue(ssm::EvMessageRecv(msg));
+void SandeshStateMachine::ResourceUpdate(bool rsc) {
+    Enqueue(ssm::EvResourceUpdate(rsc));
 }
 
 static const std::string state_names[] = {
@@ -703,14 +729,14 @@ bool SandeshStateMachine::DequeueEvent(SandeshStateMachine::EventContainer ec) {
         // Log only relevant events and states
         if (LogEvent(ec.event.get())) {
             SM_LOG(DEBUG, "Processing " << TYPE_NAME(*ec.event) << " in state "
-                   << StateName());
+                   << StateName() << " Key " << generator_key());
         }
         // Update event stats
         UpdateEventDequeue(*ec.event);
         process_event(*ec.event);
     } else {
         SM_LOG(DEBUG, "Discarding " << TYPE_NAME(*ec.event) << " in state "
-                << StateName());
+                << StateName() << " Key " << generator_key());
         // Update event stats
         UpdateEventDequeueFail(*ec.event);
     }

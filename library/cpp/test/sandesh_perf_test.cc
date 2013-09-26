@@ -195,7 +195,7 @@ TEST_F(SandeshPerfTestString, DISABLED_StringAdd) {
 TEST_F(SandeshPerfTestString, DISABLED_CString) {
     for (int i = 0; i < 1000000; i++) {
         char buf[1024];
-        int n = snprintf(buf, sizeof(buf), "name value %s ", 
+        snprintf(buf, sizeof(buf), "name value %s ", 
                          integerToString(i).c_str());
     }
 }

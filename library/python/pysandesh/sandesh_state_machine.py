@@ -393,12 +393,15 @@ class SandeshStateMachine(object):
             else:
                 self._logger.info("Discarding event[%s] in state[%s]" \
                                   % (event.event, self._fsm.current))
+        elif event.event == Event._EV_SANDESH_CTRL_MESSAGE_RECV and \
+                self._fsm.current == State._ESTABLISHED:
+            self._connection.handle_sandesh_ctrl_msg(event.msg)
         elif self._fsm.cannot(event.event) is True:
             self._logger.info("Unconsumed event[%s] in state[%s]" \
                               % (event.event, self._fsm.current))
         else:
             prev_state = self.state()
-            result = getattr(self._fsm, event.event)(sm = self, sm_event = event)
+            getattr(self._fsm, event.event)(sm = self, sm_event = event)
             # Log state transition
             self._logger.info("Sandesh Client: Event[%s] => State[%s] -> State[%s]" \
                               % (event.event, prev_state, self.state()))

@@ -48,13 +48,14 @@ public:
     SandeshConnection *FindConnection(const Endpoint &peer_addr);
     void RemoveConnection(SandeshConnection *connection);
     virtual bool DisableSandeshLogMessages() { return true; }
-    
+   
+    virtual bool ReceiveResourceUpdate(SandeshSession *session,
+            bool rsc) { return true; } 
     virtual bool ReceiveSandeshMsg(SandeshSession *session,
         const std::string& cmsg, const std::string& message_type,
-        const SandeshHeader& header, uint32_t xml_offset) = 0;
+        const SandeshHeader& header, uint32_t xml_offset, bool resource) = 0;
     virtual bool ReceiveSandeshCtrlMsg(SandeshStateMachine *state_machine,
             SandeshSession *session, const Sandesh *sandesh);
-    virtual bool ReceiveMsg(SandeshSession *session, ssm::Message *msg) = 0;
     virtual void DisconnectSession(SandeshSession *session) {}
     size_t ConnectionsCount() { return connection_.size(); }
     int AllocConnectionIndex();

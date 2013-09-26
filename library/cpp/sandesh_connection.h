@@ -17,6 +17,7 @@
 #include <base/lifetime.h>
 #include "sandesh_state_machine.h"
 
+class Sandesh;
 class SandeshSession;
 class TcpSession;
 class TcpServer;
@@ -65,9 +66,10 @@ public:
 
     void SetAdminState(bool down);
 
+    virtual bool ProcessResourceUpdate(bool res) { return true; }
     virtual bool ProcessSandeshMessage(const std::string &msg,
             const SandeshHeader &header, const std::string sandesh_name,
-            const uint32_t header_offset) = 0;
+            const uint32_t header_offset, bool resource) = 0;
     virtual bool ProcessSandeshCtrlMessage(const std::string &msg,
             const SandeshHeader &header, const std::string sandesh_name,
             const uint32_t header_offset) = 0;
@@ -102,9 +104,10 @@ public:
         int task_instance, int task_id);
     virtual ~SandeshServerConnection();
 
+    virtual bool ProcessResourceUpdate(bool res); 
     virtual bool ProcessSandeshMessage(const std::string &msg,
             const SandeshHeader &header, const std::string sandesh_name,
-            const uint32_t header_offset);
+            const uint32_t header_offset, bool resource);
     virtual bool ProcessSandeshCtrlMessage(const std::string &msg,
             const SandeshHeader &header, const std::string sandesh_name,
             const uint32_t header_offset);

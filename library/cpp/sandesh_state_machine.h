@@ -89,8 +89,8 @@ public:
     // Receive incoming sandesh message
     void OnSandeshMessage(SandeshSession *session, const std::string &msg);
 
-    // Receive incoming ssm::Message
-    void OnMessage(ssm::Message *smsg);
+    // In established state, the SM accepts updates to resource state
+    void ResourceUpdate(bool rsc);
 
     const std::string &StateName() const;
     const std::string &LastStateName() const;
@@ -109,6 +109,9 @@ public:
         state_since_ = UTCTimestampUsec();
     }
     ssm::SsmState get_state() const { return state_; }
+
+    bool get_resource() const { return resource_; }
+    void set_resource(bool r) { resource_ = r; }
 
     int idle_hold_time() const { return idle_hold_time_; }
     void reset_idle_hold_time() { idle_hold_time_ = 0; }
@@ -174,6 +177,7 @@ private:
     int statistics_timer_interval_;
     bool deleted_;
     tbb::atomic<ssm::SsmState> state_;
+    bool resource_;
     ssm::SsmState last_state_;
     uint64_t state_since_;
     std::string last_event_;
