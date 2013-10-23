@@ -40,7 +40,8 @@ class SandeshSessionTest : public SandeshSession {
 public:
     SandeshSessionTest(TcpServer *client, Socket *socket)
         : SandeshSession(client, socket, Task::kTaskInstanceAny,
-                TaskScheduler::GetInstance()->GetTaskId("sandesh::SandeshSessionTest")),
+                TaskScheduler::GetInstance()->GetTaskId("sandesh::SandeshSessionTest"),
+                TaskScheduler::GetInstance()->GetTaskId("io::ReaderTask")),
           release_count_(0) {
         SetReceiveMsgCb(boost::bind(&SandeshSessionTest::ReceiveMsg, this, _1));
     }

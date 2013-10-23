@@ -40,7 +40,8 @@ using std::vector;
 using boost::system::error_code;
 
 const std::string SandeshClient::kSMTask = "sandesh::SandeshClientSM";
-const std::string SandeshClient::kSessionTask = "sandesh::SandeshClientSession";
+const std::string SandeshClient::kSessionWriterTask = "sandesh::SandeshClientSession";
+const std::string SandeshClient::kSessionReaderTask = "io::ReaderTask";
 bool SandeshClient::task_policy_set_ = false;
 
 SandeshClient::SandeshClient(EventManager *evm,
@@ -49,7 +50,8 @@ SandeshClient::SandeshClient(EventManager *evm,
         sm_task_instance_(kSMTaskInstance),
         sm_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSMTask)),
         session_task_instance_(kSessionTaskInstance),
-        session_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSessionTask)),
+        session_writer_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSessionWriterTask)),
+        session_reader_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSessionReaderTask)),
         primary_(primary),
         secondary_(secondary),
         csf_(csf),
@@ -57,11 +59,12 @@ SandeshClient::SandeshClient(EventManager *evm,
     LOG(INFO,"primary  " << primary_);
     LOG(INFO,"secondary  " << secondary_);
 
-    // Set task policy for exclusion between state machine and session task since
+    // Set task policy for exclusion between state machine and session tasks since
     // session delete happens in state machine task
     if (!task_policy_set_) {
         TaskPolicy sm_task_policy = boost::assign::list_of
-                (TaskExclusion(session_task_id_));
+                (TaskExclusion(session_writer_task_id_))
+                (TaskExclusion(session_reader_task_id_));
         TaskScheduler::GetInstance()->SetPolicy(sm_task_id_, sm_task_policy);
         task_policy_set_ = true;
     }
@@ -270,5 +273,7 @@ void SandeshClient::SendUVE(int count,
 }
 
 TcpSession *SandeshClient::AllocSession(Socket *socket) {
-    return new SandeshSession(this, socket, session_task_instance_, session_task_id_);
+    return new SandeshSession(this, socket, session_task_instance_, 
+                              session_writer_task_id_,
+                              session_reader_task_id_);
 }

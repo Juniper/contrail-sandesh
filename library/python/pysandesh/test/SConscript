@@ -3,6 +3,7 @@
 #
 # Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
 #
+import sys
 
 Import('SandeshEnv')
 
@@ -32,6 +33,17 @@ env.Depends(test_modules_rules, test_depend_modules_rules)
 
 gen_test_pkg = env.SandeshGenPy('encode_decode_test.sandesh')
 gen_test_pkg += env.SandeshGenPy('msg_test.sandesh')
+
+venv = env.set_up_venv ('sandesh_test', 'sandesh_test')
+pip_pkgs = ['greenlet==0.4.1', 'gevent==0.13.8', 'eventlet==0.9.17',
+        'testtools==0.9.21', 'fixtures==0.3.12', 'requests==1.1.0',
+        'lxml==2.3.3', 'geventhttpclient==1.0a', 'prettytable==0.7.2',
+        'psutil==0.4.1', 'xmltodict']
+_deps = []
+_deps += env.venv_add_pip_pkg(venv, pip_pkgs)
+_deps += env.venv_add_build_pkg (venv, map (lambda x: '/'.join (
+            [Dir('#').abspath, x]), build_pkgs))
+
 pysandesh_ut = env.PyTestSuite('pysandesh-ut', 
                                ['sandesh_encode_decode_test.py', 
                                 'sandesh_msg_test.py',

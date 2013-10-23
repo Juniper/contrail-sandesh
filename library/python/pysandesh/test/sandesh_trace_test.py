@@ -35,7 +35,7 @@ class SandeshTraceTest(unittest.TestCase):
         trace_buf_name = 'test_create_delete_trace_buffer'
         trace_buf_size = 5
         self._sandesh.trace_buffer_create(trace_buf_name, trace_buf_size)
-        self.assertIn(trace_buf_name, self._sandesh.trace_buffer_list_get())
+        self.assertTrue(trace_buf_name in self._sandesh.trace_buffer_list_get())
         self.assertEqual(trace_buf_size, self._sandesh.trace_buffer_size_get(trace_buf_name))
         
         # Read from empty trace buffer
@@ -44,7 +44,7 @@ class SandeshTraceTest(unittest.TestCase):
         exp_trace_list = []
         self.assertEqual(exp_trace_list, self._trace_read_list)
         self._sandesh.trace_buffer_delete(trace_buf_name)
-        self.assertNotIn(trace_buf_name, self._sandesh.trace_buffer_list_get())
+        self.assertFalse(trace_buf_name in self._sandesh.trace_buffer_list_get())
 
         # Read deleted trace buffer
         self._sandesh.trace_buffer_read(name=trace_buf_name, read_context='test',

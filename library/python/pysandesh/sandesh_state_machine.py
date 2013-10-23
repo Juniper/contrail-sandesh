@@ -372,9 +372,17 @@ class SandeshStateMachine(object):
         return True
     #end _is_ready_to_dequeue_event
 
+    def _log_event(self, event):
+        if self._fsm.current == State._ESTABLISHED and \
+           event.event == Event._EV_SANDESH_UVE_SEND:
+           return False
+        return True
+    #end _log_event
+
     def _dequeue_event(self, event):
-        self._logger.info("Processing event[%s] in state[%s]" \
-                          % (event.event, self._fsm.current))
+        if self._log_event(event):
+            self._logger.info("Processing event[%s] in state[%s]" \
+                              % (event.event, self._fsm.current))
         if event.session is not None and event.session is not self._session:
             self._logger.info("Ignore event [%s] received for old session" \
                               % (event.event))

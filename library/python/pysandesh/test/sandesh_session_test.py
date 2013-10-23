@@ -77,6 +77,7 @@ class SandeshReaderTest(unittest.TestCase):
             sandesh_test_started = True
 
     def setUp(self):
+        self.setUpClass()
         self._session = SandeshSessionTestHelper()
         self._sandesh_reader = SandeshReaderTestHelper(self._session)
     #end setUp

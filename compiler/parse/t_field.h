@@ -39,6 +39,9 @@ class t_field : public t_doc {
     type_(type),
     name_(name),
     key_(0),
+#ifdef SANDESH
+    req_(T_OPT_IN_REQ_OUT),
+#endif
     value_(NULL),
     xsd_optional_(false),
     xsd_nillable_(false),

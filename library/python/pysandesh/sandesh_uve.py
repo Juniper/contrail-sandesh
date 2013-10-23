@@ -69,6 +69,7 @@ class SandeshUVEPerTypeMap(object):
         def __init__(self, data, seqno):
             self.data = data
             self.seqno = seqno
+            self.update_count = 0
         #end __init__
 
     #end class UVEMapEntry
@@ -117,8 +118,7 @@ class SandeshUVEPerTypeMap(object):
             else:
                 uve_entry.data = uve_sandesh.update_uve(uve_entry.data)
                 uve_entry.seqno = uve_sandesh.seqnum()
-                logger.debug('Update uve <%s, %s> in the [%s] map' \
-                    % (uve_entry.data.name, uve_entry.seqno, self._uve_type))
+                uve_entry.update_count = uve_entry.update_count + 1
                 self._uve_map[uve_name] = uve_entry
         # Now, update the uve_global_map
         self._sandesh._uve_type_maps.update_uve_type_map(self._uve_type, self)

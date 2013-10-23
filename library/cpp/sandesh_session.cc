@@ -300,13 +300,15 @@ bool SandeshSession::SessionSendReady() {
     return (IsEstablished() && writer_->SendReady());
 }
 
+int SandeshSession::reader_task_id_ = -1;
+
 SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
-        int task_instance, int task_id) :
+        int task_instance, int writer_task_id, int reader_task_id) :
     TcpSession(client, socket),
     instance_(task_instance),
     writer_(new SandeshWriter(this)), 
     reader_(new SandeshReader(this)),
-    send_queue_(new Sandesh::SandeshQueue(task_id,
+    send_queue_(new Sandesh::SandeshQueue(writer_task_id,
             task_instance,
             boost::bind(&SandeshSession::SendMsg, this, _1),
             boost::bind(&SandeshSession::SessionSendReady, this))),
@@ -314,10 +316,13 @@ SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
     keepalive_interval_(kSessionKeepaliveInterval),
     keepalive_probes_(kSessionKeepaliveProbes) {
     if (Sandesh::role() == Sandesh::Collector) {
-        send_buffer_queue_.reset(new Sandesh::SandeshBufferQueue(task_id,
+        send_buffer_queue_.reset(new Sandesh::SandeshBufferQueue(writer_task_id,
                 task_instance,
                 boost::bind(&SandeshSession::SendBuffer, this, _1),
                 boost::bind(&SandeshSession::SessionSendReady, this)));
+    }
+    if (reader_task_id_ == -1) {
+        reader_task_id_ = reader_task_id;
     }
 }
 

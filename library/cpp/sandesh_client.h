@@ -84,12 +84,14 @@ private:
     static const int kSMTaskInstance = Task::kTaskInstanceAny;
     static const std::string kSMTask;
     static const int kSessionTaskInstance = Task::kTaskInstanceAny;
-    static const std::string kSessionTask;
+    static const std::string kSessionWriterTask;
+    static const std::string kSessionReaderTask;
 
     int sm_task_instance_;
     int sm_task_id_;
     int session_task_instance_;
-    int session_task_id_;
+    int session_writer_task_id_;
+    int session_reader_task_id_;
     Endpoint primary_, secondary_;
     Sandesh::CollectorSubFn csf_;
     boost::scoped_ptr<SandeshClientSM> sm_;

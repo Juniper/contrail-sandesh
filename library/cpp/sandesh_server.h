@@ -64,7 +64,9 @@ public:
 protected:
     virtual TcpSession *AllocSession(Socket *socket);
     virtual bool AcceptSession(TcpSession *session);
-    int session_task_id() const { return sm_task_id_; }
+    // Session read, write, and state machine tasks run exclusively
+    int session_writer_task_id() const { return sm_task_id_; }
+    int session_reader_task_id() const { return sm_task_id_; }
 
 private:
     static const std::string kSessionTask;

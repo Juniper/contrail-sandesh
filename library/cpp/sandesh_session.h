@@ -135,7 +135,7 @@ class SandeshSession : public TcpSession {
 public:
     typedef boost::function<void(const std::string&, SandeshSession *)> ReceiveMsgCb;
     SandeshSession(TcpServer *client, Socket *socket, int task_instance, 
-        int task_id);
+        int writer_task_id, int reader_task_id);
     virtual ~SandeshSession();
     virtual void Shutdown();
     virtual void OnRead(Buffer buffer);
@@ -177,6 +177,11 @@ public:
     static Sandesh * DecodeCtrlSandesh(const std::string& msg, const SandeshHeader& header,
         const std::string& sandesh_name, const uint32_t& header_offset);
 
+protected:
+    virtual int reader_task_id() const {
+        return reader_task_id_;
+    }
+
 private:
     friend class SandeshSessionTest;
 
@@ -184,6 +189,7 @@ private:
     static const int kSessionKeepaliveIdleTime = 45; // in seconds
     static const int kSessionKeepaliveInterval = 3; // in seconds
     static const int kSessionKeepaliveProbes = 5; // count
+    static int reader_task_id_;
 
     bool SendMsg(Sandesh *sandesh);
     bool SendBuffer(boost::shared_ptr<TMemoryBuffer> sbuffer);

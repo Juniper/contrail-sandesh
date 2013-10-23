@@ -43,6 +43,7 @@ class SandeshMsgTest(unittest.TestCase):
                 [('127.0.0.1', 8086)], 'sandesh_msg_test_ctxt', http_port)
 
     def setUp(self):
+        self.setUpClass()
         self._session = SandeshMsgTestHelper()
         self._writer = SandeshWriter(session=self._session)
         self._reader = SandeshReader(self._session, self.sandesh_read_handler)

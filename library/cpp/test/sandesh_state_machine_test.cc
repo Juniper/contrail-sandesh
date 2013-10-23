@@ -50,7 +50,8 @@ public:
 
     SandeshSessionMock(TcpServer *server, State state, Direction direction)
         : SandeshSession(server, NULL, Task::kTaskInstanceAny,
-                TaskScheduler::GetInstance()->GetTaskId("sandesh::Test::StateMachine")),
+                TaskScheduler::GetInstance()->GetTaskId("sandesh::Test::StateMachine"),
+                TaskScheduler::GetInstance()->GetTaskId("io::ReaderTask")),
           state_(state),
           direction_(direction) {
     }

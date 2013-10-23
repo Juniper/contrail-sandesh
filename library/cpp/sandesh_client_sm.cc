@@ -410,6 +410,9 @@ struct ClientInit : public sc::state<ClientInit, SandeshClientSMImpl> {
     sc::result react(const EvTcpClose &event) {
         SandeshClientSMImpl *state_machine = &context<SandeshClientSMImpl>();
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name());
+        state_machine->DiscUpdate(
+                SandeshClientSM::CLIENT_INIT, false,
+                TcpServer::Endpoint(), TcpServer::Endpoint());
         return ToIdle(state_machine);
     }
 
@@ -858,7 +861,7 @@ bool SandeshClientSMImpl::DiscUpdate(State from_state, bool update,
             SendUVE();
             return true;
     }
-    if ((from_state == ESTABLISHED)||(from_state == CONNECT)) {
+    if ((from_state == ESTABLISHED)||(from_state == CONNECT)||(from_state == CLIENT_INIT)) {
         if (!update) {
             if (backup_!=TcpServer::Endpoint()) {
                 TcpServer::Endpoint temp = backup_;
@@ -874,13 +877,6 @@ bool SandeshClientSMImpl::DiscUpdate(State from_state, bool update,
                 SendUVE();
                 return true;                
             }
-        }
-    }
-    if (from_state == CLIENT_INIT) {
-        if (server()!=active_) {
-            set_server(active_);
-            SendUVE();
-            return true;                
         }
     }
     SendUVE();

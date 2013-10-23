@@ -159,7 +159,8 @@ TcpSession *SandeshServer::AllocSession(Socket *socket) {
     // they need to be exclusive as session delete happens from state
     // machine
     TcpSession *session = new SandeshSession(this, socket,
-            AllocConnectionIndex(), sm_task_id_);
+            AllocConnectionIndex(), session_writer_task_id(),
+            session_reader_task_id());
     return session;
 }
 
