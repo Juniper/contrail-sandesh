@@ -107,17 +107,24 @@ public:
 
 struct SandeshGenStatsElemCollection {
     SandeshGenStatsElemCollection() : messages_sent(0), bytes_sent(0), 
-                                      messages_received(0), bytes_received(0) { 
+                                      messages_received(0), bytes_received(0),
+                                      messages_sent_dropped(0),
+                                      messages_received_dropped(0) { 
     }
 
     uint64_t messages_sent;
     uint64_t bytes_sent;
     uint64_t messages_received;
     uint64_t bytes_received;
+    uint64_t messages_sent_dropped;
+    uint64_t messages_received_dropped;
 };
+
 struct SandeshGenStatsCollection {
     SandeshGenStatsCollection() : total_sandesh_sent(0), total_bytes_sent(0),
-                                  total_sandesh_received(0), total_bytes_received(0) {
+                                  total_sandesh_received(0), total_bytes_received(0),
+                                  total_sandesh_sent_dropped(0),
+                                  total_sandesh_received_dropped(0) {
     }
 
     boost::ptr_map<std::string, SandeshGenStatsElemCollection> msgtype_stats_map_;
@@ -125,6 +132,8 @@ struct SandeshGenStatsCollection {
     uint64_t total_bytes_sent;
     uint64_t total_sandesh_received;
     uint64_t total_bytes_received;
+    uint64_t total_sandesh_sent_dropped;
+    uint64_t total_sandesh_received_dropped;
 };
 
 class SandeshConnection;
@@ -220,7 +229,7 @@ public:
             int *error, SandeshContext *client_context);
     static bool SendReady(SandeshConnection * sconn = NULL);
     static void UpdateSandeshStats(const std::string& sandesh_name,
-                                   uint32_t bytes, bool is_tx);
+                                   uint32_t bytes, bool is_tx, bool dropped);
     static const char *  SandeshRoleToString(SandeshRole role);
 
     virtual void Release() { delete this; }

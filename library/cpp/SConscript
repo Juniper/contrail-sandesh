@@ -9,16 +9,17 @@ Import('SandeshEnv')
 env = SandeshEnv.Clone();
 
 env.AppendUnique(CCFLAGS='-fno-exceptions')
+
 env.Append(CPPPATH = [
     '#build/include',
     '#controller/src',
     Dir('.').abspath,
     '#tools',
+    SandeshEnv['TOP'] + '/io',
 ])
 
 # Generate the source files
 SandeshGenFiles  = env.SandeshGenCpp('../common/sandesh.sandesh')
-SandeshGenFiles += env.SandeshGenCpp('../common/sandesh_req.sandesh')
 SandeshGenFiles += env.SandeshGenCpp('../common/sandesh_uve.sandesh')
 SandeshGenFiles += env.SandeshGenOnlyCpp('../common/sandesh_ctrl.sandesh')
 SandeshGenSrcs = env.ExtractCpp(SandeshGenFiles)

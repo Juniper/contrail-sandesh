@@ -50,6 +50,7 @@ class TcpSession;
 class SandeshConnection;
 class SandeshStateMachine;
 class SandeshUVE;
+class SandeshStateMachineStats;
 
 typedef boost::function<bool(SandeshStateMachine *)> EvValidate;
 
@@ -141,22 +142,20 @@ public:
     const std::string &generator_key() const {
         return generator_key_;
     }
+    bool GetQueueCount(uint64_t &queue_count) const;
+    bool GetStatistics(SandeshStateMachineStats &stats);
 
 private:
     friend class SandeshServerStateMachineTest;
     friend class SandeshClientStateMachineTest;
-
-    static const int kStatisticsSendInterval = 30000; // 30 sec .. specified in milliseconds
 
     struct EventContainer {
         boost::intrusive_ptr<const sc::event_base> event;
         EvValidate validate;
     };
 
-    void StartStatisticsTimer();
     void TimerErrorHandler(std::string name, std::string error);
     bool IdleHoldTimerExpired();
-    bool StatisticsTimerExpired();
 
     template <typename Ev> void Enqueue(const Ev &event);
     bool DequeueEvent(EventContainer ec);
@@ -172,9 +171,7 @@ private:
     SandeshConnection *connection_;
     SandeshSession *session_;
     Timer *idle_hold_timer_;
-    Timer *statistics_timer_;
     int idle_hold_time_;
-    int statistics_timer_interval_;
     bool deleted_;
     tbb::atomic<ssm::SsmState> state_;
     bool resource_;

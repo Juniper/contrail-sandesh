@@ -26,6 +26,7 @@
 
 #include "sandesh_client_sm_priv.h"
 #include <sandesh/sandesh_constants.h>
+#include <sandesh/sandesh_uve_types.h>
 
 using boost::system::error_code;
 using std::string;
@@ -725,6 +726,50 @@ int SandeshClientSMImpl::GetConnectTime() const {
     return std::min(backoff ? 1 << (backoff - 1) : 0, kConnectInterval);
 }
 
+void SandeshClientSMImpl::UpdateEventEnqueue(const sc::event_base &event) {
+    UpdateEventStats(event, true, false);
+}
+
+void SandeshClientSMImpl::UpdateEventDequeue(const sc::event_base &event) {
+    UpdateEventStats(event, false, false);
+}
+
+void SandeshClientSMImpl::UpdateEventEnqueueFail(const sc::event_base &event) {
+    UpdateEventStats(event, true, true);
+}
+
+void SandeshClientSMImpl::UpdateEventDequeueFail(const sc::event_base &event) {
+    UpdateEventStats(event, false, true);
+}
+
+void SandeshClientSMImpl::UpdateEventStats(const sc::event_base &event,
+        bool enqueue, bool fail) {
+    tbb::mutex::scoped_lock lock(mutex_);
+    std::string event_name(TYPE_NAME(event));
+    EventStatsMap::iterator it = event_stats_.find(event_name);
+    if (it == event_stats_.end()) {
+        it = (event_stats_.insert(event_name, new EventStats)).first;
+    }
+    EventStats *es = it->second;
+    if (enqueue) {
+        if (fail) {
+            es->enqueue_fails++;
+            enqueue_fails_++;
+        } else {
+            es->enqueues++;
+            enqueues_++;
+        }
+    } else {
+        if (fail) {
+            es->dequeue_fails++;
+            dequeue_fails_++;
+        } else {
+            es->dequeues++;
+            dequeues_++;
+        }
+    }
+}
+
 bool SandeshClientSMImpl::DequeueEvent(SandeshClientSMImpl::EventContainer ec) {
     if (deleted_) return true;
     in_dequeue_ = true;
@@ -734,10 +779,12 @@ bool SandeshClientSMImpl::DequeueEvent(SandeshClientSMImpl::EventContainer ec) {
         if ((state()!=ESTABLISHED)||(TYPE_NAME(*ec.event)!="scm::EvSandeshSend"))
             SM_LOG(DEBUG, "Processing " << TYPE_NAME(*ec.event) << " in state "
                 << StateName());
+        UpdateEventDequeue(*ec.event);
         process_event(*ec.event);
     } else {
         SM_LOG(DEBUG, "Discarding " << TYPE_NAME(*ec.event) << " in state "
                 << StateName());
+        UpdateEventDequeueFail(*ec.event);
     }
 
     ec.event.reset();
@@ -779,7 +826,13 @@ void SandeshClientSMImpl::Enqueue(const Ev &event) {
     EventContainer ec;
     ec.event = event.intrusive_from_this();
     ec.validate = ValidateFn<Ev, HasValidate<Ev>::Has>()(static_cast<const Ev *>(ec.event.get()));
-    work_queue_.Enqueue(ec);
+    if (!work_queue_.Enqueue(ec)) {
+        // XXX - Disable till we implement bounded work queues
+        //UpdateEventEnqueueFail(event);
+        //return;
+    }
+    UpdateEventEnqueue(event);
+    return;
 }
 
 
@@ -792,14 +845,22 @@ SandeshClientSMImpl::SandeshClientSMImpl(EventManager *evm, Mgr *mgr,
                 boost::bind(&SandeshClientSMImpl::DequeueEvent, this, _1)),
         connect_timer_(TimerManager::CreateTimer(*evm->io_service(), "Client Connect timer")),
         idle_hold_timer_(TimerManager::CreateTimer(*evm->io_service(), "Client Idle hold timer")),
+        statistics_timer_(TimerManager::CreateTimer(*evm->io_service(), "Client Statistics timer")),
         idle_hold_time_(0),
+        statistics_timer_interval_(kStatisticsSendInterval),
         attempts_(0),
         deleted_(false),
         in_dequeue_(false),
         connects_(0),
-        coll_name_(string()) {
+        coll_name_(string()),
+        enqueues_(0),
+        enqueue_fails_(0),
+        dequeues_(0),
+        dequeue_fails_(0) {
     state_ = IDLE;
+    generator_key_ = Sandesh::source() + ":" + Sandesh::module();
     initiate();
+    StartStatisticsTimer();
 }
 
 SandeshClientSMImpl::~SandeshClientSMImpl() {
@@ -835,6 +896,50 @@ SandeshClientSMImpl::~SandeshClientSMImpl() {
     //
     TimerManager::DeleteTimer(connect_timer_);
     TimerManager::DeleteTimer(idle_hold_timer_);
+    TimerManager::DeleteTimer(statistics_timer_);
+}
+
+void SandeshClientSMImpl::StartStatisticsTimer() {
+    statistics_timer_->Start(statistics_timer_interval_,
+            boost::bind(&SandeshClientSMImpl::StatisticsTimerExpired, this),
+            boost::bind(&SandeshClientSMImpl::TimerErrorHanlder, this, _1,
+                    _2));
+}
+
+bool SandeshClientSMImpl::StatisticsTimerExpired() {
+    if (deleted_ || generator_key_.empty()) {
+        return true;
+    }
+    std::vector<SandeshStateMachineEvStats> ev_stats;
+    tbb::mutex::scoped_lock lock(mutex_);
+    for (EventStatsMap::const_iterator it = event_stats_.begin();
+            it != event_stats_.end(); ++it) {
+        const EventStats *es = it->second;
+        SandeshStateMachineEvStats ev_stat;
+        ev_stat.event = it->first;
+        ev_stat.enqueues = es->enqueues;
+        ev_stat.dequeues = es->dequeues;
+        ev_stat.enqueue_fails = es->enqueue_fails;
+        ev_stat.dequeue_fails = es->dequeue_fails;
+        ev_stats.push_back(ev_stat);
+    }
+    lock.release();
+    // Send the message
+    ModuleClientState mcs;
+    mcs.set_name(generator_key_);
+    mcs.set_sm_queue_count(enqueues_ - dequeues_);
+    // Sandesh state machine statistics
+    SandeshStateMachineStats sm_stats;
+    sm_stats.set_ev_stats(ev_stats);
+    sm_stats.set_state(StateName());
+    sm_stats.set_last_state(LastStateName());
+    sm_stats.set_last_event(last_event());
+    sm_stats.set_state_since(state_since_);
+    sm_stats.set_last_event_at(last_event_at_);
+    mcs.set_sm_stats(sm_stats);
+
+    SandeshModuleClientTrace::Send(mcs);
+    return true;
 }
 
 void SandeshClientSMImpl::GetCandidates(TcpServer::Endpoint& active,

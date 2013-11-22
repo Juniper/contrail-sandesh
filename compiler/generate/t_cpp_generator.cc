@@ -2736,11 +2736,14 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
   vector<t_field*>::const_iterator s_iter;
 
   for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
-    indent(out) << "if (data.__isset." << (*s_iter)->get_name() << ")" << endl;
-    indent_up();
-    indent(out) << "tdata.set_" << (*s_iter)->get_name() << "(data.get_" <<
-      (*s_iter)->get_name() << "());" << endl << endl;
-    indent_down();
+
+    if ((*s_iter)->annotations_.find("tags") == (*s_iter)->annotations_.end()) {
+      indent(out) << "if (data.__isset." << (*s_iter)->get_name() << ")" << endl;
+      indent_up();
+      indent(out) << "tdata.set_" << (*s_iter)->get_name() << "(data.get_" <<
+        (*s_iter)->get_name() << "());" << endl << endl;
+      indent_down();
+    }
   }
 
   indent_down();

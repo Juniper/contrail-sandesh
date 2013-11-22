@@ -117,8 +117,8 @@ class SandeshConnection(object):
             old_secondary_collector = self._secondary_collector
             if len(collector_info) > 0:
                 try:
-                    self._primary_collector = (collector_info[0]['ip-address'], 
-                                               int(collector_info[0]['port']))
+                    self._primary_collector = collector_info[0]['ip-address'] \
+                        + ':' + collector_info[0]['port']
                 except KeyError:
                     self._logger.error('Failed to decode collector info from the discovery service')
                     return
@@ -126,8 +126,8 @@ class SandeshConnection(object):
                 self._primary_collector = None
             if len(collector_info) > 1:
                 try:
-                    self._secondary_collector = (collector_info[1]['ip-address'],
-                                                 int(collector_info[1]['port']))
+                    self._secondary_collector = collector_info[1]['ip-address'] \
+                        + ':' + collector_info[1]['port']
                 except KeyError:
                     self._logger.error('Failed to decode collector info from the discovery service')
                     return

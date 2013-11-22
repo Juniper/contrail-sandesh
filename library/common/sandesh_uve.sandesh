@@ -5,8 +5,60 @@
 /*
  *  sandesh_uve.sandesh
  *
- *  Sandesh UVE definitions
+ *  Sandesh Library definitions
  */
+
+include "io/io.sandesh"
+
+struct SandeshGenStatsElem {
+    1: string message_type;
+    3: i64 messages_sent;
+    4: i64 bytes_sent;
+    5: i64 messages_received;
+    6: i64 bytes_received;
+}
+
+struct SandeshGenStats {
+    1: string hostname              
+    2: list<SandeshGenStatsElem> stats_list;
+    3: i64 total_sandesh_sent;
+    4: i64 total_bytes_sent;
+    5: i64 total_sandesh_received;
+    6: i64 total_bytes_received;
+}
+
+request sandesh SandeshGenStatsReq {
+}
+
+response sandesh SandeshGenStatsResp {
+    1: SandeshGenStats stats;
+}
+
+request sandesh SandeshLoggingParamsSet {
+    1: optional bool enable;
+    2: optional string category;
+    3: optional string level;
+    4: optional bool trace_print;
+}
+
+request sandesh SandeshLoggingParamsStatus {
+}
+
+response sandesh SandeshLoggingParams {
+    1: bool enable;
+    2: string category;
+    3: string level;
+    4: bool trace_print;
+}
+
+request sandesh CollectorInfoRequest {
+}
+
+response sandesh CollectorInfoResponse {
+    1: string ip;
+    2: i32 port;
+    3: string status;
+}
 
 request sandesh SandeshUVECacheReq {
     1: string tname;
@@ -36,19 +88,38 @@ struct SandeshStateMachineEvStats {
     5: u64                        dequeue_fails;
 }
 
-struct SandeshStateMachineData {
-    1: string                              name (key="ObjectGeneratorInfo")
-    2: optional bool                       deleted
-    3: optional u64                        agg_count (aggtype="stats", hbin="50")
-    4: optional list<SandeshStateMachineEvStats> sm_stats
-    5: optional string                     state
-    6: optional u64                        state_since
-    7: optional string                     last_state
-    8: optional string                     last_event
-    9: optional u64                        last_event_at
+struct SandeshStateMachineStats {
+    1: optional list<SandeshStateMachineEvStats> ev_stats
+    2: optional string                     state
+    3: optional u64                        state_since
+    4: optional string                     last_state
+    5: optional string                     last_event
+    6: optional u64                        last_event_at
 }
 
-uve sandesh SandeshStateMachineInfo {
-    1: SandeshStateMachineData           data
+struct SandeshClientInfo {
+    1: optional string status
+    2: optional u32 successful_connections
+    3: optional u32 pid
+    4: optional u32 http_port
+    5: optional u64 start_time
+    6: optional string collector_name
+    7: optional string primary
+    8: optional string secondary
+    9: optional io.TcpServerSocketStats rx_socket_stats
+    10: optional io.TcpServerSocketStats tx_socket_stats
+}
+
+struct ModuleClientState {
+    1: string                              name (key="ObjectGeneratorInfo")
+    2: optional bool                       deleted
+    3: optional SandeshClientInfo          client_info
+    4: optional SandeshGenStats            msg_stats
+    5: optional u64                        sm_queue_count (aggtype="stats", hbin="50")
+    6: optional SandeshStateMachineStats   sm_stats
+}
+
+uve sandesh SandeshModuleClientTrace {
+    1: ModuleClientState                   data
 }
 

@@ -316,8 +316,10 @@ class SandeshStateMachine(object):
 
     def _create_session(self):
         assert self._session is None
+        col_info = self._active_collector.split(':')
+        collector = (col_info[0], int(col_info[1]))
         self._session = SandeshSession(self._connection.sandesh_instance(),
-                                       self._active_collector,
+                                       collector,
                                        self.on_session_event,
                                        self._connection._receive_sandesh_msg) 
     #end _create_session

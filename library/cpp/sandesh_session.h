@@ -77,6 +77,7 @@ private:
     void reset_send_buf() {
         send_buf_offset_ = 0;
     }
+    SandeshSession *session();
 
     bool ready_to_send_;
     WaitMsgQ wait_msgq_;
@@ -101,7 +102,6 @@ public:
     virtual void OnRead(Buffer buffer);
     static int ExtractMsgHeader(const std::string& msg, SandeshHeader& header,
             std::string& msg_type, uint32_t& header_offset);
-    SandeshSession *session();
 
 private:
     bool MsgLengthKnown() { return msg_length_ != (size_t)-1; }
@@ -118,6 +118,7 @@ private:
     int MatchString(const std::string& match, size_t &m_offset);
     bool ExtractMsgLength(size_t &msg_length, int *result);
     bool ExtractMsg(Buffer buffer, int *result, bool NewBuf);
+    SandeshSession *session();
 
     std::string buf_;
     size_t offset_;
@@ -176,6 +177,57 @@ public:
     virtual std::string ToString() const;
     static Sandesh * DecodeCtrlSandesh(const std::string& msg, const SandeshHeader& header,
         const std::string& sandesh_name, const uint32_t& header_offset);
+    // Session statistics
+    struct SandeshSessionStats {
+        SandeshSessionStats() :
+            num_recv_msg_(0),
+            num_recv_msg_fail_(0),
+            num_recv_fail_(0),
+            num_send_msg_(0),
+            num_send_msg_fail_(0),
+            num_send_buffer_fail_(0),
+            num_wait_msgq_enqueue_(0),
+            num_wait_msgq_dequeue_(0) {
+        }
+
+        uint64_t num_recv_msg_;
+        uint64_t num_recv_msg_fail_;
+        uint64_t num_recv_fail_;
+
+        uint64_t num_send_msg_;
+        uint64_t num_send_msg_fail_;
+        uint64_t num_send_buffer_fail_;
+
+        uint64_t num_wait_msgq_enqueue_;
+        uint64_t num_wait_msgq_dequeue_;
+    };
+    inline void increment_recv_msg() {
+        sstats_.num_recv_msg_++;
+    }
+    inline void increment_recv_msg_fail() {
+        sstats_.num_recv_msg_fail_++;
+    }
+    inline void increment_recv_fail() {
+        sstats_.num_recv_fail_++;
+    }
+    inline void increment_send_msg() {
+        sstats_.num_send_msg_++;
+    }
+    inline void increment_send_msg_fail() {
+        sstats_.num_send_msg_fail_++;
+    }
+    inline void increment_send_buffer_fail() {
+        sstats_.num_send_buffer_fail_++;
+    }
+    inline void increment_wait_msgq_enqueue() {
+        sstats_.num_wait_msgq_enqueue_++;
+    }
+    inline void increment_wait_msgq_dequeue() {
+        sstats_.num_wait_msgq_dequeue_++;
+    }
+    const SandeshSessionStats& GetStats() const {
+        return sstats_;
+    }
 
 protected:
     virtual int reader_task_id() const {
@@ -189,7 +241,6 @@ private:
     static const int kSessionKeepaliveIdleTime = 45; // in seconds
     static const int kSessionKeepaliveInterval = 3; // in seconds
     static const int kSessionKeepaliveProbes = 5; // count
-    static int reader_task_id_;
 
     bool SendMsg(Sandesh *sandesh);
     bool SendBuffer(boost::shared_ptr<TMemoryBuffer> sbuffer);
@@ -206,7 +257,11 @@ private:
     int keepalive_idle_time_;
     int keepalive_interval_;
     int keepalive_probes_;
+    int reader_task_id_;
 
+    // Session statistics
+    SandeshSessionStats sstats_;
+ 
     DISALLOW_COPY_AND_ASSIGN(SandeshSession);
 };
 

@@ -29,10 +29,9 @@
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
 #include <sandesh/sandesh_session.h>
-#include <sandesh/sandesh_req_types.h>
+#include <sandesh/sandesh_uve_types.h>
 #include "sandesh_connection.h"
 #include "sandesh_state_machine.h"
-#include "../common/sandesh_uve_types.h"
 
 using namespace std;
 using boost::system::error_code;
@@ -406,13 +405,7 @@ SandeshStateMachine::SandeshStateMachine(const char *prefix, SandeshConnection *
               "Idle hold timer", 
               connection->GetTaskId(),
               connection->GetTaskInstance())),
-      statistics_timer_(TimerManager::CreateTimer(
-              *connection->server()->event_manager()->io_service(),
-              "Statistics timer",
-              connection->GetTaskId(),
-              connection->GetTaskInstance())),
       idle_hold_time_(0),
-      statistics_timer_interval_(kStatisticsSendInterval),
       deleted_(false),
       resource_(false),
       enqueues_(0),
@@ -421,7 +414,6 @@ SandeshStateMachine::SandeshStateMachine(const char *prefix, SandeshConnection *
       dequeue_fails_(0) {
     state_ = ssm::IDLE;
     initiate();
-    StartStatisticsTimer();
 }
 
 SandeshStateMachine::~SandeshStateMachine() {
@@ -444,7 +436,6 @@ SandeshStateMachine::~SandeshStateMachine() {
     // possible reference to the timers being deleted any more
     //
     TimerManager::DeleteTimer(idle_hold_timer_);
-    TimerManager::DeleteTimer(statistics_timer_);
 }
 
 void SandeshStateMachine::Initialize() {
@@ -529,13 +520,6 @@ void SandeshStateMachine::StartIdleHoldTimer() {
                     _2));
 }
 
-void SandeshStateMachine::StartStatisticsTimer() {
-    statistics_timer_->Start(statistics_timer_interval_,
-            boost::bind(&SandeshStateMachine::StatisticsTimerExpired, this),
-            boost::bind(&SandeshStateMachine::TimerErrorHandler, this, _1,
-                    _2));
-}
-
 void SandeshStateMachine::CancelIdleHoldTimer() {
     idle_hold_timer_->Cancel();
 }
@@ -558,35 +542,39 @@ void SandeshStateMachine::TimerErrorHandler(std::string name, std::string error)
     SM_LOG(ERROR, name + " error: " + error);
 }
 
-bool SandeshStateMachine::StatisticsTimerExpired() {
+bool SandeshStateMachine::GetQueueCount(uint64_t &queue_count) const {
     if (deleted_ || generator_key_.empty()) {
-        return true;
+        return false;
     }
-    std::vector<SandeshStateMachineEvStats> sm_stats;
+    queue_count = enqueues_ - dequeues_;
+    return true;
+}
+
+bool SandeshStateMachine::GetStatistics(
+        SandeshStateMachineStats &sm_stats) {
+    if (deleted_ || generator_key_.empty()) {
+        return false;
+    }
+    std::vector<SandeshStateMachineEvStats> ev_stats;
     tbb::mutex::scoped_lock lock(stats_mutex_);
     for (EventStatsMap::const_iterator it = event_stats_.begin();
             it != event_stats_.end(); ++it) {
         const EventStats *es = it->second;
-        SandeshStateMachineEvStats ev_stats;
-        ev_stats.event = it->first;
-        ev_stats.enqueues = es->enqueues;
-        ev_stats.dequeues = es->dequeues;
-        ev_stats.enqueue_fails = es->enqueue_fails;
-        ev_stats.dequeue_fails = es->dequeue_fails;
-        sm_stats.push_back(ev_stats);
+        SandeshStateMachineEvStats ev_stat;
+        ev_stat.event = it->first;
+        ev_stat.enqueues = es->enqueues;
+        ev_stat.dequeues = es->dequeues;
+        ev_stat.enqueue_fails = es->enqueue_fails;
+        ev_stat.dequeue_fails = es->dequeue_fails;
+        ev_stats.push_back(ev_stat);
     }
     lock.release();
-    // Send the message
-    SandeshStateMachineData sm_info;
-    sm_info.set_agg_count(enqueues_ - dequeues_);
-    sm_info.set_name(generator_key_);
-    sm_info.set_sm_stats(sm_stats);
-    sm_info.set_state(StateName());
-    sm_info.set_last_state(LastStateName());
-    sm_info.set_last_event(last_event());
-    sm_info.set_state_since(state_since_);
-    sm_info.set_last_event_at(last_event_at_);
-    SandeshStateMachineInfo::Send(sm_info);
+    sm_stats.set_ev_stats(ev_stats);
+    sm_stats.set_state(StateName());
+    sm_stats.set_last_state(LastStateName());
+    sm_stats.set_last_event(last_event());
+    sm_stats.set_state_since(state_since_);
+    sm_stats.set_last_event_at(last_event_at_);
     return true;
 }
 
@@ -719,9 +707,6 @@ void SandeshStateMachine::UpdateEventStats(const sc::event_base &event,
 
 bool SandeshStateMachine::DequeueEvent(SandeshStateMachine::EventContainer ec) {
     if (deleted_) {
-        // Update event stats
-        UpdateEventDequeueFail(*ec.event);
-        ec.event.reset();
         return true;
     }
     set_last_event(TYPE_NAME(*ec.event));
@@ -774,8 +759,6 @@ struct ValidateFn<Ev, true> {
 template <typename Ev>
 void SandeshStateMachine::Enqueue(const Ev &event) {
     if (deleted_) {
-        // Update event stats
-        UpdateEventEnqueueFail(event);
         return;
     }
     EventContainer ec;
@@ -783,8 +766,9 @@ void SandeshStateMachine::Enqueue(const Ev &event) {
     ec.validate = ValidateFn<Ev, HasValidate<Ev>::Has>()(static_cast<const Ev *>(ec.event.get()));
     if (!work_queue_.Enqueue(ec)) {
         // Update event stats
-        UpdateEventEnqueueFail(event);
-        return;
+        // XXX Disable till we implement bounded work queues
+        //UpdateEventEnqueueFail(event);
+        //return;
     }
     // Update event stats
     UpdateEventEnqueue(event);

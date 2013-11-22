@@ -48,14 +48,19 @@ SandeshWriter::~SandeshWriter() {
     wait_msgq_.clear();
 }
 
+SandeshSession * SandeshWriter::session () {
+    return static_cast<SandeshSession *>(session_);
+}
+
 void SandeshWriter::WriteReady(const boost::system::error_code &ec) {
     boost::shared_ptr<TMemoryBuffer> buf;
     uint8_t *buffer;
     uint32_t size;
     size_t sent;
-
+    SandeshSession *ssession = session();
+    
     if (ec) {
-        LOG(INFO, "SandeshSession Write error value: " << ec.value()
+        LOG(ERROR, "SandeshSession Write error value: " << ec.value()
             << " category: " << ec.category().name()
             << " message: " << ec.message());
         return;
@@ -72,11 +77,13 @@ void SandeshWriter::WriteReady(const boost::system::error_code &ec) {
             buf->getBuffer(&buffer, &size);
             bool ret = session_->Send((const uint8_t *)buffer, size, &sent);
             if (true == ret) {
+                ssession->increment_wait_msgq_dequeue();
                 wait_msgq_.erase(it);
             } else {
                 // Partial message send would be handled internally. 
                 // Therefore, remove the msg from the wait queue.
                 if (sent) {
+                    ssession->increment_wait_msgq_dequeue();
                     wait_msgq_.erase(it);
                 }
                 return;
@@ -86,7 +93,6 @@ void SandeshWriter::WriteReady(const boost::system::error_code &ec) {
     }
 
     // We may want to start the Runner for the send_queue
-    SandeshSession *ssession = static_cast<SandeshSession *>(session_);
     ssession->send_queue()->MayBeStartRunner();
 }
 
@@ -122,6 +128,9 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
         LOG(ERROR, __func__ << ": Sandesh header write FAILED: " <<
             sandesh->Name() << " : Source:" << sandesh->source() << " Module:" <<
             sandesh->module() << " Sequence Number:" << sandesh->seqnum());
+        session()->increment_send_msg_fail();
+        Sandesh::UpdateSandeshStats(sandesh->Name(), 0, true, true);
+        sandesh->Release();
         return;
     }
     xfer += ret;
@@ -130,6 +139,10 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
         LOG(ERROR, __func__ << ": Sandesh write FAILED: "<<
             sandesh->Name() << " : Source:" << sandesh->source() << " Module:" <<
             sandesh->module() << " Sequence Number:" << sandesh->seqnum());
+        session()->increment_send_msg_fail();
+        Sandesh::UpdateSandeshStats(sandesh->Name(), 0, true, true);
+        sandesh->Release();
+        return;
     }
     xfer += ret;
     // Write the sandesh close envelope
@@ -151,7 +164,8 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
             ss.str().length());
 
     // Update sandesh stats
-    Sandesh::UpdateSandeshStats(sandesh->Name(), offset, true);
+    Sandesh::UpdateSandeshStats(sandesh->Name(), offset, true, false);
+    session()->increment_send_msg();
 
     if (send_buf()) {
         if (more) {
@@ -281,6 +295,7 @@ void SandeshWriter::SendInternal(boost::shared_ptr<TMemoryBuffer> buf) {
     tbb::mutex::scoped_lock lock(mutex_);
     if (false == ready_to_send_) {
         // Can't send the message now. Add the message in the wait queue.
+        session()->increment_wait_msgq_enqueue();
         wait_msgq_.push_back(buf);
     } else {
         buf->getBuffer(&buffer, &len);
@@ -290,6 +305,7 @@ void SandeshWriter::SendInternal(boost::shared_ptr<TMemoryBuffer> buf) {
             if (!sent) {
                 // We don't have to bother about partial send. 
                 // Add the message to the wait queue, only if sent == 0
+                session()->increment_wait_msgq_enqueue();
                 wait_msgq_.push_back(buf);
             }
         }
@@ -299,8 +315,6 @@ void SandeshWriter::SendInternal(boost::shared_ptr<TMemoryBuffer> buf) {
 bool SandeshSession::SessionSendReady() {
     return (IsEstablished() && writer_->SendReady());
 }
-
-int SandeshSession::reader_task_id_ = -1;
 
 SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
         int task_instance, int writer_task_id, int reader_task_id) :
@@ -314,15 +328,13 @@ SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
             boost::bind(&SandeshSession::SessionSendReady, this))),
     keepalive_idle_time_(kSessionKeepaliveIdleTime),
     keepalive_interval_(kSessionKeepaliveInterval),
-    keepalive_probes_(kSessionKeepaliveProbes) {
+    keepalive_probes_(kSessionKeepaliveProbes),
+    reader_task_id_(reader_task_id) {
     if (Sandesh::role() == Sandesh::Collector) {
         send_buffer_queue_.reset(new Sandesh::SandeshBufferQueue(writer_task_id,
                 task_instance,
                 boost::bind(&SandeshSession::SendBuffer, this, _1),
                 boost::bind(&SandeshSession::SessionSendReady, this)));
-    }
-    if (reader_task_id_ == -1) {
-        reader_task_id_ = reader_task_id;
     }
 }
 
@@ -354,6 +366,8 @@ error_code SandeshSession::SetSocketOptions() {
 void SandeshSession::OnRead(Buffer buffer) {
     // Check if session is being deleted, then drop the packet
     if (cb_ == NULL) {
+        LOG(ERROR, __func__ << " Session being deleted: Dropping Message");
+        increment_recv_fail();
         ReleaseBuffer(buffer);
         return;
     }
@@ -363,8 +377,12 @@ void SandeshSession::OnRead(Buffer buffer) {
 bool SandeshSession::SendMsg(Sandesh *sandesh) {
     tbb::mutex::scoped_lock lock(smutex_);
     if (!IsEstablished()) {
-        LOG(ERROR, __func__ << " Not Connected : Dropping Message");
-        sandesh->Log();
+        if (sandesh->IsLoggingAllowed()) {
+            LOG(ERROR, __func__ << " Not Connected : Dropping Message: " << 
+                sandesh->ToString());
+        }
+        increment_send_msg_fail();
+        Sandesh::UpdateSandeshStats(sandesh->Name(), 0, true, true);
         sandesh->Release();
         return true;
     }
@@ -379,6 +397,7 @@ bool SandeshSession::SendMsg(Sandesh *sandesh) {
 bool SandeshSession::SendBuffer(boost::shared_ptr<TMemoryBuffer> sbuffer) {
     tbb::mutex::scoped_lock lock(smutex_);
     if (!IsEstablished()) {
+        increment_send_buffer_fail();
         return true;
     }
     // No buffer packing supported currently
@@ -511,20 +530,22 @@ void SandeshReader::OnRead(Buffer buffer) {
     do {
         if (result < 0) {
             // Generate error and close connection
-            LOG(DEBUG, __func__ << " Message extract failed: " << result);
+            LOG(ERROR, __func__ << " Message extract failed: " << result);
             const uint8_t *cp = TcpSession::BufferData(buffer);
             size_t cp_size = TcpSession::BufferSize(buffer);
-            LOG(DEBUG, __func__ << " OnRead Buffer Size: " << cp_size);
-            LOG(DEBUG, __func__ << " OnRead Buffer: ");
+            LOG(ERROR, __func__ << " OnRead Buffer Size: " << cp_size);
+            LOG(ERROR, __func__ << " OnRead Buffer: ");
             std::string debug((const char*)cp, cp_size);
-            LOG(DEBUG, debug);
-            LOG(DEBUG, __func__ << " Reader Size: " << buf_.size());
-            LOG(DEBUG, __func__ << " Reader Offset: " << offset_);
-            LOG(DEBUG, __func__ << " Reader Buffer: " << buf_);
+            LOG(ERROR, debug);
+            LOG(ERROR, __func__ << " Reader Size: " << buf_.size());
+            LOG(ERROR, __func__ << " Reader Offset: " << offset_);
+            LOG(ERROR, __func__ << " Reader Buffer: " << buf_);
             buf_.clear();
             offset_ = 0;
             // Enqueue a close on the state machine
-            session()->EnqueueClose();
+            SandeshSession *ssession = session();
+            ssession->increment_recv_fail();
+            ssession->EnqueueClose();
             break;
         }
         if (done == true) {
@@ -539,9 +560,13 @@ void SandeshReader::OnRead(Buffer buffer) {
             reset_msg_length();
             SandeshSession *ssession = session();
             if (ssession->receive_msg_cb()) {
+                ssession->increment_recv_msg();
                 ssession->receive_msg_cb()(xml, ssession);
             } else {
                 // Receive message callback not set, session being deleted
+                LOG(ERROR, __func__ << 
+                    ": Session being deleted: Dropping Message: " << xml);
+                ssession->increment_recv_msg_fail();
                 break;
             }
         } else {

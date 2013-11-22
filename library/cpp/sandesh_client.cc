@@ -23,10 +23,10 @@
 #include <sandesh/sandesh_session.h>
 
 #include "sandesh_state_machine.h"
-#include "../common/sandesh_req_types.h"
 
 #include <sandesh/protocol/TXMLProtocol.h>
 #include <sandesh/sandesh_ctrl_types.h>
+#include <sandesh/sandesh_uve_types.h>
 #include <sandesh/common/vns_constants.h>
 #include "sandesh_client.h"
 #include "sandesh_uve.h"
@@ -127,12 +127,12 @@ bool SandeshClient::ReceiveCtrlMsg(const std::string &msg,
 
     const SandeshCtrlServerToClient * snh = dynamic_cast<const SandeshCtrlServerToClient *>(sandesh);
     if (!snh) {
-        LOG(DEBUG, "Received Ctrl Message with wrong type " << sandesh->Name());
+        LOG(ERROR, "Received Ctrl Message with wrong type " << sandesh->Name());
         sandesh->Release();
         return false;
     }
     if (!snh->get_success()) {
-        LOG(DEBUG, "Received Ctrl Message : Connection with server has failed");
+        LOG(ERROR, "Received Ctrl Message : Connection with server has failed");
         sandesh->Release();
         return false;
     }
@@ -158,19 +158,21 @@ bool SandeshClient::ReceiveMsg(const std::string& msg,
     namespace sandesh_trans = contrail::sandesh::transport;
 
     if (header_offset == 0) {
+        Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, true);
         return false;
     }
 
-    Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false);
-
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
-        return ReceiveCtrlMsg(msg, header, sandesh_name, header_offset);
+        bool success = ReceiveCtrlMsg(msg, header, sandesh_name, header_offset);
+        Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, !success);
+        return success;
     }
 
     // Create and process the sandesh
     Sandesh *sandesh = SandeshBaseFactory::CreateInstance(sandesh_name);
     if (sandesh == NULL) {
         LOG(ERROR, __func__ << ": Unknown sandesh: " << sandesh_name);
+        Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, true);
         return true;
     }
     boost::shared_ptr<sandesh_trans::TMemoryBuffer> btrans =
@@ -182,9 +184,11 @@ bool SandeshClient::ReceiveMsg(const std::string& msg,
     int32_t xfer = sandesh->Read(prot);
     if (xfer < 0) {
         LOG(ERROR, __func__ << ": Decoding " << sandesh_name << " FAILED");
+        Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, true);
         return false;
     }
 
+    Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, false);
     SandeshRequest *sr = dynamic_cast<SandeshRequest *>(sandesh);
     assert(sr);
     sr->Enqueue(Sandesh::recv_queue());
@@ -268,6 +272,14 @@ void SandeshClient::SendUVE(int count,
     sci.set_collector_name(server);
     sci.set_primary(pri.str());
     sci.set_secondary(sec.str());
+    // Sandesh client socket statistics
+    TcpServerSocketStats rx_stats;
+    GetRxSocketStats(rx_stats);
+    sci.set_rx_socket_stats(rx_stats);
+    TcpServerSocketStats tx_stats;
+    GetTxSocketStats(tx_stats);
+    sci.set_tx_socket_stats(tx_stats);
+
     mcs.set_client_info(sci);
     SandeshModuleClientTrace::Send(mcs);
 }

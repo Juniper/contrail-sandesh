@@ -310,8 +310,11 @@ void Sandesh::SetTracePrint(bool enable_trace_print) {
 
 bool Sandesh::Enqueue(SandeshQueue *queue) {
     if (!queue) {
-        LOG(ERROR, __func__ << ": SandeshQueue NULL");
-        Log();
+        if (IsLoggingAllowed()) {
+            LOG(ERROR, __func__ << ": SandeshQueue NULL : Dropping Message: "
+                << ToString());
+        } 
+        Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
         return false;
     }
@@ -441,14 +444,18 @@ bool Sandesh::HandleTest() {
 
 bool Sandesh::SendEnqueue() {
     if (!client_) {
-        LOG(INFO, __func__ << " Cannot Send : No client");
-        Log();
+        if (IsLoggingAllowed()) {
+            LOG(ERROR, "Sandesh: Send: No client: " << ToString());
+        }
+        Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
         return false;        
     } 
     if (!client_->SendSandesh(this)) {
-        LOG(INFO, __func__ << " Cannot Send : No session");
-        Log();
+        if (IsLoggingAllowed()) {
+            LOG(ERROR, "Sandesh: Send: FAILED: " << ToString());
+        }
+        Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
         return false;
     }
@@ -501,23 +508,29 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
     }
     if (client_) {
         if (!client_->SendSandeshUVE(this)) {
-            LOG(ERROR, "SandeshClient UVE enqueue FAILED");
-            Log();
+            if (IsLoggingAllowed()) {
+                LOG(ERROR, "SandeshUVE : Send FAILED: " << ToString());
+            }
+            Sandesh::UpdateSandeshStats(Name(), 0, true, true);
             Release();
             return false;
         }
         return true;
     }
-    LOG(ERROR, "Not Ready to Dispatch SandeshUVE");
-    Log();
+    if (IsLoggingAllowed()) {
+        LOG(ERROR, "SandeshUVE: No Client: " << ToString());
+    }
+    Sandesh::UpdateSandeshStats(Name(), 0, true, true);
     Release();
     return false;
 }
 
 bool SandeshRequest::Enqueue(SandeshRxQueue *queue) {
     if (!queue) {
-        LOG(ERROR, __func__ << ": SandeshRxQueue NULL");
-        Log();
+        if (IsLoggingAllowed()) {
+            LOG(ERROR, "SandeshRequest: No RxQueue: " << ToString());
+        }
+        Sandesh::UpdateSandeshStats(Name(), 0, false, true);
         Release();
         return false;
     }
@@ -561,7 +574,7 @@ SandeshLevel::type Sandesh::StringToLevel(std::string level) {
 }
 
 void Sandesh::UpdateSandeshStats(const std::string& sandesh_name,
-                                 uint32_t bytes, bool is_tx) {
+                                 uint32_t bytes, bool is_tx, bool dropped) {
     tbb::mutex::scoped_lock lock(stats_mutex_);
 
     boost::ptr_map<std::string, SandeshGenStatsElemCollection>& stats_map = 
@@ -575,14 +588,24 @@ void Sandesh::UpdateSandeshStats(const std::string& sandesh_name,
     SandeshGenStatsElemCollection *stats_elem = it->second;
 
     if (is_tx) {
-        stats_elem->messages_sent++;
-        stats_elem->bytes_sent += bytes;
-        stats_.total_sandesh_sent++;
-        stats_.total_bytes_sent += bytes;
+        if (dropped) {
+            stats_elem->messages_sent_dropped++;
+            stats_.total_sandesh_sent_dropped++;
+        } else {
+            stats_elem->messages_sent++;
+            stats_elem->bytes_sent += bytes;
+            stats_.total_sandesh_sent++;
+            stats_.total_bytes_sent += bytes;
+        }
     } else {
-        stats_elem->messages_received++;
-        stats_elem->bytes_received += bytes;
-        stats_.total_sandesh_received++;
-        stats_.total_bytes_received += bytes;
+        if (dropped) {
+            stats_elem->messages_received_dropped++;
+            stats_.total_sandesh_received_dropped++;
+        } else { 
+            stats_elem->messages_received++;
+            stats_elem->bytes_received += bytes;
+            stats_.total_sandesh_received++;
+            stats_.total_bytes_received += bytes;
+        }
     }
 }

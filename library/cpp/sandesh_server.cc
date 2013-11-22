@@ -65,6 +65,10 @@ SandeshServer::~SandeshServer() {
     TcpServer::ClearSessions();
 }
 
+int SandeshServer::lifetime_mgr_task_id() {
+    return lifetime_mgr_task_id_;
+}
+
 void SandeshServer::SessionShutdown() {
     TcpServer::Shutdown();
 }

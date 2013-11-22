@@ -40,10 +40,11 @@ public:
     virtual TcpSession *CreateSession();
     void Initiate();
     void Shutdown();
-    void SessionShutdown();
+    virtual void SessionShutdown();
 
     LifetimeManager *lifetime_manager();
     LifetimeActor *deleter();
+    int lifetime_mgr_task_id();
 
     SandeshConnection *FindConnection(const Endpoint &peer_addr);
     void RemoveConnection(SandeshConnection *connection);

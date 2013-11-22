@@ -9,7 +9,7 @@
 from pysandesh.sandesh_uve import SandeshUVETypeMaps
 from pysandesh.sandesh_trace import SandeshTraceRequestRunner
 from pysandesh.gen_py.sandesh_uve.ttypes import SandeshUVECacheReq, SandeshUVECacheResp, SandeshUVETypesReq, SandeshUVETypesResp, SandeshUVETypeInfo 
-from pysandesh.gen_py.sandesh_req.ttypes import CollectorInfoRequest, CollectorInfoResponse, SandeshLoggingParamsSet, SandeshLoggingParamsStatus, SandeshLoggingParams, SandeshGenStatsElem, SandeshGenStats, SandeshGenStatsReq, SandeshGenStatsResp
+from pysandesh.gen_py.sandesh_uve.ttypes import CollectorInfoRequest, CollectorInfoResponse, SandeshLoggingParamsSet, SandeshLoggingParamsStatus, SandeshLoggingParams, SandeshGenStatsElem, SandeshGenStats, SandeshGenStatsReq, SandeshGenStatsResp
 from pysandesh.gen_py.sandesh.ttypes import SandeshLevel
 from pysandesh.gen_py.sandesh_trace.ttypes import SandeshTraceBufInfo, SandeshTraceRequest, SandeshTraceBufferListRequest, SandeshTraceBufferListResponse, SandeshTraceTextResponse, SandeshTraceEnableDisableReq, SandeshTraceEnableDisableRes, SandeshTraceBufStatusReq, SandeshTraceBufStatusRes, SandeshTraceBufferEnableDisableReq, SandeshTraceBufferEnableDisableRes, SandeshTraceBufStatusInfo
 
@@ -37,8 +37,9 @@ class SandeshReqImpl(object):
             if client.connection() is not None:
                 collector = client.connection().server()
                 if collector is not None:
+                    collector = collector.split(':')
                     resp.ip = collector[0]
-                    resp.port = collector[1]
+                    resp.port = int(collector[1])
                 resp.status = client.connection().state()
         resp.response(sandesh_req.context())
     #end collector_info_handle_request

@@ -243,7 +243,7 @@ class Sandesh(object):
     #end send_sandesh
 
     def send_generator_info(self):
-        from gen_py.sandesh_req.ttypes import SandeshClientInfo, ModuleClientState, \
+        from gen_py.sandesh_uve.ttypes import SandeshClientInfo, ModuleClientState, \
              SandeshModuleClientTrace
         client_info = SandeshClientInfo()
         try:
@@ -258,15 +258,12 @@ class Sandesh(object):
             client_info.status = self._client.connection().state() 
             client_info.successful_connections = \
                 self._client.connection().statemachine().connect_count() 
-            primary_collector = self._client.connection().primary_collector()
-            if primary_collector:
-                client_info.primary = primary_collector[0]
-            else:
+            client_info.primary = self._client.connection().primary_collector()
+            if client_info.primary is None:
                 client_info.primary = ''
-            secondary_collector = self._client.connection().secondary_collector()
-            if secondary_collector:
-                client_info.secondary = secondary_collector[0]
-            else:
+            client_info.secondary = \
+                self._client.connection().secondary_collector()
+            if client_info.secondary is None:
                 client_info.secondary = ''
             module_state = ModuleClientState(name=self._source+':'+self._module, 
                                              client_info=client_info)

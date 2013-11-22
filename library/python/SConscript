@@ -115,17 +115,19 @@ sandesh_hdr_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh.sandes
 sandesh_ctrl_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_ctrl.sandesh', 'pysandesh/') 
 # Auto-generated Sandesh UVE package 
 sandesh_uve_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_uve.sandesh', 'pysandesh/')
-# Auto-generated Sandesh Req package
-sandesh_req_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_req.sandesh', 'pysandesh/')
 # Auto-generated Sandesh Trace package
 sandesh_trace_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_trace.sandesh', 'pysandesh/')
+# Generate the io files and install in sandesh_uve
+io_pkg = env.SandeshGenPy('#controller/src/io/io.sandesh', 'pysandesh/gen_py/sandesh_uve/', False)
+env.Depends(io_pkg, sandesh_uve_pkg)
 
 sdist_depends = [local_modules_rules, web_srv_rules,
                  pysandesh_modules_rules, transport_modules_rules, 
                  protocol_modules_rules, sandesh_hdr_pkg,
-                 sandesh_ctrl_pkg, sandesh_uve_pkg, sandesh_req_pkg,
+                 sandesh_ctrl_pkg, sandesh_uve_pkg,
                  sandesh_trace_pkg,
-                 fysom_sources_rules, bottle_sources_rules]
+                 fysom_sources_rules, bottle_sources_rules,
+                 io_pkg]
 
 env['pysandesh_target'] = sdist_depends
 

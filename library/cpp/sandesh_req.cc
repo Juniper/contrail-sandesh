@@ -12,7 +12,7 @@
 #include "sandesh.h"
 #include "sandesh_client.h"
 #include "sandesh_connection.h"
-#include "../common/sandesh_req_types.h"
+#include <sandesh/sandesh_uve_types.h>
 
 using boost::asio::ip::address;
 

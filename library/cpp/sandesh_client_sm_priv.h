@@ -99,6 +99,7 @@ public:
     void set_state(State state) {
         last_state_ = state;
         state_ = state;
+        state_since_ = UTCTimestampUsec();
     }
     State get_state() const { return state_; }
 
@@ -114,6 +115,7 @@ public:
 
     void set_last_event(const std::string &event) {
         last_event_ = event;
+        last_event_at_ = UTCTimestampUsec();
     }
     const std::string &last_event() const {
         return last_event_;
@@ -131,37 +133,68 @@ public:
         mgr_->SendUVE(connects(), StateName(), collector_name(), active_, backup_);
     }
 private:
-
+    static const int kStatisticsSendInterval = 30000; // 30 sec .. specified in milliseconds
     struct EventContainer {
         boost::intrusive_ptr<const sc::event_base> event;
         EvValidate validate;
     };
 
+    void StartStatisticsTimer();
+    bool StatisticsTimerExpired();
     void TimerErrorHanlder(std::string name, std::string error);
     bool ConnectTimerExpired();
     bool IdleHoldTimerExpired();
 
     template <typename Ev> void Enqueue(const Ev &event);
     bool DequeueEvent(EventContainer ec);
+    void UpdateEventDequeue(const sc::event_base &event);
+    void UpdateEventDequeueFail(const sc::event_base &event);
+    void UpdateEventEnqueue(const sc::event_base &event);
+    void UpdateEventEnqueueFail(const sc::event_base &event);
+    void UpdateEventStats(const sc::event_base &event, bool enqueue, bool fail);
+
     TcpServer::Endpoint active_;
     TcpServer::Endpoint backup_;
     WorkQueue<EventContainer> work_queue_;
     Timer *connect_timer_;
     Timer *idle_hold_timer_;
+    Timer *statistics_timer_;
     int idle_hold_time_;
+    int statistics_timer_interval_;
     int attempts_;
     bool deleted_;
     bool in_dequeue_;
     int connects_;
     State last_state_;
+    uint64_t state_since_;
     std::string last_event_;
+    uint64_t last_event_at_;
     std::string coll_name_;
     tbb::mutex mutex_;
+    std::string generator_key_;
+
+    struct EventStats {
+        EventStats() :
+            enqueues(0),
+            enqueue_fails(0),
+            dequeues(0),
+            dequeue_fails(0) {
+        }
+        uint64_t enqueues;
+        uint64_t enqueue_fails;
+        uint64_t dequeues;
+        uint64_t dequeue_fails;
+    };
+    typedef boost::ptr_map<std::string, EventStats> EventStatsMap;
+    EventStatsMap event_stats_;
+
+    uint64_t enqueues_;
+    uint64_t enqueue_fails_;
+    uint64_t dequeues_;
+    uint64_t dequeue_fails_;
 
     DISALLOW_COPY_AND_ASSIGN(SandeshClientSMImpl);
 };
 
-
 #endif // __SANDESH_CLIENT_SM_PRIV_H__
-
 
