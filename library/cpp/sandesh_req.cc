@@ -8,47 +8,37 @@
 // File to handle all sandesh requests..
 //
 
-#include "sandesh/sandesh_types.h"
-#include "sandesh.h"
+#include <sandesh/sandesh_types.h>
+#include <sandesh/sandesh.h>
+#include <sandesh/sandesh_uve_types.h>
+
+#include "sandesh_statistics.h"
 #include "sandesh_client.h"
 #include "sandesh_connection.h"
-#include <sandesh/sandesh_uve_types.h>
 
 using boost::asio::ip::address;
 
 int PullSandeshGenStatsReq = 0;
 
-void SandeshGenStatsReq::HandleRequest() const {
-    SandeshGenStatsResp *resp(new SandeshGenStatsResp);
+void SandeshMessageStatsReq::HandleRequest() const {
+    SandeshMessageStatsResp *resp(new SandeshMessageStatsResp);
 
     tbb::mutex::scoped_lock lock(stats_mutex_);
-    SandeshGenStatsCollection &stats = Sandesh::stats_;
+    SandeshStatistics &stats = Sandesh::stats_;
 
-    typedef boost::ptr_map<std::string, SandeshGenStatsElemCollection> SandeshGenStatsMap;
-
-    std::vector<SandeshGenStatsElem> stats_list;
-    for (SandeshGenStatsMap::iterator mt_it = stats.msgtype_stats_map_.begin();
-            mt_it != stats.msgtype_stats_map_.end();
+    // XXX - Check if introspect supports maps
+    typedef boost::ptr_map<std::string, SandeshMessageTypeStats> SandeshMessageTypeStatsMap;
+    std::vector<SandeshMessageTypeStats> mtype_stats;
+    for (SandeshMessageTypeStatsMap::iterator mt_it = stats.type_stats.begin();
+            mt_it != stats.type_stats.end();
             mt_it++) {
-        SandeshGenStatsElem stats_elem;
-        stats_elem.set_message_type(mt_it->first);
-        stats_elem.set_messages_sent((mt_it->second)->messages_sent);
-        stats_elem.set_bytes_sent((mt_it->second)->bytes_sent);
-        stats_elem.set_messages_received(
-                                (mt_it->second)->messages_received);
-        stats_elem.set_bytes_received((mt_it->second)->bytes_received);
-        stats_list.push_back(stats_elem);
+        mtype_stats.push_back(*mt_it->second);
     }
-    SandeshGenStats stats_resp;
-    stats_resp.set_stats_list(stats_list);
-    stats_resp.set_hostname(Sandesh::source());
-    stats_resp.set_total_sandesh_sent(stats.total_sandesh_sent);
-    stats_resp.set_total_bytes_sent(stats.total_bytes_sent);
-    stats_resp.set_total_sandesh_received(stats.total_sandesh_received);
-    stats_resp.set_total_bytes_received(stats.total_bytes_received);
+    SandeshGeneratorStats sandesh_stats;
+    sandesh_stats.set_type_stats(mtype_stats);
+    sandesh_stats.set_aggregate_stats(stats.agg_stats);
 
-    resp->set_stats(stats_resp);
-
+    resp->set_stats(sandesh_stats);
     resp->set_context(context());
     resp->Response();
 }

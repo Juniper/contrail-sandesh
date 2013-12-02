@@ -15,9 +15,10 @@
 #include <tbb/mutex.h>
 #include <boost/system/error_code.hpp>
 #include <boost/asio.hpp>
-#include "base/util.h"
-#include "io/tcp_session.h"
-#include "sandesh.h"
+#include <base/util.h>
+#include <io/tcp_session.h>
+#include <sandesh/sandesh.h>
+#include <sandesh/sandesh_uve_types.h>
 
 using contrail::sandesh::transport::TMemoryBuffer;
 class SandeshSession;
@@ -178,52 +179,32 @@ public:
     static Sandesh * DecodeCtrlSandesh(const std::string& msg, const SandeshHeader& header,
         const std::string& sandesh_name, const uint32_t& header_offset);
     // Session statistics
-    struct SandeshSessionStats {
-        SandeshSessionStats() :
-            num_recv_msg_(0),
-            num_recv_msg_fail_(0),
-            num_recv_fail_(0),
-            num_send_msg_(0),
-            num_send_msg_fail_(0),
-            num_send_buffer_fail_(0),
-            num_wait_msgq_enqueue_(0),
-            num_wait_msgq_dequeue_(0) {
-        }
-
-        uint64_t num_recv_msg_;
-        uint64_t num_recv_msg_fail_;
-        uint64_t num_recv_fail_;
-
-        uint64_t num_send_msg_;
-        uint64_t num_send_msg_fail_;
-        uint64_t num_send_buffer_fail_;
-
-        uint64_t num_wait_msgq_enqueue_;
-        uint64_t num_wait_msgq_dequeue_;
-    };
     inline void increment_recv_msg() {
-        sstats_.num_recv_msg_++;
+        sstats_.num_recv_msg++;
     }
     inline void increment_recv_msg_fail() {
-        sstats_.num_recv_msg_fail_++;
+        sstats_.num_recv_msg_fail++;
     }
     inline void increment_recv_fail() {
-        sstats_.num_recv_fail_++;
+        sstats_.num_recv_fail++;
     }
     inline void increment_send_msg() {
-        sstats_.num_send_msg_++;
+        sstats_.num_send_msg++;
     }
     inline void increment_send_msg_fail() {
-        sstats_.num_send_msg_fail_++;
+        sstats_.num_send_msg_fail++;
     }
     inline void increment_send_buffer_fail() {
-        sstats_.num_send_buffer_fail_++;
+        sstats_.num_send_buffer_fail++;
     }
     inline void increment_wait_msgq_enqueue() {
-        sstats_.num_wait_msgq_enqueue_++;
+        sstats_.num_wait_msgq_enqueue++;
     }
     inline void increment_wait_msgq_dequeue() {
-        sstats_.num_wait_msgq_dequeue_++;
+        sstats_.num_wait_msgq_dequeue++;
+    }
+    inline void increment_write_ready_cb_error() {
+        sstats_.num_write_ready_cb_error++;
     }
     const SandeshSessionStats& GetStats() const {
         return sstats_;

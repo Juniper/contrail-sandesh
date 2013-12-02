@@ -10,28 +10,30 @@
 
 include "io/io.sandesh"
 
-struct SandeshGenStatsElem {
+struct SandeshMessageStats {
+    1: i64 messages_sent;
+    2: i64 bytes_sent;
+    3: i64 messages_received;
+    4: i64 bytes_received;
+    5: i64 messages_sent_dropped;
+    6: i64 messages_received_dropped;
+}
+
+struct SandeshMessageTypeStats {
     1: string message_type;
-    3: i64 messages_sent;
-    4: i64 bytes_sent;
-    5: i64 messages_received;
-    6: i64 bytes_received;
+    2: SandeshMessageStats stats;
 }
 
-struct SandeshGenStats {
-    1: string hostname              
-    2: list<SandeshGenStatsElem> stats_list;
-    3: i64 total_sandesh_sent;
-    4: i64 total_bytes_sent;
-    5: i64 total_sandesh_received;
-    6: i64 total_bytes_received;
+struct SandeshGeneratorStats {
+    1: list<SandeshMessageTypeStats> type_stats;
+    2: SandeshMessageStats aggregate_stats;
 }
 
-request sandesh SandeshGenStatsReq {
+request sandesh SandeshMessageStatsReq {
 }
 
-response sandesh SandeshGenStatsResp {
-    1: SandeshGenStats stats;
+response sandesh SandeshMessageStatsResp {
+    1: SandeshGeneratorStats stats;
 }
 
 request sandesh SandeshLoggingParamsSet {
@@ -110,16 +112,30 @@ struct SandeshClientInfo {
     10: optional io.TcpServerSocketStats tx_socket_stats
 }
 
+struct SandeshSessionStats {
+    1: u64                        num_recv_msg
+    2: u64                        num_recv_msg_fail
+    3: u64                        num_recv_fail
+    4: u64                        num_send_msg
+    5: u64                        num_send_msg_fail
+    6: u64                        num_send_buffer_fail
+    7: u64                        num_wait_msgq_enqueue
+    8: u64                        num_wait_msgq_dequeue
+    9: u64                        num_write_ready_cb_error
+}
+
 struct ModuleClientState {
     1: string                              name (key="ObjectGeneratorInfo")
     2: optional bool                       deleted
     3: optional SandeshClientInfo          client_info
-    4: optional SandeshGenStats            msg_stats
+    4: optional SandeshGeneratorStats      msg_stats
     5: optional u64                        sm_queue_count (aggtype="stats", hbin="50")
     6: optional SandeshStateMachineStats   sm_stats
+    7: optional SandeshSessionStats        session_stats
+    8: optional io.TcpServerSocketStats    session_rx_socket_stats
+    9: optional io.TcpServerSocketStats    session_tx_socket_stats
 }
 
 uve sandesh SandeshModuleClientTrace {
     1: ModuleClientState                   data
 }
-

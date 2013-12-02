@@ -30,6 +30,7 @@
 #include <sandesh/sandesh.h>
 #include <sandesh/sandesh_session.h>
 #include <sandesh/sandesh_uve_types.h>
+#include "sandesh_statistics.h"
 #include "sandesh_connection.h"
 #include "sandesh_state_machine.h"
 
@@ -551,10 +552,12 @@ bool SandeshStateMachine::GetQueueCount(uint64_t &queue_count) const {
 }
 
 bool SandeshStateMachine::GetStatistics(
-        SandeshStateMachineStats &sm_stats) {
+        SandeshStateMachineStats &sm_stats,
+        SandeshGeneratorStats &msg_stats) {
     if (deleted_ || generator_key_.empty()) {
         return false;
     }
+    // State machine event statistics
     std::vector<SandeshStateMachineEvStats> ev_stats;
     tbb::mutex::scoped_lock lock(stats_mutex_);
     for (EventStatsMap::const_iterator it = event_stats_.begin();
@@ -575,6 +578,16 @@ bool SandeshStateMachine::GetStatistics(
     sm_stats.set_last_event(last_event());
     sm_stats.set_state_since(state_since_);
     sm_stats.set_last_event_at(last_event_at_);
+    // Sandesh message statistics
+    typedef boost::ptr_map<std::string, SandeshMessageTypeStats> SandeshMessageTypeStatsMap;
+    std::vector<SandeshMessageTypeStats> mtype_stats;
+    for (SandeshMessageTypeStatsMap::iterator mt_it = message_stats_.type_stats.begin();
+         mt_it != message_stats_.type_stats.end();
+         mt_it++) {
+        mtype_stats.push_back(*mt_it->second);
+    }
+    msg_stats.set_type_stats(mtype_stats);
+    msg_stats.set_aggregate_stats(message_stats_.agg_stats);
     return true;
 }
 
@@ -619,6 +632,8 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
 
     // Extract the header and message type
     SandeshReader::ExtractMsgHeader(msg, header, message_type, xml_offset);
+    // Update message statistics
+    message_stats_.Update(message_type, msg.size(), false, false);
     
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
         SM_LOG(DEBUG, "OnMessage control in state: " << StateName() <<
