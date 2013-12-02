@@ -17,9 +17,11 @@
 #include <tbb/mutex.h>
 #include <tbb/atomic.h>
 
-#include "base/queue_task.h"
-#include "base/timer.h"
-#include "io/tcp_session.h"
+#include <base/queue_task.h>
+#include <base/timer.h>
+#include <io/tcp_session.h>
+
+#include <sandesh/sandesh_statistics.h>
 
 namespace sc = boost::statechart;
 
@@ -51,6 +53,8 @@ class SandeshConnection;
 class SandeshStateMachine;
 class SandeshUVE;
 class SandeshStateMachineStats;
+class SandeshGeneratorStats;
+class SandeshStatistics;
 
 typedef boost::function<bool(SandeshStateMachine *)> EvValidate;
 
@@ -143,7 +147,8 @@ public:
         return generator_key_;
     }
     bool GetQueueCount(uint64_t &queue_count) const;
-    bool GetStatistics(SandeshStateMachineStats &stats);
+    bool GetStatistics(SandeshStateMachineStats &stats, 
+                       SandeshGeneratorStats &msg_stats);
 
 private:
     friend class SandeshServerStateMachineTest;
@@ -200,6 +205,7 @@ private:
     uint64_t dequeue_fails_;
     tbb::mutex stats_mutex_;
     std::string generator_key_;
+    SandeshStatistics message_stats_;
             
     DISALLOW_COPY_AND_ASSIGN(SandeshStateMachine);
 };

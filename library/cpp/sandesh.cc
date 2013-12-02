@@ -23,6 +23,8 @@
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
 #include <sandesh/sandesh_trace.h>
+#include <sandesh/sandesh_uve_types.h>
+#include "sandesh_statistics.h"
 #include "sandesh_uve.h"
 #include "sandesh_session.h"
 #include "sandesh_http.h"
@@ -51,7 +53,7 @@ Sandesh::SandeshCallback Sandesh::response_callback_ = 0;
 SandeshLevel::type Sandesh::logging_level_ = SandeshLevel::INVALID;
 std::string Sandesh::logging_category_;
 EventManager* Sandesh::event_manager_ = NULL;
-SandeshGenStatsCollection Sandesh::stats_;
+SandeshStatistics Sandesh::stats_;
 tbb::mutex Sandesh::stats_mutex_;
 
 const char * Sandesh::SandeshRoleToString(SandeshRole role) {
@@ -576,36 +578,39 @@ SandeshLevel::type Sandesh::StringToLevel(std::string level) {
 void Sandesh::UpdateSandeshStats(const std::string& sandesh_name,
                                  uint32_t bytes, bool is_tx, bool dropped) {
     tbb::mutex::scoped_lock lock(stats_mutex_);
+    stats_.Update(sandesh_name, bytes, is_tx, dropped);
+}
 
-    boost::ptr_map<std::string, SandeshGenStatsElemCollection>& stats_map = 
-        stats_.msgtype_stats_map_;
-    boost::ptr_map<std::string, SandeshGenStatsElemCollection>::iterator it = 
-        stats_map.find(sandesh_name);
-    if (it == stats_map.end()) {
+void SandeshStatistics::Update(const std::string& sandesh_name,
+                               uint32_t bytes, bool is_tx, bool dropped) {
+    boost::ptr_map<std::string, SandeshMessageTypeStats>::iterator it = 
+        type_stats.find(sandesh_name);
+    if (it == type_stats.end()) {
         std::string name(sandesh_name);
-        it = (stats_map.insert(name, new SandeshGenStatsElemCollection)).first;
+        SandeshMessageTypeStats *nmtstats = new SandeshMessageTypeStats;
+        nmtstats->message_type = name; 
+        it = (type_stats.insert(name, nmtstats)).first;
     }
-    SandeshGenStatsElemCollection *stats_elem = it->second;
-
+    SandeshMessageTypeStats *mtstats = it->second;
     if (is_tx) {
         if (dropped) {
-            stats_elem->messages_sent_dropped++;
-            stats_.total_sandesh_sent_dropped++;
+            mtstats->stats.messages_sent_dropped++;
+            agg_stats.messages_sent_dropped++;
         } else {
-            stats_elem->messages_sent++;
-            stats_elem->bytes_sent += bytes;
-            stats_.total_sandesh_sent++;
-            stats_.total_bytes_sent += bytes;
+            mtstats->stats.messages_sent++;
+            mtstats->stats.bytes_sent += bytes;
+            agg_stats.messages_sent++;
+            agg_stats.bytes_sent += bytes;
         }
     } else {
         if (dropped) {
-            stats_elem->messages_received_dropped++;
-            stats_.total_sandesh_received_dropped++;
+            mtstats->stats.messages_received_dropped++;
+            agg_stats.messages_received_dropped++;
         } else { 
-            stats_elem->messages_received++;
-            stats_elem->bytes_received += bytes;
-            stats_.total_sandesh_received++;
-            stats_.total_bytes_received += bytes;
+            mtstats->stats.messages_received++;
+            mtstats->stats.bytes_received += bytes;
+            agg_stats.messages_received++;
+            agg_stats.bytes_received += bytes;
         }
     }
 }

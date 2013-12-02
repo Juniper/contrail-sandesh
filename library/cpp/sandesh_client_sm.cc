@@ -937,8 +937,19 @@ bool SandeshClientSMImpl::StatisticsTimerExpired() {
     sm_stats.set_state_since(state_since_);
     sm_stats.set_last_event_at(last_event_at_);
     mcs.set_sm_stats(sm_stats);
-
+    // Sandesh session statistics
+    SandeshSession *session = this->session();
+    if (session) {
+        mcs.set_session_stats(session->GetStats());
+        TcpServerSocketStats rx_stats;
+        session->GetRxSocketStats(rx_stats);
+        mcs.set_session_rx_socket_stats(rx_stats);
+        TcpServerSocketStats tx_stats;
+        session->GetTxSocketStats(tx_stats);
+        mcs.set_session_tx_socket_stats(tx_stats);
+    }
     SandeshModuleClientTrace::Send(mcs);
+    SendUVE();
     return true;
 }
 

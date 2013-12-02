@@ -105,37 +105,6 @@ public:
     virtual ~SandeshContext() { }
 };
 
-struct SandeshGenStatsElemCollection {
-    SandeshGenStatsElemCollection() : messages_sent(0), bytes_sent(0), 
-                                      messages_received(0), bytes_received(0),
-                                      messages_sent_dropped(0),
-                                      messages_received_dropped(0) { 
-    }
-
-    uint64_t messages_sent;
-    uint64_t bytes_sent;
-    uint64_t messages_received;
-    uint64_t bytes_received;
-    uint64_t messages_sent_dropped;
-    uint64_t messages_received_dropped;
-};
-
-struct SandeshGenStatsCollection {
-    SandeshGenStatsCollection() : total_sandesh_sent(0), total_bytes_sent(0),
-                                  total_sandesh_received(0), total_bytes_received(0),
-                                  total_sandesh_sent_dropped(0),
-                                  total_sandesh_received_dropped(0) {
-    }
-
-    boost::ptr_map<std::string, SandeshGenStatsElemCollection> msgtype_stats_map_;
-    uint64_t total_sandesh_sent;
-    uint64_t total_bytes_sent;
-    uint64_t total_sandesh_received;
-    uint64_t total_bytes_received;
-    uint64_t total_sandesh_sent_dropped;
-    uint64_t total_sandesh_received_dropped;
-};
-
 class SandeshConnection;
 //
 // Sandesh
@@ -164,6 +133,7 @@ struct WorkQueueDelete<SandeshRequest *> {
     }
 };
 
+class SandeshStatistics;
 class Sandesh {
 public:
     typedef WorkQueue<SandeshRequest *> SandeshRxQueue;
@@ -278,7 +248,7 @@ public:
     static const char* LevelToString(SandeshLevel::type level);
     static SandeshLevel::type StringToLevel(std::string level);
 
-    static SandeshGenStatsCollection stats_;
+    static SandeshStatistics stats_;
     static tbb::mutex stats_mutex_;
 
 protected:

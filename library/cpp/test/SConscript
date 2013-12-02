@@ -16,6 +16,7 @@ env.Append(CPPPATH = [Dir('.').abspath,
                       Dir('#tools').abspath,
                       '../',
                       '../../common/test/',
+                      env['TOP'] + '/io',
                       ])
     
 # Generate the source files

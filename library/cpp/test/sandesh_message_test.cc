@@ -27,6 +27,8 @@
 #include <sandesh/sandesh_session.h>
 #include <sandesh/sandesh_http.h>
 #include <sandesh/sandesh_ctrl_types.h>
+#include <sandesh/sandesh_uve_types.h>
+#include "sandesh_statistics.h"
 #include "sandesh_client.h"
 #include "sandesh_server.h"
 #include "sandesh_message_test_types.h"
@@ -263,15 +265,15 @@ TEST_F(SandeshAsyncTest, Async) {
     {
         tbb::mutex::scoped_lock lock(Sandesh::stats_mutex_);
 
-        boost::ptr_map<std::string, SandeshGenStatsElemCollection>::iterator it;
-        it = Sandesh::stats_.msgtype_stats_map_.find("SystemLogTest");
-        EXPECT_EQ(3, it->second->messages_sent);
-        it = Sandesh::stats_.msgtype_stats_map_.find("ObjectLogTest");
-        EXPECT_EQ(1, it->second->messages_sent);
-        it = Sandesh::stats_.msgtype_stats_map_.find("ObjectLogAnnTest");
-        EXPECT_EQ(1, it->second->messages_sent);
-        it = Sandesh::stats_.msgtype_stats_map_.find("ObjectLogInnerAnnTest");
-        EXPECT_EQ(1, it->second->messages_sent);
+        boost::ptr_map<std::string, SandeshMessageTypeStats>::iterator it;
+        it = Sandesh::stats_.type_stats.find("SystemLogTest");
+        EXPECT_EQ(3, it->second->stats.messages_sent);
+        it = Sandesh::stats_.type_stats.find("ObjectLogTest");
+        EXPECT_EQ(1, it->second->stats.messages_sent);
+        it = Sandesh::stats_.type_stats.find("ObjectLogAnnTest");
+        EXPECT_EQ(1, it->second->stats.messages_sent);
+        it = Sandesh::stats_.type_stats.find("ObjectLogInnerAnnTest");
+        EXPECT_EQ(1, it->second->stats.messages_sent);
     }
 }
 

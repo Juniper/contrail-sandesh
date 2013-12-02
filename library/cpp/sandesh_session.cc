@@ -13,12 +13,14 @@
 
 #include <base/logging.h>
 #include <base/parse_object.h>
+
 #include <sandesh/common/vns_types.h>
 #include <sandesh/common/vns_constants.h>
 #include <sandesh/transport/TBufferTransports.h>
 #include <sandesh/protocol/TXMLProtocol.h>
 #include "sandesh/sandesh_types.h"
-#include "sandesh.h"
+#include "sandesh/sandesh.h"
+
 #include "sandesh_connection.h"
 #include "sandesh_session.h"
 
@@ -63,6 +65,7 @@ void SandeshWriter::WriteReady(const boost::system::error_code &ec) {
         LOG(ERROR, "SandeshSession Write error value: " << ec.value()
             << " category: " << ec.category().name()
             << " message: " << ec.message());
+        ssession->increment_write_ready_cb_error();
         return;
     }
 
