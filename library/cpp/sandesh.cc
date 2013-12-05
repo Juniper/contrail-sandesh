@@ -43,6 +43,7 @@ Sandesh::SandeshRole Sandesh::role_ = Invalid;
 bool Sandesh::enable_local_log_ = false;
 uint32_t Sandesh::http_port_ = 0;
 bool Sandesh::enable_trace_print_ = false;
+bool Sandesh::send_queue_enabled_ = true;
 SandeshClient *Sandesh::client_ = NULL;
 std::auto_ptr<Sandesh::SandeshRxQueue> Sandesh::recv_queue_;
 std::string Sandesh::module_;
@@ -579,6 +580,20 @@ void Sandesh::UpdateSandeshStats(const std::string& sandesh_name,
                                  uint32_t bytes, bool is_tx, bool dropped) {
     tbb::mutex::scoped_lock lock(stats_mutex_);
     stats_.Update(sandesh_name, bytes, is_tx, dropped);
+}
+
+void Sandesh::SetSendQueue(bool enable) {
+    if (send_queue_enabled_ != enable) {
+        LOG(INFO, "SANDESH: CLIENT: SEND QUEUE: " <<
+            (send_queue_enabled_ ? "ENABLED" : "DISABLED") << " -> " <<
+            (enable ? "ENABLED" : "DISABLED"));
+        send_queue_enabled_ = enable;
+        if (enable) {
+            if (client_ && client_->IsSession()) {
+                client_->session()->send_queue()->MayBeStartRunner();
+            }
+        } 
+    }
 }
 
 void SandeshStatistics::Update(const std::string& sandesh_name,

@@ -193,6 +193,13 @@ public:
     static std::string LoggingCategory() { return logging_category_; }
     static void SendLoggingResponse(std::string context);
 
+    // Send queue processing
+    static void SetSendQueue(bool enable);
+    static inline bool IsSendQueueEnabled() { 
+        return send_queue_enabled_;
+    }
+    static void SendQueueResponse(std::string context);
+
     static int32_t ReceiveBinaryMsgOne(u_int8_t *buf, u_int32_t buf_len,
             int *error, SandeshContext *client_context);
     static int32_t ReceiveBinaryMsg(u_int8_t *buf, u_int32_t buf_len,
@@ -303,6 +310,7 @@ private:
     static std::string logging_category_; // current logging category
     static bool enable_trace_print_; // whether to print traces locally
     static EventManager *event_manager_;
+    static bool send_queue_enabled_;
 
     const uint32_t seqnum_;
     std::string context_;

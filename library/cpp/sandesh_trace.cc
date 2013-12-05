@@ -75,7 +75,6 @@ private:
     SandeshTraceBufferPtr req_buf_;
     std::string req_context_;
     std::string read_context_;
-    vector<string> tracebuf_;
     SandeshTraceTextResponse *sttr_;
     uint32_t req_count_;
     uint32_t read_count_;

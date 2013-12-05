@@ -24,9 +24,15 @@ struct SandeshMessageTypeStats {
     2: SandeshMessageStats stats;
 }
 
+struct SandeshQueueStats {
+    1: u64 enqueues;
+    2: u64 count;
+}
+
 struct SandeshGeneratorStats {
     1: list<SandeshMessageTypeStats> type_stats;
     2: SandeshMessageStats aggregate_stats;
+    3: SandeshQueueStats send_queue_stats;
 }
 
 request sandesh SandeshMessageStatsReq {
@@ -51,6 +57,17 @@ response sandesh SandeshLoggingParams {
     2: string category;
     3: string level;
     4: bool trace_print;
+}
+
+request sandesh SandeshSendQueueSet {
+    1: optional bool enable;
+}
+
+request sandesh SandeshSendQueueStatus {
+}
+
+response sandesh SandeshSendQueueResponse {
+   1: bool enable;
 }
 
 request sandesh CollectorInfoRequest {

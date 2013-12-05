@@ -76,6 +76,10 @@ public:
         else return false;
     }
 
+    SandeshSession * session() const {
+        return sm_->session();
+    }
+
     friend class CollectorInfoRequest;
 protected:
     virtual TcpSession *AllocSession(Socket *socket);
