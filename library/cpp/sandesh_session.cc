@@ -47,7 +47,6 @@ SandeshWriter::SandeshWriter(TcpSession *session)
 
 SandeshWriter::~SandeshWriter() {
     delete [] send_buf_;
-    wait_msgq_.clear();
 }
 
 SandeshSession * SandeshWriter::session () {
@@ -55,10 +54,6 @@ SandeshSession * SandeshWriter::session () {
 }
 
 void SandeshWriter::WriteReady(const boost::system::error_code &ec) {
-    boost::shared_ptr<TMemoryBuffer> buf;
-    uint8_t *buffer;
-    uint32_t size;
-    size_t sent;
     SandeshSession *ssession = session();
     
     if (ec) {
@@ -71,27 +66,6 @@ void SandeshWriter::WriteReady(const boost::system::error_code &ec) {
 
     {
         tbb::mutex::scoped_lock lock(mutex_);
-
-        WaitMsgQ::iterator it = wait_msgq_.begin();
-        WaitMsgQ::iterator next = it;
-        for (int i = 0, cnt = wait_msgq_.size(); i < cnt; i++, it = next) {
-            ++next;
-            buf = *it;
-            buf->getBuffer(&buffer, &size);
-            bool ret = session_->Send((const uint8_t *)buffer, size, &sent);
-            if (true == ret) {
-                ssession->increment_wait_msgq_dequeue();
-                wait_msgq_.erase(it);
-            } else {
-                // Partial message send would be handled internally. 
-                // Therefore, remove the msg from the wait queue.
-                if (sent) {
-                    ssession->increment_wait_msgq_dequeue();
-                    wait_msgq_.erase(it);
-                }
-                return;
-            }
-        }
         ready_to_send_ = true;
     }
 
@@ -293,26 +267,10 @@ void SandeshWriter::SendMsgAll(boost::shared_ptr<TMemoryBuffer> send_buffer) {
 void SandeshWriter::SendInternal(boost::shared_ptr<TMemoryBuffer> buf) {
     uint8_t  *buffer;
     uint32_t len;
-    size_t   sent;
 
     tbb::mutex::scoped_lock lock(mutex_);
-    if (false == ready_to_send_) {
-        // Can't send the message now. Add the message in the wait queue.
-        session()->increment_wait_msgq_enqueue();
-        wait_msgq_.push_back(buf);
-    } else {
-        buf->getBuffer(&buffer, &len);
-        bool ret = session_->Send((const uint8_t *)buffer, len, &sent);
-        if (false == ret) {
-            ready_to_send_ = false;
-            if (!sent) {
-                // We don't have to bother about partial send. 
-                // Add the message to the wait queue, only if sent == 0
-                session()->increment_wait_msgq_enqueue();
-                wait_msgq_.push_back(buf);
-            }
-        }
-    }
+    buf->getBuffer(&buffer, &len);
+    ready_to_send_ = session_->Send((const uint8_t *)buffer, len, NULL);
 }
 
 bool SandeshSession::SessionSendReady() {
