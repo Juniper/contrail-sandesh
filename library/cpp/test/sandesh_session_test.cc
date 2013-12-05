@@ -110,13 +110,13 @@ private:
         bool ret = true;
 
         if (NO_SEND == send_action) {
-            *sent = 0;
-            return false;
+            if (sent) *sent = 0;
+            ret = false;
         } else if (PARTIAL_SEND == send_action) {
-            *sent = size/2;
+            if (sent) *sent = size/2;
             ret = false;
         } else if (SEND == send_action) {
-            *sent = size;
+            if (sent) *sent = size;
         }
 
         LOG(DEBUG, "Send: [" << size << "] bytes");
@@ -486,33 +486,20 @@ TEST_F(SandeshSendMsgUnitTest, AsyncSend) {
     send_action = NO_SEND;
     session_->SendMessage(msg_info[cnt].buf,
                          msg_info[cnt].msg_size, false);
-    EXPECT_EQ(0, session_->send_count());
+    EXPECT_EQ(1, session_->send_count());
     EXPECT_EQ(0, send_buf_offset());
-    EXPECT_EQ(1, session_->writer()->WaitMsgQSize());
     EXPECT_EQ(0, session_->writer()->SendReady());
 
     cnt++; // 1
     session_->SendMessage(msg_info[cnt].buf,
                          msg_info[cnt].msg_size, false);
-    EXPECT_EQ(0, session_->send_count());
+    EXPECT_EQ(2, session_->send_count());
     EXPECT_EQ(0, send_buf_offset());
-    EXPECT_EQ(2, session_->writer()->WaitMsgQSize());
     EXPECT_EQ(0, session_->writer()->SendReady());
 
     send_action = PARTIAL_SEND;
     session_->WriteReady(ec);
-    EXPECT_EQ(1, session_->send_count());
-    EXPECT_EQ(1, session_->writer()->WaitMsgQSize());
-    EXPECT_EQ(0, session_->writer()->SendReady());
-
-    session_->WriteReady(ec);
     EXPECT_EQ(2, session_->send_count());
-    EXPECT_EQ(0, session_->writer()->WaitMsgQSize());
-    EXPECT_EQ(0, session_->writer()->SendReady());
-
-    session_->WriteReady(ec);
-    EXPECT_EQ(2, session_->send_count());
-    EXPECT_EQ(0, session_->writer()->WaitMsgQSize());
     EXPECT_EQ(1, session_->writer()->SendReady());
 
     cnt++; // 2
@@ -520,22 +507,19 @@ TEST_F(SandeshSendMsgUnitTest, AsyncSend) {
                          msg_info[cnt].msg_size, false);
     EXPECT_EQ(3, session_->send_count());
     EXPECT_EQ(0, send_buf_offset());
-    EXPECT_EQ(0, session_->writer()->WaitMsgQSize());
     EXPECT_EQ(0, session_->writer()->SendReady());
 
     cnt++; // 3
     session_->SendMessage(msg_info[cnt].buf,
                          msg_info[cnt].msg_size, false);
-    EXPECT_EQ(3, session_->send_count());
+    EXPECT_EQ(4, session_->send_count());
     EXPECT_EQ(0, send_buf_offset());
-    EXPECT_EQ(1, session_->writer()->WaitMsgQSize());
     EXPECT_EQ(0, session_->writer()->SendReady());
 
     send_action = SEND;
     session_->WriteReady(ec);
     EXPECT_EQ(4, session_->send_count());
     EXPECT_EQ(0, send_buf_offset());
-    EXPECT_EQ(0, session_->writer()->WaitMsgQSize());
     EXPECT_EQ(1, session_->writer()->SendReady());
 
     for (int i = 0; i < session_->send_count(); i++) {

@@ -41,7 +41,6 @@ public:
         tbb::mutex::scoped_lock lock(mutex_);
         return ready_to_send_;
     }
-    int WaitMsgQSize() { return wait_msgq_.size(); }
 
     static const std::string sandesh_open_;
     static const std::string sandesh_open_attr_length_;
@@ -56,8 +55,6 @@ protected:
 
 private:
     friend class SandeshSendMsgUnitTest;
-
-    typedef std::vector<boost::shared_ptr<TMemoryBuffer> > WaitMsgQ;
 
     TcpSession *session_;
 
@@ -81,7 +78,6 @@ private:
     SandeshSession *session();
 
     bool ready_to_send_;
-    WaitMsgQ wait_msgq_;
     tbb::mutex mutex_;
     // send_buf_ is used to store unsent data
     uint8_t *send_buf_;
