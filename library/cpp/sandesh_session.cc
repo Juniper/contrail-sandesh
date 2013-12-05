@@ -316,7 +316,8 @@ void SandeshWriter::SendInternal(boost::shared_ptr<TMemoryBuffer> buf) {
 }
 
 bool SandeshSession::SessionSendReady() {
-    return (IsEstablished() && writer_->SendReady());
+    return (IsEstablished() && writer_->SendReady() &&
+            Sandesh::IsSendQueueEnabled());
 }
 
 SandeshSession::SandeshSession(TcpServer *client, Socket *socket,

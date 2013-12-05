@@ -14,7 +14,8 @@ from pysandesh.gen_py.sandesh_uve.ttypes import SandeshUVECacheReq, \
     SandeshLoggingParamsSet, SandeshLoggingParamsStatus, SandeshLoggingParams
 from pysandesh.gen_py.sandesh_uve.ttypes import SandeshMessageStats, \
     SandeshMessageTypeStats, SandeshGeneratorStats, SandeshMessageStatsReq, \
-    SandeshMessageStatsResp
+    SandeshMessageStatsResp, SandeshSendQueueSet, SandeshSendQueueStatus, \
+    SandeshSendQueueResponse
 from pysandesh.gen_py.sandesh.ttypes import SandeshLevel
 from pysandesh.gen_py.sandesh_trace.ttypes import SandeshTraceBufInfo, \
     SandeshTraceRequest, SandeshTraceBufferListRequest, \
@@ -51,6 +52,10 @@ class SandeshReqImpl(object):
             self.sandesh_trace_buf_status_handle_request
         SandeshTraceBufferEnableDisableReq.handle_request = \
             self.sandesh_trace_buffer_enable_disable_handle_request
+        SandeshSendQueueSet.handle_request = \
+            self.sandesh_send_queue_set_handle_request
+        SandeshSendQueueStatus.handle_request = \
+            self.sandesh_send_queue_status_handle_request
     # end __init__
 
     # Public functions
@@ -143,6 +148,16 @@ class SandeshReqImpl(object):
             sandesh_stats._sandesh_received
         gen_stats.aggregate_stats.bytes_received = \
             sandesh_stats._bytes_received
+        connection = self._sandesh.client().connection()
+        if connection and connection.session():
+            session = connection.session()
+            squeue = session.send_queue()
+            send_queue_stats = SandeshQueueStats()
+            send_queue_stats.enqueues = \
+                squeue.num_enqueues()
+            send_queue_stats.count = \
+                squeue.num_enqueues() - squeue.num_dequeues()
+            gen_stats.send_queue_stats = send_queue_stats
         stats_resp = SandeshMessageStatsResp(gen_stats)
         stats_resp.response(sandesh_req.context())
     # end sandesh_stats_handle_request
@@ -230,5 +245,26 @@ class SandeshReqImpl(object):
                                                      sandesh_req.count)
         trace_req_runner.Run()
     # end sandesh_trace_request_handle_request
+
+    def sandesh_send_queue_set_handle_request(self, sandesh_req):
+        # Set the send queue processing state
+        if sandesh_req.enable is not None:
+            if sandesh_req.enable:
+                benable = True
+            else:
+                benable = False
+            self._sandesh.set_send_queue(benable)
+        # Return the send queue processing state
+        send_queue_resp = SandeshSendQueueResponse(
+            enable=self._sandesh.is_send_queue_enabled())
+        send_queue_resp.response(sandesh_req.context())
+    # end sandesh_send_queue_set_handle_request
+
+    def sandesh_send_queue_status_handle_request(self, sandesh_req):
+        # Return the send queue processing state
+        send_queue_resp = SandeshSendQueueResponse(
+            enable=self._sandesh.is_send_queue_enabled())
+        send_queue_resp.response(sandesh_req.context())
+    # end sandesh_send_queue_status_handle_request
 
 # end class SandeshReqImpl

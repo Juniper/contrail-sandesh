@@ -38,6 +38,14 @@ void SandeshMessageStatsReq::HandleRequest() const {
     sandesh_stats.set_type_stats(mtype_stats);
     sandesh_stats.set_aggregate_stats(stats.agg_stats);
 
+    SandeshClient *client = Sandesh::client();
+    if (client && client->IsSession()) {
+        SandeshQueueStats qstats;
+        qstats.set_enqueues(client->session()->send_queue()->EnqueueCount());
+        qstats.set_count(client->session()->send_queue()->QueueCount());
+        sandesh_stats.set_send_queue_stats(qstats);
+    }
+
     resp->set_stats(sandesh_stats);
     resp->set_context(context());
     resp->Response();
@@ -56,6 +64,7 @@ void Sandesh::SendLoggingResponse(std::string context) {
     slogger->set_context(context);
     slogger->Response();
 }
+
 void SandeshLoggingParamsSet::HandleRequest() const {
     // Set the logging parameters
     if (__isset.level) {
@@ -81,6 +90,26 @@ void SandeshLoggingParamsSet::HandleRequest() const {
 void SandeshLoggingParamsStatus::HandleRequest() const {
     // Send response
     Sandesh::SendLoggingResponse(context());
+}
+
+void Sandesh::SendQueueResponse(std::string context) {
+    SandeshSendQueueResponse *ssqr(new SandeshSendQueueResponse);
+    ssqr->set_enable(IsSendQueueEnabled());
+    ssqr->set_context(context);
+    ssqr->Response();
+}
+
+void SandeshSendQueueSet::HandleRequest() const {
+    if (__isset.enable) {
+        Sandesh::SetSendQueue(get_enable());
+    }
+    // Send response
+    Sandesh::SendQueueResponse(context());
+}
+
+void SandeshSendQueueStatus::HandleRequest() const {
+    // Send response
+    Sandesh::SendQueueResponse(context());
 }
 
 void CollectorInfoRequest::HandleRequest() const {
