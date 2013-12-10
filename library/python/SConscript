@@ -137,5 +137,6 @@ sdist_gen = env.Command('dist', 'setup.py', 'python setup.py sdist', chdir=1)
 env.Depends(sdist_gen, sdist_depends)
 
 env.Default(sdist_gen)
+env.Alias('sandesh/library/python:pysandesh', sdist_gen)
 
 SConscript('pysandesh/SConscript', exports='env', duplicate = 0)
