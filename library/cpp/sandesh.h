@@ -185,6 +185,7 @@ public:
     static void SetLoggingLevel(std::string level);
     static void SetLoggingLevel(SandeshLevel::type level);
     static SandeshLevel::type LoggingLevel() { return logging_level_; }
+    static SandeshLevel::type LoggingUtLevel() { return logging_ut_level_; }
     static bool IsLocalLoggingEnabled() { return enable_local_log_; }
     static void SetLocalLogging(bool enable);
     static bool IsTracePrintEnabled() { return enable_trace_print_; }
@@ -307,6 +308,7 @@ private:
     static SandeshContext *client_context_;
     static bool enable_local_log_;  // whether to just enable local logging
     static SandeshLevel::type logging_level_; // current logging level
+    static SandeshLevel::type logging_ut_level_; // ut_debug logging level
     static std::string logging_category_; // current logging category
     static bool enable_trace_print_; // whether to print traces locally
     static EventManager *event_manager_;
