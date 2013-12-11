@@ -31,7 +31,6 @@ using namespace contrail::sandesh::transport;
 
 using boost::asio::mutable_buffer;
 using boost::asio::buffer_cast;
-using boost::system::error_code;
 
 const std::string SandeshWriter::sandesh_open_ = sXML_SANDESH_OPEN;
 const std::string SandeshWriter::sandesh_open_attr_length_ =
@@ -316,8 +315,8 @@ std::string SandeshSession::ToString() const {
     return out.str();
 }
 
-error_code SandeshSession::SetSocketOptions() {
-    error_code ec = TcpSession::SetSocketOptions();
+boost::system::error_code SandeshSession::SetSocketOptions() {
+    boost::system::error_code ec = TcpSession::SetSocketOptions();
     if (ec) {
         return ec;
     }
