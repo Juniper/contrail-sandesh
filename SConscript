@@ -9,9 +9,6 @@ SandeshEnv = DefaultEnvironment().Clone()
 SandeshEnv.Append(CPPDEFINES='SANDESH')
 SandeshEnv.Replace(LIBS='')
 
-if sys.platform == 'darwin':
-    SandeshEnv.Append(CPPPATH = '#/build/include/boost')
-
 while SandeshEnv['CCFLAGS'].count('--coverage') > 0:
     SandeshEnv['CCFLAGS'].remove('--coverage')
 
