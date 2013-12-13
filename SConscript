@@ -2,6 +2,8 @@
 # Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
 #
 
+import sys
+
 SandeshEnv = DefaultEnvironment().Clone()
 
 SandeshEnv.Append(CPPDEFINES='SANDESH')
