@@ -229,6 +229,18 @@ void Sandesh::InitGeneratorTest(const std::string module,
                client_context);
 }
 
+static void WaitForIdle() {
+    static const int kTimeout = 15;
+    TaskScheduler *scheduler = TaskScheduler::GetInstance();
+
+    for (int i = 0; i < (kTimeout * 1000); i++) {
+        if (scheduler->IsEmpty()) {
+            break;
+        }
+        usleep(1000);
+    }    
+}
+
 void Sandesh::Uninit() {
 
     // Wait until all pending http session based tasks are cleaned up.
@@ -250,6 +262,7 @@ void Sandesh::Uninit() {
     if (client_ != NULL) {
         client_->Shutdown();
         while (client()->IsSession()) usleep(100);
+        WaitForIdle(); 
         client_->ClearSessions();
         TcpServerManager::DeleteServer(client_);
         client_ = NULL;
