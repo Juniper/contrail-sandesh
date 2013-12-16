@@ -104,7 +104,7 @@ class SandeshUVEPerTypeMap(object):
                 SandeshUVEPerTypeMap.UVEMapEntry(uve_sandesh.data, uve_sandesh.seqnum())
         else:
             if uve_entry.data.deleted is True:
-                if uve_sandesh.data.deleted is False:
+                if uve_sandesh.data.deleted is not True:
                     # The uve entry in the cache has been marked for deletion and
                     # a new uve entry with the same key has been created. Replace the
                     # deleted uve entry in the cache with this new entry.
@@ -114,7 +114,7 @@ class SandeshUVEPerTypeMap(object):
                         SandeshUVEPerTypeMap.UVEMapEntry(uve_sandesh.data, uve_sandesh.seqnum())
                 else:
                     # Duplicate uve delete. Do we need to update the seqnum here?
-                    pass
+                    logger.error('Duplicate uve delete <%s>' % (uve_name))
             else:
                 uve_entry.data = uve_sandesh.update_uve(uve_entry.data)
                 uve_entry.seqno = uve_sandesh.seqnum()
