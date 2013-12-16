@@ -24,7 +24,7 @@ from pysandesh.gen_py.sandesh_trace.ttypes import SandeshTraceBufInfo, \
     SandeshTraceBufStatusReq, SandeshTraceBufStatusRes, \
     SandeshTraceBufferEnableDisableReq, SandeshTraceBufferEnableDisableRes, \
     SandeshTraceBufStatusInfo
-
+from pysandesh.gen_py.sandesh_uve.ttypes import SandeshQueueStats
 
 class SandeshReqImpl(object):
 
