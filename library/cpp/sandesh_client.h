@@ -16,6 +16,8 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
+#include <boost/tuple/tuple.hpp>
+
 #include <tbb/mutex.h>
 #include <tbb/atomic.h>
 
@@ -35,7 +37,7 @@ class SandeshHeader;
 
 class SandeshClient : public TcpServer, public SandeshClientSM::Mgr {
 public:
-
+    
     SandeshClient(EventManager *evm, Endpoint primary,
              Endpoint secondary = Endpoint(),
              Sandesh::CollectorSubFn csf = 0);
@@ -80,6 +82,11 @@ public:
         return sm_->session();
     }
 
+    void SetSessionWaterMarkInfo(SandeshSession::SessionWaterMarkInfo &scwm);
+    void ResetSessionWaterMarkInfo();
+    void GetSessionWaterMarkInfo(
+        std::vector<SandeshSession::SessionWaterMarkInfo> &scwm_info) const;
+
     friend class CollectorInfoRequest;
 protected:
     virtual TcpSession *AllocSession(Socket *socket);
@@ -90,6 +97,7 @@ private:
     static const int kSessionTaskInstance = Task::kTaskInstanceAny;
     static const std::string kSessionWriterTask;
     static const std::string kSessionReaderTask;
+    static const std::vector<SandeshSession::SessionWaterMarkInfo> kSessionWaterMarkInfo;
 
     int sm_task_instance_;
     int sm_task_id_;
@@ -99,6 +107,7 @@ private:
     Endpoint primary_, secondary_;
     Sandesh::CollectorSubFn csf_;
     boost::scoped_ptr<SandeshClientSM> sm_;
+    std::vector<SandeshSession::SessionWaterMarkInfo> session_wm_info_;
     static bool task_policy_set_;
 
     void CollectorHandler(std::vector<DSResponse> resp);

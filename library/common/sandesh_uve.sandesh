@@ -52,6 +52,28 @@ request sandesh SandeshLoggingParamsSet {
 request sandesh SandeshLoggingParamsStatus {
 }
 
+request sandesh SandeshSendingParamsSet {
+    1: optional bool high;
+    2: optional u32 queue_count;
+    3: optional string level;
+}    
+
+request sandesh SandeshSendingParamsReset {
+}
+
+request sandesh SandeshSendingParamsStatus {
+}
+
+struct SandeshSendingParams {
+    1: bool high;
+    2: u32 queue_count;
+    3: string level;
+}
+
+response sandesh SandeshSendingParamsResponse {
+    1: list<SandeshSendingParams> info;
+}
+
 response sandesh SandeshLoggingParams {
     1: bool enable;
     2: string category;

@@ -53,23 +53,27 @@ protected:
         sandesh_queue_.reset(new Sandesh::SandeshQueue(
             TaskScheduler::GetInstance()->GetTaskId("sandesh::Test::PerfTest::sandesh_queue"),
             Task::kTaskInstanceAny,
-            boost::bind(&SandeshPerfTestEnqueue::DequeueSandesh, this, _1),
-            boost::bind(&SandeshPerfTestEnqueue::StartDequeueSandesh, this)));
+            boost::bind(&SandeshPerfTestEnqueue::DequeueSandesh, this, _1)));
+        sandesh_queue_->SetStartRunnerFunc(
+            boost::bind(&SandeshPerfTestEnqueue::StartDequeueSandesh, this));
         pstruct_queue_.reset(new WorkQueue<TestStruct *>(
             TaskScheduler::GetInstance()->GetTaskId("sandesh::Test::PerfTest::pstruct_queue_"),
             Task::kTaskInstanceAny,
-            boost::bind(&SandeshPerfTestEnqueue::DequeuePTestStruct, this, _1),
-            boost::bind(&SandeshPerfTestEnqueue::StartDequeuePTestStruct, this)));
+            boost::bind(&SandeshPerfTestEnqueue::DequeuePTestStruct, this, _1)));
+        pstruct_queue_->SetStartRunnerFunc(
+            boost::bind(&SandeshPerfTestEnqueue::StartDequeuePTestStruct, this));
         struct_queue_.reset(new WorkQueue<TestStruct>(
             TaskScheduler::GetInstance()->GetTaskId("sandesh::Test::PerfTest::struct_queue_"),
             Task::kTaskInstanceAny,
-            boost::bind(&SandeshPerfTestEnqueue::DequeueTestStruct, this, _1),
-            boost::bind(&SandeshPerfTestEnqueue::StartDequeueTestStruct, this)));
+            boost::bind(&SandeshPerfTestEnqueue::DequeueTestStruct, this, _1)));
+        struct_queue_->SetStartRunnerFunc(
+            boost::bind(&SandeshPerfTestEnqueue::StartDequeueTestStruct, this));
         pstructpool_queue_.reset(new WorkQueue<TestStructPool *>(
             TaskScheduler::GetInstance()->GetTaskId("sandesh::Test::PerfTest::pstructpool_queue_"),
             Task::kTaskInstanceAny,
-            boost::bind(&SandeshPerfTestEnqueue::DequeuePTestStructPool, this, _1),
-            boost::bind(&SandeshPerfTestEnqueue::StartDequeuePTestStructPool, this)));
+            boost::bind(&SandeshPerfTestEnqueue::DequeuePTestStructPool, this, _1)));
+        pstructpool_queue_->SetStartRunnerFunc(
+            boost::bind(&SandeshPerfTestEnqueue::StartDequeuePTestStructPool, this));
     }
 
     virtual void TearDown() {

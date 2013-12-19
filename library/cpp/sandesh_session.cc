@@ -9,6 +9,7 @@
 //
 
 #include <boost/bind.hpp>
+#include <boost/assign.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <base/logging.h>
@@ -272,10 +273,6 @@ void SandeshWriter::SendInternal(boost::shared_ptr<TMemoryBuffer> buf) {
     ready_to_send_ = session_->Send((const uint8_t *)buffer, len, NULL);
 }
 
-bool SandeshSession::SessionSendReady() {
-    return (IsEstablished() && writer_->SendReady() &&
-            Sandesh::IsSendQueueEnabled());
-}
 
 SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
         int task_instance, int writer_task_id, int reader_task_id) :
@@ -285,8 +282,7 @@ SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
     reader_(new SandeshReader(this)),
     send_queue_(new Sandesh::SandeshQueue(writer_task_id,
             task_instance,
-            boost::bind(&SandeshSession::SendMsg, this, _1),
-            boost::bind(&SandeshSession::SessionSendReady, this))),
+            boost::bind(&SandeshSession::SendMsg, this, _1))),
     keepalive_idle_time_(kSessionKeepaliveIdleTime),
     keepalive_interval_(kSessionKeepaliveInterval),
     keepalive_probes_(kSessionKeepaliveProbes),
@@ -294,12 +290,34 @@ SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
     if (Sandesh::role() == Sandesh::Collector) {
         send_buffer_queue_.reset(new Sandesh::SandeshBufferQueue(writer_task_id,
                 task_instance,
-                boost::bind(&SandeshSession::SendBuffer, this, _1),
-                boost::bind(&SandeshSession::SessionSendReady, this)));
+                boost::bind(&SandeshSession::SendBuffer, this, _1)));
+        send_buffer_queue_->SetStartRunnerFunc(boost::bind(&SandeshSession::SessionSendReady, this));
     }
+    send_queue_->SetStartRunnerFunc(boost::bind(&SandeshSession::SessionSendReady, this));
 }
 
 SandeshSession::~SandeshSession() {
+}
+
+bool SandeshSession::SessionSendReady() {
+    return (IsEstablished() && writer_->SendReady() &&
+            Sandesh::IsSendQueueEnabled());
+}
+
+void SandeshSession::SetSendQueueWaterMark(
+    SandeshSession::SessionWaterMarkInfo &swmi) {
+    Sandesh::SandeshQueue::WaterMarkInfo wm(boost::get<0>(swmi),
+        boost::bind(&Sandesh::SetSendingLevel, _1, boost::get<1>(swmi)));
+    if (boost::get<2>(swmi)) {
+        send_queue_->SetHighWaterMark(wm);
+    } else {
+        send_queue_->SetLowWaterMark(wm);
+    }
+}
+
+void SandeshSession::ResetSendQueueWaterMark() {
+    send_queue_->ResetHighWaterMark();
+    send_queue_->ResetLowWaterMark();
 }
 
 void SandeshSession::Shutdown() {

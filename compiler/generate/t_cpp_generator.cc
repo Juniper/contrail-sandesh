@@ -1191,17 +1191,22 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     out << indent() << "static void " << creator_func_name <<
              generate_sandesh_async_creator(tsandesh, true, false, false, "", "", true, false) <<
              " {" << endl;
-
-     indent_up();
-     out << indent() << tsandesh->get_name() <<
-           " * snh = new " << tsandesh->get_name() <<
-           generate_sandesh_no_static_const_string_function(tsandesh, false, false, false, false) <<
-           ";" << endl;
-     out << indent() << "snh->set_level(level);" << endl;
-     out << indent() << "snh->set_category(category);" << endl;
-     out << indent() << "snh->Dispatch();" << endl;
-     indent_down();
-     indent(out) << "}" << endl << endl;
+    indent_up();
+    out << indent() << "if (level >= SendingLevel()) {" << endl;
+    indent_up();
+    out << indent() << "UpdateSandeshStats(\"" << tsandesh->get_name() << "\", 0, true, true);" <<
+        endl;
+    out << indent() << "return;" << endl;
+    scope_down(out);
+    out << indent() << tsandesh->get_name() <<
+          " * snh = new " << tsandesh->get_name() <<
+          generate_sandesh_no_static_const_string_function(tsandesh, false, false, false, false) <<
+          ";" << endl;
+    out << indent() << "snh->set_level(level);" << endl;
+    out << indent() << "snh->set_category(category);" << endl;
+    out << indent() << "snh->Dispatch();" << endl;
+    indent_down();
+    indent(out) << "}" << endl << endl;
 
     // Generate creator macro
     string creator_name = tsandesh->get_name() + macro_func_name;

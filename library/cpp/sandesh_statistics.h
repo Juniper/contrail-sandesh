@@ -13,6 +13,10 @@ public:
 
     void Update(const std::string& sandesh_name,
                 uint32_t bytes, bool is_tx, bool dropped);
+    void Get(std::vector<SandeshMessageTypeStats> &mtype_stats,
+             SandeshMessageStats &magg_stats);
+    void Get(boost::ptr_map<std::string, SandeshMessageTypeStats> &mtype_stats,
+             SandeshMessageStats &magg_stats);
 
     boost::ptr_map<std::string, SandeshMessageTypeStats> type_stats;
     SandeshMessageStats agg_stats;

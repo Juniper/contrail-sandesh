@@ -11,12 +11,16 @@
 #ifndef __SANDESH_SESSION_H__
 #define __SANDESH_SESSION_H__
 
-#include <sandesh/transport/TBufferTransports.h>
 #include <tbb/mutex.h>
+
 #include <boost/system/error_code.hpp>
 #include <boost/asio.hpp>
+#include <boost/tuple/tuple.hpp>
+
 #include <base/util.h>
 #include <io/tcp_session.h>
+
+#include <sandesh/transport/TBufferTransports.h>
 #include <sandesh/sandesh.h>
 #include <sandesh/sandesh_uve_types.h>
 
@@ -131,6 +135,7 @@ class SandeshConnection;
 
 class SandeshSession : public TcpSession {
 public:
+    typedef boost::tuple<size_t, SandeshLevel::type, bool> SessionWaterMarkInfo;
     typedef boost::function<void(const std::string&, SandeshSession *)> ReceiveMsgCb;
     SandeshSession(TcpServer *client, Socket *socket, int task_instance, 
         int writer_task_id, int reader_task_id);
@@ -205,6 +210,8 @@ public:
     const SandeshSessionStats& GetStats() const {
         return sstats_;
     }
+    void SetSendQueueWaterMark(SessionWaterMarkInfo &wm_info);
+    void ResetSendQueueWaterMark();
 
 protected:
     virtual int reader_task_id() const {
