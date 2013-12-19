@@ -43,6 +43,12 @@ const std::string SandeshClient::kSMTask = "sandesh::SandeshClientSM";
 const std::string SandeshClient::kSessionWriterTask = "sandesh::SandeshClientSession";
 const std::string SandeshClient::kSessionReaderTask = "io::ReaderTask";
 bool SandeshClient::task_policy_set_ = false;
+const std::vector<SandeshSession::SessionWaterMarkInfo> 
+    SandeshClient::kSessionWaterMarkInfo = boost::assign::tuple_list_of
+					       (50000, SandeshLevel::SYS_ERR, true)
+                                               (10000, SandeshLevel::SYS_DEBUG, true)
+                                               (10000, SandeshLevel::SYS_DEBUG, false)
+                                               (2500, SandeshLevel::INVALID, false);
 
 SandeshClient::SandeshClient(EventManager *evm,
         Endpoint primary, Endpoint secondary, Sandesh::CollectorSubFn csf)
@@ -55,7 +61,8 @@ SandeshClient::SandeshClient(EventManager *evm,
         primary_(primary),
         secondary_(secondary),
         csf_(csf),
-        sm_(SandeshClientSM::CreateClientSM(evm, this, sm_task_instance_, sm_task_id_)) {
+        sm_(SandeshClientSM::CreateClientSM(evm, this, sm_task_instance_, sm_task_id_)),
+        session_wm_info_(kSessionWaterMarkInfo) {
     LOG(INFO,"primary  " << primary_);
     LOG(INFO,"secondary  " << secondary_);
 
@@ -227,6 +234,10 @@ SandeshSession *SandeshClient::CreateSMSession(
     sandesh_session->SetReceiveMsgCb(rmcb);
     sandesh_session->SetConnection(NULL);
     sandesh_session->set_observer(eocb);
+    // Set watermarks
+    for (size_t i = 0; i < session_wm_info_.size(); i++) {
+        sandesh_session->SetSendQueueWaterMark(session_wm_info_[i]);
+    }
     TcpServer::Connect(sandesh_session, ep);
 
     return sandesh_session;
@@ -282,6 +293,28 @@ void SandeshClient::SendUVE(int count,
 
     mcs.set_client_info(sci);
     SandeshModuleClientTrace::Send(mcs);
+}
+
+void SandeshClient::SetSessionWaterMarkInfo(
+    SandeshSession::SessionWaterMarkInfo &scwm) {
+    SandeshSession *session = sm_->session();
+    if (session) {
+        session->SetSendQueueWaterMark(scwm);
+    }
+    session_wm_info_.push_back(scwm);
+}
+
+void SandeshClient::ResetSessionWaterMarkInfo() {
+    SandeshSession *session = sm_->session();
+    if (session) {
+        session->ResetSendQueueWaterMark();
+    }
+    session_wm_info_.clear();
+}    
+
+void SandeshClient::GetSessionWaterMarkInfo(
+    std::vector<SandeshSession::SessionWaterMarkInfo> &scwm_info) const {
+    scwm_info = session_wm_info_;
 }
 
 TcpSession *SandeshClient::AllocSession(Socket *socket) {

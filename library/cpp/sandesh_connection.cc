@@ -248,11 +248,12 @@ void SandeshServerConnection::Destroy() {
         CONNECTION_LOG(ERROR, __func__ << " No Server");
         return;
     }
-    sserver->RemoveConnection(this);
     int index = GetTaskInstance();
     if (index != -1) {
         sserver->FreeConnectionIndex(index);
     }
+    // Deletes self - should always be the last 
+    sserver->RemoveConnection(this);
 };
 
 LifetimeActor *SandeshServerConnection::deleter() {

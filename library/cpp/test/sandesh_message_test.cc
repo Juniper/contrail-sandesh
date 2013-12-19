@@ -263,16 +263,17 @@ TEST_F(SandeshAsyncTest, Async) {
     TASK_UTIL_EXPECT_TRUE(asyncserver_done);
 
     {
-        tbb::mutex::scoped_lock lock(Sandesh::stats_mutex_);
-
+        boost::ptr_map<std::string, SandeshMessageTypeStats> type_stats;
+        SandeshMessageStats agg_stats;
+        Sandesh::GetSandeshStats(type_stats, agg_stats);
         boost::ptr_map<std::string, SandeshMessageTypeStats>::iterator it;
-        it = Sandesh::stats_.type_stats.find("SystemLogTest");
+        it = type_stats.find("SystemLogTest");
         EXPECT_EQ(3, it->second->stats.messages_sent);
-        it = Sandesh::stats_.type_stats.find("ObjectLogTest");
+        it = type_stats.find("ObjectLogTest");
         EXPECT_EQ(1, it->second->stats.messages_sent);
-        it = Sandesh::stats_.type_stats.find("ObjectLogAnnTest");
+        it = type_stats.find("ObjectLogAnnTest");
         EXPECT_EQ(1, it->second->stats.messages_sent);
-        it = Sandesh::stats_.type_stats.find("ObjectLogInnerAnnTest");
+        it = type_stats.find("ObjectLogInnerAnnTest");
         EXPECT_EQ(1, it->second->stats.messages_sent);
     }
 }

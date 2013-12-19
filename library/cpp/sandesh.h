@@ -134,6 +134,9 @@ struct WorkQueueDelete<SandeshRequest *> {
 };
 
 class SandeshStatistics;
+class SandeshMessageTypeStats;
+class SandeshMessageStats;
+
 class Sandesh {
 public:
     typedef WorkQueue<SandeshRequest *> SandeshRxQueue;
@@ -200,6 +203,9 @@ public:
         return send_queue_enabled_;
     }
     static void SendQueueResponse(std::string context);
+    static void SetSendingLevel(size_t count, SandeshLevel::type level);
+    static SandeshLevel::type SendingLevel() { return sending_level_; }
+    static void SendingParamsResponse(std::string context);
 
     static int32_t ReceiveBinaryMsgOne(u_int8_t *buf, u_int32_t buf_len,
             int *error, SandeshContext *client_context);
@@ -208,6 +214,12 @@ public:
     static bool SendReady(SandeshConnection * sconn = NULL);
     static void UpdateSandeshStats(const std::string& sandesh_name,
                                    uint32_t bytes, bool is_tx, bool dropped);
+    static void GetSandeshStats(
+        std::vector<SandeshMessageTypeStats> &mtype_stats,
+        SandeshMessageStats &magg_stats);
+    static void GetSandeshStats(
+        boost::ptr_map<std::string, SandeshMessageTypeStats> &mtype_stats,
+        SandeshMessageStats &magg_stats);
     static const char *  SandeshRoleToString(SandeshRole role);
 
     virtual void Release() { delete this; }
@@ -255,9 +267,6 @@ public:
     std::string category() const { return category_; }
     static const char* LevelToString(SandeshLevel::type level);
     static SandeshLevel::type StringToLevel(std::string level);
-
-    static SandeshStatistics stats_;
-    static tbb::mutex stats_mutex_;
 
 protected:
     void set_timestamp(time_t timestamp) { timestamp_ = timestamp; }
@@ -313,6 +322,9 @@ private:
     static bool enable_trace_print_; // whether to print traces locally
     static EventManager *event_manager_;
     static bool send_queue_enabled_;
+    static SandeshLevel::type sending_level_;
+    static SandeshStatistics stats_;
+    static tbb::mutex stats_mutex_;
 
     const uint32_t seqnum_;
     std::string context_;

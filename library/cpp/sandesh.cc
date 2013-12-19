@@ -44,6 +44,7 @@ bool Sandesh::enable_local_log_ = false;
 uint32_t Sandesh::http_port_ = 0;
 bool Sandesh::enable_trace_print_ = false;
 bool Sandesh::send_queue_enabled_ = true;
+SandeshLevel::type Sandesh::sending_level_ = SandeshLevel::INVALID;
 SandeshClient *Sandesh::client_ = NULL;
 std::auto_ptr<Sandesh::SandeshRxQueue> Sandesh::recv_queue_;
 std::string Sandesh::module_;
@@ -229,6 +230,18 @@ void Sandesh::InitGeneratorTest(const std::string module,
                client_context);
 }
 
+static void WaitForIdle() {
+    static const int kTimeout = 15;
+    TaskScheduler *scheduler = TaskScheduler::GetInstance();
+
+    for (int i = 0; i < (kTimeout * 1000); i++) {
+        if (scheduler->IsEmpty()) {
+            break;
+        }
+        usleep(1000);
+    }    
+}
+
 void Sandesh::Uninit() {
 
     // Wait until all pending http session based tasks are cleaned up.
@@ -250,6 +263,7 @@ void Sandesh::Uninit() {
     if (client_ != NULL) {
         client_->Shutdown();
         while (client()->IsSession()) usleep(100);
+        WaitForIdle(); 
         client_->ClearSessions();
         TcpServerManager::DeleteServer(client_);
         client_ = NULL;
@@ -310,6 +324,15 @@ void Sandesh::SetTracePrint(bool enable_trace_print) {
                 (enable_trace_print_ ? "ENABLED" : "DISABLED") << " -> " <<
                 (enable_trace_print ? "ENABLED" : "DISABLED"));
         enable_trace_print_ = enable_trace_print;
+    }
+}
+
+void Sandesh::SetSendingLevel(size_t count, SandeshLevel::type level) {
+    if (sending_level_ != level) {
+        LOG(INFO, "SANDESH: Sending: LEVEL: " << "[ " <<
+            LevelToString(sending_level_) << " ] -> [ " <<
+            LevelToString(level) << " ] : " << count);
+        sending_level_ = level;
     }
 }
 
@@ -584,6 +607,20 @@ void Sandesh::UpdateSandeshStats(const std::string& sandesh_name,
     stats_.Update(sandesh_name, bytes, is_tx, dropped);
 }
 
+void Sandesh::GetSandeshStats(
+    std::vector<SandeshMessageTypeStats> &mtype_stats,
+    SandeshMessageStats &magg_stats) {
+    tbb::mutex::scoped_lock lock(stats_mutex_);
+    stats_.Get(mtype_stats, magg_stats);
+}
+
+void Sandesh::GetSandeshStats(
+    boost::ptr_map<std::string, SandeshMessageTypeStats> &mtype_stats,
+    SandeshMessageStats &magg_stats) {
+    tbb::mutex::scoped_lock lock(stats_mutex_);
+    stats_.Get(mtype_stats, magg_stats);
+}
+
 void Sandesh::SetSendQueue(bool enable) {
     if (send_queue_enabled_ != enable) {
         LOG(INFO, "SANDESH: CLIENT: SEND QUEUE: " <<
@@ -596,6 +633,24 @@ void Sandesh::SetSendQueue(bool enable) {
             }
         } 
     }
+}
+
+void SandeshStatistics::Get(
+    boost::ptr_map<std::string, SandeshMessageTypeStats> &mtype_stats,
+    SandeshMessageStats &magg_stats) {
+    mtype_stats = type_stats;    
+    magg_stats = agg_stats; 
+}
+
+void SandeshStatistics::Get(std::vector<SandeshMessageTypeStats> &mtype_stats,
+                            SandeshMessageStats &magg_stats) {
+    for (boost::ptr_map<std::string, SandeshMessageTypeStats>::iterator it = 
+             type_stats.begin();
+         it != type_stats.end();
+         it++) {
+        mtype_stats.push_back(*it->second);
+    }
+    magg_stats = agg_stats; 
 }
 
 void SandeshStatistics::Update(const std::string& sandesh_name,
