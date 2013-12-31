@@ -67,10 +67,10 @@ protected:
     virtual bool AcceptSession(TcpSession *session);
     // Session read, write, and state machine tasks run exclusively
     int session_writer_task_id() const { return sm_task_id_; }
-    int session_reader_task_id() const { return sm_task_id_; }
+    int session_reader_task_id() const { return session_reader_task_id_; }
 
 private:
-    static const std::string kSessionTask;
+    static const std::string kSessionReaderTask;
     static const std::string kStateMachineTask;
     static const std::string kLifetimeMgrTask;
     static bool task_policy_set_;
@@ -88,6 +88,7 @@ private:
     SandeshConnectionMap connection_;
     boost::dynamic_bitset<> conn_bmap_;
     int sm_task_id_;
+    int session_reader_task_id_;
     int lifetime_mgr_task_id_;
     boost::scoped_ptr<LifetimeManager> lifetime_manager_;
     boost::scoped_ptr<DeleteActor> deleter_;
