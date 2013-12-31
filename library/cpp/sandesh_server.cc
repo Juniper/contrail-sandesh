@@ -25,6 +25,7 @@ using namespace boost::asio;
 
 const std::string SandeshServer::kStateMachineTask = "sandesh::SandeshStateMachine";
 const std::string SandeshServer::kLifetimeMgrTask = "sandesh::LifetimeMgr";
+const std::string SandeshServer::kSessionReaderTask = "io::ReaderTask";
 
 class SandeshServer::DeleteActor : public LifetimeActor {
 public:
@@ -47,6 +48,7 @@ bool SandeshServer::task_policy_set_ = false;
 SandeshServer::SandeshServer(EventManager *evm)
     : TcpServer(evm),
       sm_task_id_(TaskScheduler::GetInstance()->GetTaskId(kStateMachineTask)),
+      session_reader_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSessionReaderTask)),
       lifetime_mgr_task_id_(TaskScheduler::GetInstance()->GetTaskId(kLifetimeMgrTask)),
       lifetime_manager_(new LifetimeManager(lifetime_mgr_task_id_)),
       deleter_(new DeleteActor(this)) {
