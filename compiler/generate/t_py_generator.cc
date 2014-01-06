@@ -1414,6 +1414,8 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
     indent(out) << "self._scope = sandesh.scope()" << endl;
     indent(out) << "self._module = sandesh.module()" << endl;
     indent(out) << "self._source = sandesh.source_id()" << endl;
+    indent(out) << "self._node_type = sandesh.node_type()" << endl;
+    indent(out) << "self._instance_id = sandesh.instance_id()" << endl;
     indent(out) << "self._seqnum = 0" << endl;
     indent(out) << "self._timestamp = UTCTimestampUsec()" << endl;
     indent(out) << "self._versionsig = " << tsandesh->get_4byte_fingerprint() << endl; 

@@ -49,6 +49,8 @@ SandeshClient *Sandesh::client_ = NULL;
 std::auto_ptr<Sandesh::SandeshRxQueue> Sandesh::recv_queue_;
 std::string Sandesh::module_;
 std::string Sandesh::source_;
+std::string Sandesh::node_type_;
+std::string Sandesh::instance_id_;
 int Sandesh::recv_task_id_ = -1;
 SandeshContext* Sandesh::client_context_ = NULL;
 Sandesh::SandeshCallback Sandesh::response_callback_ = 0;
@@ -99,8 +101,10 @@ extern int PullSandeshUVE;
 extern int PullSandeshTraceReq;
 
 void Sandesh::Initialize(SandeshRole role,
-                         const std::string module, 
-                         const std::string source,
+                         const std::string &module,
+                         const std::string &source,
+                         const std::string &node_type,
+                         const std::string &instance_id,
                          EventManager *evm,
                          unsigned short http_port,
                          SandeshContext *client_context) {
@@ -112,14 +116,18 @@ void Sandesh::Initialize(SandeshRole role,
         return;
     }
 
-    LOG(INFO, "SANDESH: ROLE   : " << SandeshRoleToString(role)); 
-    LOG(INFO, "SANDESH: MODULE : " << module);
-    LOG(INFO, "SANDESH: SOURCE : " << source);
+    LOG(INFO, "SANDESH: ROLE             : " << SandeshRoleToString(role)); 
+    LOG(INFO, "SANDESH: MODULE           : " << module);
+    LOG(INFO, "SANDESH: SOURCE           : " << source);
+    LOG(INFO, "SANDESH: NODE TYPE        : " << node_type);
+    LOG(INFO, "SANDESH: INSTANCE ID      : " << instance_id);
     LOG(INFO, "SANDESH: HTTP SERVER PORT : " << http_port);
 
     role_           = role;
     module_         = module;
     source_         = source;
+    node_type_      = node_type;
+    instance_id_    = instance_id;
     client_context_ = client_context;
     event_manager_  = evm;
 
@@ -127,7 +135,7 @@ void Sandesh::Initialize(SandeshRole role,
     http_port_ = SandeshHttp::Init(evm, module, http_port, &SandeshHttpCallback);
 }
 
-bool Sandesh::ConnectToCollector(const std::string collector_ip,
+bool Sandesh::ConnectToCollector(const std::string &collector_ip,
                                  int collector_port) {
     boost::system::error_code ec;
     address collector_addr = address::from_string(collector_ip, ec);
@@ -168,24 +176,9 @@ static bool make_endpoint(TcpServer::Endpoint& ep,const std::string& epstr) {
     return true;
 }
 
-void Sandesh::InitGenerator(const std::string module,
-        const std::string source, EventManager *evm,
-        unsigned short http_port,
-        SandeshContext *client_context) {
-    Initialize(Generator, module, source, evm,
-            http_port, client_context);
-}
-
-bool Sandesh::InitGenerator(const std::string &module, 
-                            const std::string &source,
-                            EventManager *evm, 
-                            unsigned short http_port,
-                            CollectorSubFn csf,
-                            const std::vector<std::string> collectors,
-                            SandeshContext *client_context) {
-    Initialize(Generator, module, source, evm,
-               http_port, client_context);
-
+bool Sandesh::InitClient(EventManager *evm, 
+                         const std::vector<std::string> &collectors,
+                         CollectorSubFn csf) {
     Endpoint primary = Endpoint();
     Endpoint secondary = Endpoint();
 
@@ -210,23 +203,53 @@ bool Sandesh::InitGenerator(const std::string &module,
     return true;
 }
 
-void Sandesh::InitCollector(const std::string module, 
-                            const std::string source,
-                            EventManager *evm, 
-                            const std::string collector_ip, int collector_port,
+void Sandesh::InitGenerator(const std::string &module,
+                            const std::string &source, 
+                            const std::string &node_type,
+                            const std::string &instance_id,
+                            EventManager *evm,
                             unsigned short http_port,
                             SandeshContext *client_context) {
-    Initialize(Collector, module, source, evm,
+    Initialize(Generator, module, source, node_type, instance_id, evm,
+               http_port, client_context);
+}
+
+bool Sandesh::InitGenerator(const std::string &module,
+                            const std::string &source,
+                            const std::string &node_type,
+                            const std::string &instance_id,
+                            EventManager *evm, 
+                            unsigned short http_port,
+                            CollectorSubFn csf,
+                            const std::vector<std::string> &collectors,
+                            SandeshContext *client_context) {
+    Initialize(Generator, module, source, node_type, instance_id, evm,
+               http_port, client_context);
+    return InitClient(evm, collectors, csf);
+}
+
+// Collector
+void Sandesh::InitCollector(const std::string &module,
+                            const std::string &source,
+                            const std::string &node_type,
+                            const std::string &instance_id,
+                            EventManager *evm, 
+                            const std::string &collector_ip, int collector_port,
+                            unsigned short http_port,
+                            SandeshContext *client_context) {
+    Initialize(Collector, module, source, node_type, instance_id, evm,
                http_port, client_context);
     ConnectToCollector(collector_ip, collector_port);
 }
 
-void Sandesh::InitGeneratorTest(const std::string module, 
-                                const std::string source,
+void Sandesh::InitGeneratorTest(const std::string &module,
+                                const std::string &source,
+                                const std::string &node_type,
+                                const std::string &instance_id,
                                 EventManager *evm,
                                 unsigned short http_port, 
                                 SandeshContext *client_context) {
-    Initialize(Test, module, source, evm, http_port,
+    Initialize(Test, module, source, node_type, instance_id, evm, http_port,
                client_context);
 }
 

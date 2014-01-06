@@ -114,7 +114,7 @@ class SandeshStateMachine(object):
             e.sm._cancel_connect_timer()
             e.sm._connection.set_collector(e.sm_event.source)
             e.sm._connection.handle_sandesh_ctrl_msg(e.sm_event.msg)
-            self._connection.sandesh_instance().send_generator_info()
+            e.sm._connection.sandesh_instance().send_generator_info()
         #end _on_established
 
         # FSM - Fysom

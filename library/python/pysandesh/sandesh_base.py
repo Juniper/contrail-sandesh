@@ -37,6 +37,8 @@ class Sandesh(object):
         self._scope = ''
         self._module = ''
         self._source = ''
+        self._node_type = ''
+        self._instance_id = ''
         self._timestamp = 0
         self._versionsig = 0
         self._type = 0
@@ -52,12 +54,15 @@ class Sandesh(object):
 
     # Public functions
 
-    def init_generator(self, module, source, collectors, client_context,
+    def init_generator(self, module, source, node_type, instance_id,
+                       collectors, client_context, 
                        http_port, sandesh_req_uve_pkg_list=None,
                        discovery_client=None):
         self._role = self.SandeshRole.GENERATOR
         self._module = module
         self._source = source
+        self._node_type = node_type
+        self._instance_id = instance_id
         self._client_context = client_context
         self._collectors = collectors
         self._rcv_queue = WorkQueue(self._process_rx_sandesh)
@@ -168,6 +173,14 @@ class Sandesh(object):
     def source_id(self):
         return self._source
     # end source_id
+
+    def node_type(self):
+        return self._node_type
+    #end node_type
+
+    def instance_id(self):
+        return self._instance_id
+    #end instance_id
 
     def scope(self):
         return self._scope
@@ -286,9 +299,11 @@ class Sandesh(object):
                 self._client.connection().secondary_collector()
             if client_info.secondary is None:
                 client_info.secondary = ''
-            module_state = ModuleClientState(
-                name=self._source + ':' + self._module,
-                client_info=client_info)
+            module_state = ModuleClientState(name=self._source + ':' +
+                                             self._node_type + ':' + 
+                                             self._module + ':' +
+                                             self._instance_id, 
+                                             client_info=client_info)
             generator_info = SandeshModuleClientTrace(
                 data=module_state, sandesh=self)
             generator_info.send(sandesh=self)

@@ -227,7 +227,8 @@ TEST_F(SandeshAsyncTest, Async) {
     int port = server_->GetPort();
     ASSERT_LT(0, port);
     // Connect to the server
-    Sandesh::InitGenerator("SandeshAsyncTest-Client", "localhost", evm_.get(),
+    Sandesh::InitGenerator("SandeshAsyncTest-Client", "localhost", 
+                           "Test", "Test", evm_.get(),
                            0);
     Sandesh::ConnectToCollector("127.0.0.1", port);
     Sandesh::SetLoggingParams(true, "", "UT_DEBUG");
@@ -388,7 +389,7 @@ TEST_F(SandeshRequestTest, Request) {
     ASSERT_LT(0, port);
     // Connect to the server
     Sandesh::InitGenerator("SandeshRequestTest-Client", "localhost",
-            evm_.get(), 0, NULL);
+            "Test", "Test", evm_.get(), 0, NULL);
     Sandesh::ConnectToCollector("127.0.0.1", port);
     TASK_UTIL_EXPECT_TRUE(Sandesh::client()->state() == SandeshClientSM::ESTABLISHED);
     // Send the request

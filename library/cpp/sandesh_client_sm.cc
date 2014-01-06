@@ -858,7 +858,8 @@ SandeshClientSMImpl::SandeshClientSMImpl(EventManager *evm, Mgr *mgr,
         dequeues_(0),
         dequeue_fails_(0) {
     state_ = IDLE;
-    generator_key_ = Sandesh::source() + ":" + Sandesh::module();
+    generator_key_ = Sandesh::source() + ":" + Sandesh::node_type() + ":" + 
+        Sandesh::module() + ":" + Sandesh::instance_id();
     initiate();
     StartStatisticsTimer();
 }

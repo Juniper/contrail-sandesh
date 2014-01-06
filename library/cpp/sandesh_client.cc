@@ -251,10 +251,13 @@ void SandeshClient::InitializeSMSession(int count) {
     for(; it!= SandeshUVETypeMaps::End(); it++) {
         stv.push_back(it->first);
     }
-    LOG(DEBUG, "Sending Ctrl Message for " << Sandesh::module() << " count " << count);
+    LOG(DEBUG, "Sending Ctrl Message for " << Sandesh::source() << ":" <<
+        Sandesh::module() << ":" << Sandesh::instance_id() << ":" <<
+        Sandesh::node_type() << " count " << count);
 
     SandeshCtrlClientToServer::Request(Sandesh::source(), Sandesh::module(),
-            count, stv, getpid(), Sandesh::http_port(), "ctrl");
+            count, stv, getpid(), Sandesh::http_port(),
+            Sandesh::node_type(), Sandesh::instance_id(), "ctrl");
 
 }
 
@@ -265,7 +268,8 @@ void SandeshClient::SendUVE(int count,
         const string & stateName, const string & server,
         Endpoint primary, Endpoint secondary) {
     ModuleClientState mcs;
-    mcs.set_name(Sandesh::source() + ":" + Sandesh::module());
+    mcs.set_name(Sandesh::source() + ":" + Sandesh::node_type() +
+        ":" + Sandesh::module() + ":" + Sandesh::instance_id());
     SandeshClientInfo sci;
     if (!client_start) {
         client_start_time = UTCTimestampUsec(); 
