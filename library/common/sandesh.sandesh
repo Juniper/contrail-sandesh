@@ -70,4 +70,6 @@ struct SandeshHeader {
     9: i32 Hints;
     10: i32 Level;
     11: string Category;
+    12: string NodeType;
+    13: string InstanceId;
 }

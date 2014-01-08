@@ -70,7 +70,8 @@ int main(int argc, char **argv) {
     EventManager evm;
     TaskScheduler *scheduler = TaskScheduler::GetInstance();
     int task_id = scheduler->GetTaskId("sandesh show trace test");
-    Sandesh::InitGeneratorTest("sandesh show trace test", "localhost", &evm, 0,
+    Sandesh::InitGeneratorTest("sandesh show trace test", "localhost", 
+            "sandesh show trace test", "sandesh show trace test", &evm, 0,
             NULL);
     Sandesh::SetLoggingParams(false, "", SandeshLevel::UT_DEBUG);
 

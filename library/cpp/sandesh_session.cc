@@ -95,6 +95,8 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
     header.set_Hints(sandesh->hints());
     header.set_Level(sandesh->level());
     header.set_Category(sandesh->category());
+    header.set_NodeType(sandesh->node_type());
+    header.set_InstanceId(sandesh->instance_id());
 
     // Write the sandesh open envelope.
     buffer = btrans->getWritePtr(sandesh_open_.length());
@@ -103,8 +105,9 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
     // Write the sandesh header
     if ((ret = header.write(prot)) < 0) {
         LOG(ERROR, __func__ << ": Sandesh header write FAILED: " <<
-            sandesh->Name() << " : Source:" << sandesh->source() << " Module:" <<
-            sandesh->module() << " Sequence Number:" << sandesh->seqnum());
+            sandesh->Name() << " : " << sandesh->source() << ":" <<
+            sandesh->module() << ":" << sandesh->instance_id() <<
+            " Sequence Number:" << sandesh->seqnum());
         session()->increment_send_msg_fail();
         Sandesh::UpdateSandeshStats(sandesh->Name(), 0, true, true);
         sandesh->Release();
@@ -114,8 +117,9 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
     // Write the sandesh
     if ((ret = sandesh->Write(prot)) < 0) {
         LOG(ERROR, __func__ << ": Sandesh write FAILED: "<<
-            sandesh->Name() << " : Source:" << sandesh->source() << " Module:" <<
-            sandesh->module() << " Sequence Number:" << sandesh->seqnum());
+            sandesh->Name() << " : " << sandesh->source() << ":" <<
+            sandesh->module() << ":" << sandesh->instance_id() <<
+            " Sequence Number:" << sandesh->seqnum());
         session()->increment_send_msg_fail();
         Sandesh::UpdateSandeshStats(sandesh->Name(), 0, true, true);
         sandesh->Release();

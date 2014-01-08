@@ -72,7 +72,7 @@ class SandeshReaderTest(unittest.TestCase):
         if (not sandesh_test_started):
             http_port = test_utils.get_free_port()
             sandesh_global.init_generator('sandesh_session_test', 
-                socket.gethostname(), None,  
+                socket.gethostname(), 'Test', 'Test', None,  
                 'sandesh_msg_test_ctxt', http_port)
             sandesh_test_started = True
 

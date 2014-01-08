@@ -158,26 +158,39 @@ public:
     // Initialization APIs
     static bool InitGenerator(const std::string &module,
             const std::string &source,
+            const std::string &node_type,
+            const std::string &instance_id,
             EventManager *evm,
             unsigned short http_port,
             CollectorSubFn csf,
-            const std::vector<std::string> collectors,
+            const std::vector<std::string> &collectors,
             SandeshContext *client_context = NULL);
-    static void InitCollector(const std::string module,
-            const std::string source, EventManager *evm,
-            const std::string collector_ip, int collector_port,
+    static void InitGenerator(const std::string &module,
+            const std::string &source, 
+            const std::string &node_type,
+            const std::string &instance_id,
+            EventManager *evm,
             unsigned short http_port,
             SandeshContext *client_context = NULL);
-    static void InitGenerator(const std::string module,
-            const std::string source, EventManager *evm,
+    // Collector
+    static void InitCollector(const std::string &module,
+            const std::string &source, 
+            const std::string &node_type,
+            const std::string &instance_id,
+            EventManager *evm,
+            const std::string &collector_ip, int collector_port,
             unsigned short http_port,
             SandeshContext *client_context = NULL);
-    static bool ConnectToCollector(const std::string collector_ip,
+    // Test
+    static void InitGeneratorTest(const std::string &module,
+            const std::string &source,
+            const std::string &node_type,
+            const std::string &instance_id, 
+            EventManager *evm,
+            unsigned short http_port,
+            SandeshContext *client_context = NULL);
+    static bool ConnectToCollector(const std::string &collector_ip,
             int collector_port);
-    static void InitGeneratorTest(const std::string module,
-            const std::string source, EventManager *evm,
-            unsigned short http_port,
-            SandeshContext *client_context = NULL);
     static void Uninit();
 
     // Logging and category APIs
@@ -240,10 +253,14 @@ public:
     bool IsLoggingAllowed();
 
     // Accessors
-    static void set_source(std::string source) { source_ = source; }
+    static void set_source(std::string &source) { source_ = source; }
     static std::string source() { return source_; }
-    static void set_module(std::string module) { module_ = module; }
+    static void set_module(std::string &module) { module_ = module; }
     static std::string module() { return module_; }
+    static void set_instance_id(std::string &instance_id) { instance_id_ = instance_id; }
+    static std::string instance_id() { return instance_id_; }
+    static void set_node_type(std::string &node_type) { node_type_ = node_type; }
+    static std::string node_type() { return node_type_; }
     static SandeshRole role() { return role_; }
     static uint32_t http_port() { return http_port_; }
     static SandeshRxQueue* recv_queue() { return recv_queue_.get(); }
@@ -300,9 +317,15 @@ private:
 
     static void InitReceive(int recv_task_inst = -1);
     static void InitClient(EventManager *evm, Endpoint server);
+    static bool InitClient(EventManager *evm, 
+                           const std::vector<std::string> &collectors,
+                           CollectorSubFn csf);
     static bool ProcessRecv(SandeshRequest *);
-    static void Initialize(SandeshRole role, const std::string module,
-            const std::string source, EventManager *evm,
+    static void Initialize(SandeshRole role, const std::string &module,
+            const std::string &source, 
+            const std::string &node_type,
+            const std::string &instance_id,
+            EventManager *evm,
             unsigned short http_port,
             SandeshContext *client_context = NULL);
 
@@ -311,6 +334,8 @@ private:
     static SandeshRole role_;
     static std::string module_;
     static std::string source_;
+    static std::string node_type_;
+    static std::string instance_id_;
     static uint32_t http_port_;
     static std::auto_ptr<SandeshRxQueue> recv_queue_;
     static int recv_task_id_;

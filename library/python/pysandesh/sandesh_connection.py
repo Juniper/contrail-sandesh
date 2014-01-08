@@ -88,7 +88,9 @@ class SandeshConnection(object):
             uve_types.append(uve_type_key)
         from gen_py.sandesh_ctrl.ttypes import SandeshCtrlClientToServer
         ctrl_msg = SandeshCtrlClientToServer(self._sandesh_instance.source_id(),
-            self._sandesh_instance.module(), count, uve_types, os.getpid(), 0)
+            self._sandesh_instance.module(), count, uve_types, os.getpid(), 0,
+            self._sandesh_instance.node_type(), 
+            self._sandesh_instance.instance_id())
         self._logger.debug('Send sandesh control message. uve type count # %d' % (len(uve_types)))
         ctrl_msg.request('ctrl', sandesh=self._sandesh_instance)
     #end handle_initialized

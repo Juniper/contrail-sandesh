@@ -161,7 +161,9 @@ class SandeshWriter(object):
                                     sandesh.type(),
                                     sandesh.hints(),
                                     sandesh.level(),
-                                    sandesh.category())
+                                    sandesh.category(),
+                                    sandesh.node_type(),
+                                    sandesh.instance_id())
         # write the sandesh header
         if sandesh_hdr.write(protocol) < 0:
             print 'Error in encoding sandesh header'
