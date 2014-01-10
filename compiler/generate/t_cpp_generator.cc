@@ -2685,7 +2685,7 @@ void t_cpp_generator::generate_sandesh_http_reader(ofstream& out,
 	    t_type *ftype = (*f_iter)->get_type();
 	    if (ftype->is_base_type()) {
 	        t_base_type *btype = static_cast<t_base_type *>(ftype);
-	        indent(out) << "if (++it2 != var.end()) " << endl;
+	        indent(out) << "if (it2 != var.end()&& ++it2 != var.end()) " << endl;
 	        scope_up(out);
 	        if ((*f_iter)->get_req() == t_field::T_OPTIONAL) {
 	            indent(out) << "__isset." << (*f_iter)->get_name() << " = true;" << endl;
