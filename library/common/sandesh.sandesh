@@ -19,6 +19,7 @@ enum SandeshType {
     OBJECT = 7,
     FLOW = 8,
     TRACE_OBJECT = 9,
+    SYSLOG = 10,
 }
 
 enum SandeshLevel {
@@ -72,4 +73,6 @@ struct SandeshHeader {
     11: string Category;
     12: string NodeType;
     13: string InstanceId;
+    14: string IPAddress;
+    15: i32 Pid;
 }

@@ -64,8 +64,8 @@ tbb::mutex Sandesh::stats_mutex_;
 
 const char * Sandesh::SandeshRoleToString(SandeshRole role) {
     switch (role) {
-    case Generator:
-        return "Generator";
+    case SandeshGenerator:
+        return "SandeshGenerator";
     case Collector:
         return "Collector";
     case Test:
@@ -210,7 +210,7 @@ void Sandesh::InitGenerator(const std::string &module,
                             EventManager *evm,
                             unsigned short http_port,
                             SandeshContext *client_context) {
-    Initialize(Generator, module, source, node_type, instance_id, evm,
+    Initialize(SandeshGenerator, module, source, node_type, instance_id, evm,
                http_port, client_context);
 }
 
@@ -223,7 +223,7 @@ bool Sandesh::InitGenerator(const std::string &module,
                             CollectorSubFn csf,
                             const std::vector<std::string> &collectors,
                             SandeshContext *client_context) {
-    Initialize(Generator, module, source, node_type, instance_id, evm,
+    Initialize(SandeshGenerator, module, source, node_type, instance_id, evm,
                http_port, client_context);
     return InitClient(evm, collectors, csf);
 }
