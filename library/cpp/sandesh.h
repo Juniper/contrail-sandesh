@@ -301,6 +301,17 @@ protected:
         category_(""),
         name_(name) {
     }
+    Sandesh(SandeshType::type type, const std::string& name, uint32_t seqno, bool no_time_stamp) :
+        seqnum_(seqno),
+        context_(""),
+        scope_(""),
+        type_(type),
+        hints_(0),
+        level_(SandeshLevel::INVALID),
+        category_(""),
+        name_(name) {
+        timestamp_ = no_time_stamp ? 0 : UTCTimestampUsec();
+    }
     virtual ~Sandesh() {}
     virtual bool Dispatch(SandeshConnection * sconn = NULL);
     virtual bool SendEnqueue();
@@ -406,7 +417,7 @@ public:
     }
 protected:
     SandeshBuffer(const std::string& name, uint32_t seqno) :
-        Sandesh(SandeshType::BUFFER, name, seqno) {}
+        Sandesh(SandeshType::BUFFER, name, seqno, true) {}
 };
 
 class SandeshTrace : public Sandesh {
