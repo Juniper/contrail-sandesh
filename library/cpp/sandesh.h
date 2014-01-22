@@ -148,7 +148,7 @@ public:
     typedef boost::function<void (Sandesh *)> SandeshCallback;
     typedef enum {
         Invalid,
-        Generator,
+        SandeshGenerator,
         Collector,
         Test,
     } SandeshRole;

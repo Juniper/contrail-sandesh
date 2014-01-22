@@ -401,7 +401,7 @@ class SandeshTracePerfTest : public ::testing::Test {
 protected:
     virtual void SetUp() {
         // Disable printing of trace
-        Sandesh::role_ = Sandesh::Generator;
+        Sandesh::role_ = Sandesh::SandeshGenerator;
     }
 
     virtual void TearDown() {
