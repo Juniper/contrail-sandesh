@@ -658,16 +658,18 @@ void Sandesh::SetSendQueue(bool enable) {
     }
 }
 
+// Sandesh statistics
+
 void SandeshStatistics::Get(
     boost::ptr_map<std::string, SandeshMessageTypeStats> &mtype_stats,
-    SandeshMessageStats &magg_stats) {
+    SandeshMessageStats &magg_stats) const {
     mtype_stats = type_stats;    
     magg_stats = agg_stats; 
 }
 
 void SandeshStatistics::Get(std::vector<SandeshMessageTypeStats> &mtype_stats,
-                            SandeshMessageStats &magg_stats) {
-    for (boost::ptr_map<std::string, SandeshMessageTypeStats>::iterator it = 
+                            SandeshMessageStats &magg_stats) const {
+    for (boost::ptr_map<std::string, SandeshMessageTypeStats>::const_iterator it = 
              type_stats.begin();
          it != type_stats.end();
          it++) {
@@ -706,6 +708,53 @@ void SandeshStatistics::Update(const std::string& sandesh_name,
             mtstats->stats.bytes_received += bytes;
             agg_stats.messages_received++;
             agg_stats.bytes_received += bytes;
+        }
+    }
+}
+
+void SandeshEventStatistics::Get(
+    std::vector<SandeshStateMachineEvStats> &ev_stats) const {
+    for (EventStatsMap::const_iterator it = event_stats.begin();
+            it != event_stats.end(); ++it) {
+        const EventStats *es = it->second;
+        SandeshStateMachineEvStats ev_stat;
+        ev_stat.event = it->first;
+        ev_stat.enqueues = es->enqueues;
+        ev_stat.dequeues = es->dequeues;
+        ev_stat.enqueue_fails = es->enqueue_fails;
+        ev_stat.dequeue_fails = es->dequeue_fails;
+        ev_stats.push_back(ev_stat);
+    }
+    SandeshStateMachineEvStats ev_agg_stat;
+    ev_agg_stat.enqueues = agg_stats.enqueues;
+    ev_agg_stat.dequeues = agg_stats.dequeues;
+    ev_agg_stat.enqueue_fails = agg_stats.enqueue_fails;
+    ev_agg_stat.dequeue_fails = agg_stats.dequeue_fails;
+    ev_stats.push_back(ev_agg_stat);
+}
+
+void SandeshEventStatistics::Update(std::string &event_name, bool enqueue,
+    bool fail) {
+    EventStatsMap::iterator it = event_stats.find(event_name);
+    if (it == event_stats.end()) {
+        it = (event_stats.insert(event_name, new EventStats)).first;
+    }
+    EventStats *es = it->second;
+    if (enqueue) {
+        if (fail) {
+            es->enqueue_fails++;
+            agg_stats.enqueue_fails++;
+        } else {
+            es->enqueues++;
+            agg_stats.enqueues++;
+        }
+    } else {
+        if (fail) {
+            es->dequeue_fails++;
+            agg_stats.dequeue_fails++;
+        } else {
+            es->dequeues++;
+            agg_stats.dequeues++;
         }
     }
 }

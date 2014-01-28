@@ -408,11 +408,7 @@ SandeshStateMachine::SandeshStateMachine(const char *prefix, SandeshConnection *
               connection->GetTaskInstance())),
       idle_hold_time_(0),
       deleted_(false),
-      resource_(false),
-      enqueues_(0),
-      enqueue_fails_(0),
-      dequeues_(0),
-      dequeue_fails_(0) {
+      resource_(false) {
     state_ = ssm::IDLE;
     initiate();
 }
@@ -547,7 +543,7 @@ bool SandeshStateMachine::GetQueueCount(uint64_t &queue_count) const {
     if (deleted_ || generator_key_.empty()) {
         return false;
     }
-    queue_count = enqueues_ - dequeues_;
+    queue_count = work_queue_.Length();
     return true;
 }
 
@@ -557,21 +553,11 @@ bool SandeshStateMachine::GetStatistics(
     if (deleted_ || generator_key_.empty()) {
         return false;
     }
-    // State machine event statistics
     std::vector<SandeshStateMachineEvStats> ev_stats;
-    tbb::mutex::scoped_lock lock(stats_mutex_);
-    for (EventStatsMap::const_iterator it = event_stats_.begin();
-            it != event_stats_.end(); ++it) {
-        const EventStats *es = it->second;
-        SandeshStateMachineEvStats ev_stat;
-        ev_stat.event = it->first;
-        ev_stat.enqueues = es->enqueues;
-        ev_stat.dequeues = es->dequeues;
-        ev_stat.enqueue_fails = es->enqueue_fails;
-        ev_stat.dequeue_fails = es->dequeue_fails;
-        ev_stats.push_back(ev_stat);
-    }
-    lock.release();
+    tbb::mutex::scoped_lock elock(smutex_);
+    // State machine event statistics
+    event_stats_.Get(ev_stats);
+    elock.release();
     sm_stats.set_ev_stats(ev_stats);
     sm_stats.set_state(StateName());
     sm_stats.set_last_state(LastStateName());
@@ -579,15 +565,13 @@ bool SandeshStateMachine::GetStatistics(
     sm_stats.set_state_since(state_since_);
     sm_stats.set_last_event_at(last_event_at_);
     // Sandesh message statistics
-    typedef boost::ptr_map<std::string, SandeshMessageTypeStats> SandeshMessageTypeStatsMap;
     std::vector<SandeshMessageTypeStats> mtype_stats;
-    for (SandeshMessageTypeStatsMap::iterator mt_it = message_stats_.type_stats.begin();
-         mt_it != message_stats_.type_stats.end();
-         mt_it++) {
-        mtype_stats.push_back(*mt_it->second);
-    }
+    SandeshMessageStats magg_stats;
+    tbb::mutex::scoped_lock mlock(smutex_);
+    message_stats_.Get(mtype_stats, magg_stats);
+    mlock.release();
     msg_stats.set_type_stats(mtype_stats);
-    msg_stats.set_aggregate_stats(message_stats_.agg_stats);
+    msg_stats.set_aggregate_stats(magg_stats);
     return true;
 }
 
@@ -633,7 +617,9 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
     // Extract the header and message type
     SandeshReader::ExtractMsgHeader(msg, header, message_type, xml_offset);
     // Update message statistics
+    tbb::mutex::scoped_lock lock(smutex_);
     message_stats_.Update(message_type, msg.size(), false, false);
+    lock.release();
     
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
         SM_LOG(DEBUG, "OnMessage control in state: " << StateName() <<
@@ -694,30 +680,10 @@ void SandeshStateMachine::UpdateEventDequeueFail(const sc::event_base &event) {
 
 void SandeshStateMachine::UpdateEventStats(const sc::event_base &event,
         bool enqueue, bool fail) {
-    tbb::mutex::scoped_lock lock(stats_mutex_);
     std::string event_name(TYPE_NAME(event));
-    EventStatsMap::iterator it = event_stats_.find(event_name);
-    if (it == event_stats_.end()) {
-        it = (event_stats_.insert(event_name, new EventStats)).first;
-    }
-    EventStats *es = it->second;
-    if (enqueue) {
-        if (fail) {
-            es->enqueue_fails++;
-            enqueue_fails_++;
-        } else {
-            es->enqueues++;
-            enqueues_++;
-        }
-    } else {
-        if (fail) {
-            es->dequeue_fails++;
-            dequeue_fails_++;
-        } else {
-            es->dequeues++;
-            dequeues_++;
-        }
-    }
+    tbb::mutex::scoped_lock lock(smutex_);
+    event_stats_.Update(event_name, enqueue, fail);
+    lock.release();
 }
 
 bool SandeshStateMachine::DequeueEvent(SandeshStateMachine::EventContainer ec) {
