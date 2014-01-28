@@ -24,9 +24,12 @@
 #include <base/task_annotations.h>
 #include <io/event_manager.h>
 
-#include "sandesh_client_sm_priv.h"
 #include <sandesh/sandesh_constants.h>
+#include <sandesh/sandesh_types.h>
+#include <sandesh/sandesh.h>
 #include <sandesh/sandesh_uve_types.h>
+#include <sandesh/sandesh_statistics.h>
+#include "sandesh_client_sm_priv.h"
 
 using boost::system::error_code;
 using std::string;
@@ -744,30 +747,10 @@ void SandeshClientSMImpl::UpdateEventDequeueFail(const sc::event_base &event) {
 
 void SandeshClientSMImpl::UpdateEventStats(const sc::event_base &event,
         bool enqueue, bool fail) {
-    tbb::mutex::scoped_lock lock(mutex_);
     std::string event_name(TYPE_NAME(event));
-    EventStatsMap::iterator it = event_stats_.find(event_name);
-    if (it == event_stats_.end()) {
-        it = (event_stats_.insert(event_name, new EventStats)).first;
-    }
-    EventStats *es = it->second;
-    if (enqueue) {
-        if (fail) {
-            es->enqueue_fails++;
-            enqueue_fails_++;
-        } else {
-            es->enqueues++;
-            enqueues_++;
-        }
-    } else {
-        if (fail) {
-            es->dequeue_fails++;
-            dequeue_fails_++;
-        } else {
-            es->dequeues++;
-            dequeues_++;
-        }
-    }
+    tbb::mutex::scoped_lock lock(mutex_);
+    event_stats_.Update(event_name, enqueue, fail);
+    lock.release();
 }
 
 bool SandeshClientSMImpl::DequeueEvent(SandeshClientSMImpl::EventContainer ec) {
@@ -852,11 +835,7 @@ SandeshClientSMImpl::SandeshClientSMImpl(EventManager *evm, Mgr *mgr,
         deleted_(false),
         in_dequeue_(false),
         connects_(0),
-        coll_name_(string()),
-        enqueues_(0),
-        enqueue_fails_(0),
-        dequeues_(0),
-        dequeue_fails_(0) {
+        coll_name_(string()) {
     state_ = IDLE;
     generator_key_ = Sandesh::source() + ":" + Sandesh::node_type() + ":" + 
         Sandesh::module() + ":" + Sandesh::instance_id();
@@ -913,22 +892,12 @@ bool SandeshClientSMImpl::StatisticsTimerExpired() {
     }
     std::vector<SandeshStateMachineEvStats> ev_stats;
     tbb::mutex::scoped_lock lock(mutex_);
-    for (EventStatsMap::const_iterator it = event_stats_.begin();
-            it != event_stats_.end(); ++it) {
-        const EventStats *es = it->second;
-        SandeshStateMachineEvStats ev_stat;
-        ev_stat.event = it->first;
-        ev_stat.enqueues = es->enqueues;
-        ev_stat.dequeues = es->dequeues;
-        ev_stat.enqueue_fails = es->enqueue_fails;
-        ev_stat.dequeue_fails = es->dequeue_fails;
-        ev_stats.push_back(ev_stat);
-    }
+    event_stats_.Get(ev_stats);
     lock.release();
     // Send the message
     ModuleClientState mcs;
     mcs.set_name(generator_key_);
-    mcs.set_sm_queue_count(enqueues_ - dequeues_);
+    mcs.set_sm_queue_count(work_queue_.Length());
     // Sandesh state machine statistics
     SandeshStateMachineStats sm_stats;
     sm_stats.set_ev_stats(ev_stats);

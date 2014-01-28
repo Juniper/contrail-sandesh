@@ -36,6 +36,7 @@ struct EvStart;
 } // namespace scm
 
 class SandeshClientSMImpl;
+class SandeshEventStatistics;
 typedef boost::function<bool(SandeshClientSMImpl *)> EvValidate;
 
 class SandeshClientSMImpl : public SandeshClientSM,
@@ -114,13 +115,16 @@ public:
     }
 
     void set_last_event(const std::string &event) {
+        tbb::mutex::scoped_lock lock(mutex_);
         last_event_ = event;
         last_event_at_ = UTCTimestampUsec();
     }
-    const std::string &last_event() const {
+    const std::string last_event() const {
+        tbb::mutex::scoped_lock lock(mutex_);
         return last_event_;
     }
     void reset_last_info() {
+        tbb::mutex::scoped_lock lock(mutex_);
         last_state_ = IDLE;
         last_event_ = "";
     }
@@ -170,28 +174,9 @@ private:
     std::string last_event_;
     uint64_t last_event_at_;
     std::string coll_name_;
-    tbb::mutex mutex_;
+    mutable tbb::mutex mutex_;
     std::string generator_key_;
-
-    struct EventStats {
-        EventStats() :
-            enqueues(0),
-            enqueue_fails(0),
-            dequeues(0),
-            dequeue_fails(0) {
-        }
-        uint64_t enqueues;
-        uint64_t enqueue_fails;
-        uint64_t dequeues;
-        uint64_t dequeue_fails;
-    };
-    typedef boost::ptr_map<std::string, EventStats> EventStatsMap;
-    EventStatsMap event_stats_;
-
-    uint64_t enqueues_;
-    uint64_t enqueue_fails_;
-    uint64_t dequeues_;
-    uint64_t dequeue_fails_;
+    SandeshEventStatistics event_stats_;
 
     DISALLOW_COPY_AND_ASSIGN(SandeshClientSMImpl);
 };
