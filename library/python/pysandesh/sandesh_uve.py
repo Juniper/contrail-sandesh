@@ -134,7 +134,8 @@ class SandeshUVEPerTypeMap(object):
             for uve_name, uve_entry in self._uve_map.iteritems():
                 if seqno == 0 or seqno < uve_entry.seqno:
                     try:
-                        sandesh_uve = getattr(imp_module, self._uve_type)()
+                        sandesh_uve = \
+                            getattr(imp_module, self._uve_type)(sandesh=sandesh_instance)
                     except AttributeError:
                         logger.error('Failed to create sandesh UVE "%s"' % (self._uve_type))
                         break
