@@ -50,6 +50,7 @@ class Sandesh(object):
         self._level = SandeshLevel.INVALID
         self._category = ''
         self._send_queue_enabled = True
+        self._http_server = None
     # end __init__
 
     # Public functions
@@ -80,8 +81,10 @@ class Sandesh(object):
         sandesh_req_uve_pkg_list.append('pysandesh.gen_py')
         for pkg_name in sandesh_req_uve_pkg_list:
             self._create_sandesh_request_and_uve_lists(pkg_name)
-        self._http_server = SandeshHttp(
-            self, module, http_port, sandesh_req_uve_pkg_list)
+        if http_port != -1:
+            self._http_server = SandeshHttp(
+                self, module, http_port, sandesh_req_uve_pkg_list)
+            gevent.spawn(self._http_server.start_http_server)
         primary_collector = None
         secondary_collector = None
         if self._collectors is not None:
@@ -89,7 +92,6 @@ class Sandesh(object):
                 primary_collector = self._collectors[0]
             if len(self._collectors) > 1:
                 secondary_collector = self._collectors[1]
-        gevent.spawn(self._http_server.start_http_server)
         self._client = SandeshClient(
             self, primary_collector, secondary_collector,
             discovery_client)
@@ -287,7 +289,8 @@ class Sandesh(object):
         finally:
             client_info.start_time = self._start_time
             client_info.pid = os.getpid()
-            client_info.http_port = self._http_server.get_port()
+            if self._http_server is not None:
+                client_info.http_port = self._http_server.get_port()
             client_info.collector_name = self._client.connection().collector()
             client_info.status = self._client.connection().state()
             client_info.successful_connections = \
