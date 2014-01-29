@@ -17,15 +17,15 @@ class SandeshLogger(object):
     _logger = None
     _DEFAULT_LOG_FILE = '<stdout>'
 
-    def __init__(self, module):
-        assert module, 'SandeshLogger init requires module name'
+    def __init__(self, generator):
+        assert generator, 'SandeshLogger init requires generator name'
 
-        self._module = module
+        self._generator = generator
         self._enable_local_log = False
         self._logging_category = ''
         self._logging_level = SandeshLevel.SYS_INFO
         self._logging_file = self._DEFAULT_LOG_FILE
-        self._logger = logging.getLogger(self._module)
+        self._logger = logging.getLogger(self._generator)
         # For now, set the logging level=DEBUG
         self._logger.setLevel(logging.DEBUG)
         self._logging_handler = logging.StreamHandler()

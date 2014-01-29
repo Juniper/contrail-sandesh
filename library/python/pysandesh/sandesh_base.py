@@ -67,7 +67,8 @@ class Sandesh(object):
         self._client_context = client_context
         self._collectors = collectors
         self._rcv_queue = WorkQueue(self._process_rx_sandesh)
-        self._init_logger(module)
+        self._init_logger(source + ':' + module + ':' + node_type + ':' \
+            + instance_id)
         self._stats = SandeshStats()
         self._trace = trace.Trace()
         self._sandesh_request_dict = {}
@@ -484,10 +485,10 @@ class Sandesh(object):
                     SandeshUVEPerTypeMap(self, uve_type_name, mod)
     # end _add_sandesh_uve
 
-    def _init_logger(self, module):
-        if not module:
-            module = 'sandesh'
-        self._sandesh_logger = SandeshLogger(module)
+    def _init_logger(self, generator):
+        if not generator:
+            generator = 'sandesh'
+        self._sandesh_logger = SandeshLogger(generator)
         self._logger = self._sandesh_logger.logger()
     # end _init_logger
 
