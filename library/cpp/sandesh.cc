@@ -361,10 +361,8 @@ void Sandesh::SetSendingLevel(size_t count, SandeshLevel::type level) {
 
 bool Sandesh::Enqueue(SandeshQueue *queue) {
     if (!queue) {
-        if (IsLoggingAllowed()) {
-            LOG(ERROR, __func__ << ": SandeshQueue NULL : Dropping Message: "
+        LOG(ERROR, __func__ << ": SandeshQueue NULL : Dropping Message: "
                 << ToString());
-        } 
         Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
         return false;
@@ -495,17 +493,13 @@ bool Sandesh::HandleTest() {
 
 bool Sandesh::SendEnqueue() {
     if (!client_) {
-        if (IsLoggingAllowed()) {
-            LOG(ERROR, "Sandesh: Send: No client: " << ToString());
-        }
+        LOG(ERROR, "Sandesh: Send: No client: " << ToString());
         Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
         return false;        
     } 
     if (!client_->SendSandesh(this)) {
-        if (IsLoggingAllowed()) {
-            LOG(ERROR, "Sandesh: Send: FAILED: " << ToString());
-        }
+        LOG(ERROR, "Sandesh: Send: FAILED: " << ToString());
         Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
         return false;
@@ -559,18 +553,14 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
     }
     if (client_) {
         if (!client_->SendSandeshUVE(this)) {
-            if (IsLoggingAllowed()) {
-                LOG(ERROR, "SandeshUVE : Send FAILED: " << ToString());
-            }
+            LOG(ERROR, "SandeshUVE : Send FAILED: " << ToString());
             Sandesh::UpdateSandeshStats(Name(), 0, true, true);
             Release();
             return false;
         }
         return true;
     }
-    if (IsLoggingAllowed()) {
-        LOG(ERROR, "SandeshUVE: No Client: " << ToString());
-    }
+    LOG(ERROR, "SandeshUVE: No Client: " << ToString());
     Sandesh::UpdateSandeshStats(Name(), 0, true, true);
     Release();
     return false;
@@ -578,9 +568,7 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
 
 bool SandeshRequest::Enqueue(SandeshRxQueue *queue) {
     if (!queue) {
-        if (IsLoggingAllowed()) {
-            LOG(ERROR, "SandeshRequest: No RxQueue: " << ToString());
-        }
+        LOG(ERROR, "SandeshRequest: No RxQueue: " << ToString());
         Sandesh::UpdateSandeshStats(Name(), 0, false, true);
         Release();
         return false;
