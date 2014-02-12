@@ -73,6 +73,6 @@ struct SandeshHeader {
     11: string Category;
     12: string NodeType;
     13: string InstanceId;
-    14: string IPAddress;
-    15: i32 Pid;
+    14: optional string IPAddress;
+    15: optional i32 Pid;
 }
