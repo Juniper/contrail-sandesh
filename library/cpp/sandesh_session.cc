@@ -360,10 +360,8 @@ void SandeshSession::OnRead(Buffer buffer) {
 bool SandeshSession::SendMsg(Sandesh *sandesh) {
     tbb::mutex::scoped_lock lock(smutex_);
     if (!IsEstablished()) {
-        if (sandesh->IsLoggingAllowed()) {
-            LOG(ERROR, __func__ << " Not Connected : Dropping Message: " << 
+        LOG(ERROR, __func__ << " Not Connected : Dropping Message: " << 
                 sandesh->ToString());
-        }
         increment_send_msg_fail();
         Sandesh::UpdateSandeshStats(sandesh->Name(), 0, true, true);
         sandesh->Release();
