@@ -32,7 +32,6 @@ public:
     typedef std::map<std::string, SandeshUVEPerTypeMap *> uve_global_map;
 
     static void RegisterType(const std::string &s, SandeshUVEPerTypeMap *tmap) {
-        LOG(DEBUG, __func__ << "Registering " << s);
         assert(GetMap()->insert(std::make_pair(s, tmap)).second);
     }
     static const SandeshUVEPerTypeMap * TypeMap(const std::string &s) {
