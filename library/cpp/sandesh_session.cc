@@ -414,14 +414,14 @@ int SandeshReader::ExtractMsgHeader(const std::string& msg,
     boost::shared_ptr<TXMLProtocol> prot =
             boost::shared_ptr<TXMLProtocol>(new TXMLProtocol(btrans));
     // Read the sandesh header and note the offset
-    if ((ret = header.read(prot)) < 0) {
+    if ((ret = header.read(prot)) <= 0) {
         LOG(ERROR, __func__ << ": Sandesh header read FAILED: " << msg);
         return EINVAL;
     }
     xfer += ret;
     header_offset = xfer;
     // Extract the message name
-    if ((ret = prot->readSandeshBegin(msg_type)) < 0) {
+    if ((ret = prot->readSandeshBegin(msg_type)) <= 0) {
         LOG(ERROR, __func__ << ": Sandesh begin read FAILED: " << msg);
         return EINVAL;
     }

@@ -114,12 +114,7 @@ public:
     }
 
     virtual bool ReceiveSandeshMsg(SandeshSession *session,
-       const string& cmsg, const string& message_type,
-       const SandeshHeader& header, uint32_t xml_offset, bool rsc) {
-        return true;
-    }
-
-    virtual bool ReceiveMsg(SandeshSession *session, ssm::Message *msg) {
+       const SandeshMessage *msg, bool rsc) {
         return true;
     }
 
