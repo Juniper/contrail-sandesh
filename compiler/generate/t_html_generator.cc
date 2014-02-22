@@ -410,7 +410,7 @@ void t_html_generator::generate_xml() {
   string fname = get_out_dir() + program_->get_name() + ".xml";
   f_out_.open(fname.c_str());
   f_out_ <<
-      "<?xml-stylesheet type=\"text/xsl\" href=\"universal_parse.xsl\"?>" <<
+      "<?xml-stylesheet type=\"text/xsl\" href=\"/universal_parse.xsl\"?>" <<
       endl;
   f_out_ << "<" << program_->get_name() << " type=\"rlist\">" << endl;
 
