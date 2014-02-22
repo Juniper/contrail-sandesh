@@ -698,7 +698,13 @@ void SandeshClientSMImpl::OnMessage(SandeshSession *session,
     uint32_t xml_offset = 0;
 
     // Extract the header and message type
-    SandeshReader::ExtractMsgHeader(msg, header, message_type, xml_offset);
+    int ret = SandeshReader::ExtractMsgHeader(msg, header, message_type,
+        xml_offset);
+    if (ret) {
+        SM_LOG(ERROR, "OnMessage in state: " << StateName() << ": Extract "
+               << " FAILED(" << ret << ")");
+        return;
+    }
     
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
         SM_LOG(INFO, "OnMessage control in state: " << StateName() );

@@ -179,10 +179,6 @@ bool SandeshServerConnection::ProcessSandeshCtrlMessage(const std::string &msg,
         CONNECTION_LOG(ERROR, __func__ << " No Server");
         return false;
     }
-    if (header_offset == 0) {
-        CONNECTION_LOG(ERROR, __func__ << " No Sandesh Header");
-        return false;
-    }
     Sandesh *ctrl_snh = SandeshSession::DecodeCtrlSandesh(msg, header, sandesh_name,
                                                           header_offset);
     bool ret = sserver->ReceiveSandeshCtrlMsg(state_machine(), session(), ctrl_snh);
@@ -199,28 +195,14 @@ bool SandeshServerConnection::ProcessResourceUpdate(bool rsc) {
     return sserver->ReceiveResourceUpdate(session(), rsc);
 }
 
-bool SandeshServerConnection::ProcessSandeshMessage(const std::string &msg,
-        const SandeshHeader &header, const std::string sandesh_name,
-        const uint32_t header_offset, bool resource) {
+bool SandeshServerConnection::ProcessSandeshMessage(
+        const SandeshMessage *msg, bool resource) {
     SandeshServer *sserver = dynamic_cast<SandeshServer *>(server());
     if (!sserver) {
         CONNECTION_LOG(ERROR, __func__ << " No Server");
         return false;
     }
-    if (header_offset == 0) {
-        CONNECTION_LOG(ERROR, __func__ << " No Sandesh Header");
-        return false;
-    }
-    sserver->ReceiveSandeshMsg(session(), msg, sandesh_name, header, header_offset, resource);
-    return true;
-}
-
-bool SandeshServerConnection::ProcessMessage(ssm::Message *msg) {
-    SandeshServer *sserver = dynamic_cast<SandeshServer *>(server());
-    if (!sserver) {
-        CONNECTION_LOG(ERROR, __func__ << " No Server");
-        return false;
-    }
+    sserver->ReceiveSandeshMsg(session(), msg, resource);
     return true;
 }
 

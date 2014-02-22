@@ -28,6 +28,7 @@
 #include <sandesh/sandesh_http.h>
 #include <sandesh/sandesh_ctrl_types.h>
 #include <sandesh/sandesh_uve_types.h>
+#include <sandesh/sandesh_message_builder.h>
 #include "sandesh_statistics.h"
 #include "sandesh_client.h"
 #include "sandesh_server.h"
@@ -58,8 +59,7 @@ namespace {
 class SandeshServerTest : public SandeshServer {
 public:
     typedef boost::function<bool(SandeshSession *session,
-            const string&, const string&,
-            const SandeshHeader&, uint32_t)> ReceiveMsgCb;
+            const SandeshMessage *msg)> ReceiveMsgCb;
 
     SandeshServerTest(EventManager *evm, ReceiveMsgCb cb) :
             SandeshServer(evm),
@@ -69,14 +69,9 @@ public:
     virtual ~SandeshServerTest() {
     }
 
-    virtual bool ReceiveSandeshMsg(SandeshSession *session,
-                           const string& cmsg, const string& message_type,
-                           const SandeshHeader& header, uint32_t xml_offset, bool rsc) {
-        return cb_(session, cmsg, message_type, header, xml_offset);
-    }
-
-    virtual bool ReceiveMsg(SandeshSession *session, ssm::Message *msg) {
-        return true;
+    virtual bool ReceiveSandeshMsg(SandeshSession *session, 
+        const SandeshMessage *msg, bool rsc) {
+        return cb_(session, msg);
     }
 
 private:
@@ -92,7 +87,7 @@ protected:
         msg_num_ = 0;
         evm_.reset(new EventManager());
         server_ = new SandeshServerTest(evm_.get(),
-                boost::bind(&SandeshAsyncTest::ReceiveSandeshMsg, this, _1, _2, _3, _4, _5));
+                boost::bind(&SandeshAsyncTest::ReceiveSandeshMsg, this, _1, _2));
         thread_.reset(new ServerThread(evm_.get()));
     }
 
@@ -114,9 +109,13 @@ protected:
     }
 
     bool ReceiveSandeshMsg(SandeshSession *session,
-            const string& msg, const string& sandesh_name,
-            const SandeshHeader& header, uint32_t header_offset) {
-
+            const SandeshMessage *msg) {
+        const SandeshHeader &header(msg->GetHeader());
+        const SandeshXMLMessage *xmsg = 
+            dynamic_cast<const SandeshXMLMessage *>(msg);
+        EXPECT_TRUE(xmsg != NULL);
+        std::string message(xmsg->ExtractMessage());
+    
         if (header.get_Type() == SandeshType::UVE) {
             return true;
         } 
@@ -132,8 +131,8 @@ protected:
             EXPECT_EQ(0, header.get_Hints());
             EXPECT_EQ(SandeshLevel::SYS_INFO, header.get_Level());
             EXPECT_EQ("SystemLogTest", header.get_Category());
-            const char *expect = "<SystemLogTest type=\"sandesh\"><str1 type=\"string\" identifier=\"1\">Const static string is</str1><f2 type=\"i32\" identifier=\"2\">100</f2><f3 type=\"string\" identifier=\"3\">sat1string100</f3><file type=\"string\" identifier=\"-32768\"></file><line type=\"i32\" identifier=\"-32767\">0</line></SystemLogTest>";
-            EXPECT_STREQ(expect, msg.c_str() + header_offset);
+            const char *expect = "<SystemLogTest type=\"sandesh\"><str1 type=\"string\" identifier=\"1\">Const static string is</str1><f2 type=\"i32\" identifier=\"2\">100</f2><f3 type=\"string\" identifier=\"3\">sat1string100</f3><file type=\"string\" identifier=\"-32768\">Test</file><line type=\"i32\" identifier=\"-32767\">0</line></SystemLogTest>";
+            EXPECT_STREQ(expect, message.c_str());
             break;
         }
         case 1:
@@ -146,8 +145,8 @@ protected:
             EXPECT_EQ(0, header.get_Hints());
             EXPECT_EQ(SandeshLevel::SYS_DEBUG, header.get_Level());
             EXPECT_EQ("SystemLogTest", header.get_Category());
-            const char *expect = "<SystemLogTest type=\"sandesh\"><str1 type=\"string\" identifier=\"1\">Const static string is</str1><f2 type=\"i32\" identifier=\"2\">101</f2><f3 type=\"string\" identifier=\"3\">&lt;&apos;sat1string101&apos;&gt;</f3><file type=\"string\" identifier=\"-32768\"></file><line type=\"i32\" identifier=\"-32767\">0</line></SystemLogTest>";
-            EXPECT_STREQ(expect, msg.c_str() + header_offset);
+            const char *expect = "<SystemLogTest type=\"sandesh\"><str1 type=\"string\" identifier=\"1\">Const static string is</str1><f2 type=\"i32\" identifier=\"2\">101</f2><f3 type=\"string\" identifier=\"3\">&lt;&apos;sat1string101&apos;&gt;</f3><file type=\"string\" identifier=\"-32768\">Test</file><line type=\"i32\" identifier=\"-32767\">0</line></SystemLogTest>";
+            EXPECT_STREQ(expect, message.c_str());
             break;
         }
         case 2:
@@ -161,7 +160,7 @@ protected:
             EXPECT_EQ(SandeshLevel::SYS_CRIT, header.get_Level());
             EXPECT_EQ("SystemLogTest", header.get_Category());
             const char *expect = "<SystemLogTest type=\"sandesh\"><str1 type=\"string\" identifier=\"1\">Const static string is</str1><f2 type=\"i32\" identifier=\"2\">102</f2><f3 type=\"string\" identifier=\"3\">sat1string102&amp;</f3><file type=\"string\" identifier=\"-32768\">Test</file><line type=\"i32\" identifier=\"-32767\">1</line></SystemLogTest>";
-            EXPECT_STREQ(expect, msg.c_str() + header_offset);
+            EXPECT_STREQ(expect, message.c_str());
             break;
         }
         case 3:
@@ -174,8 +173,8 @@ protected:
             EXPECT_EQ(0, header.get_Hints());
             EXPECT_EQ(SandeshLevel::SYS_INFO, header.get_Level());
             EXPECT_EQ("ObjectLogTest", header.get_Category());
-            const char *expect = "<ObjectLogTest type=\"sandesh\"><f1 type=\"struct\" identifier=\"1\"><SAT2_struct><f1 type=\"string\" identifier=\"1\">sat2string100</f1><f2 type=\"i32\" identifier=\"2\">100</f2></SAT2_struct></f1><f2 type=\"i32\" identifier=\"2\">100</f2><file type=\"string\" identifier=\"-32768\"></file><line type=\"i32\" identifier=\"-32767\">0</line></ObjectLogTest>";
-            EXPECT_STREQ(expect, msg.c_str() + header_offset);
+            const char *expect = "<ObjectLogTest type=\"sandesh\"><f1 type=\"struct\" identifier=\"1\"><SAT2_struct><f1 type=\"string\" identifier=\"1\">sat2string100</f1><f2 type=\"i32\" identifier=\"2\">100</f2></SAT2_struct></f1><f2 type=\"i32\" identifier=\"2\">100</f2><file type=\"string\" identifier=\"-32768\">Test</file><line type=\"i32\" identifier=\"-32767\">0</line></ObjectLogTest>";
+            EXPECT_STREQ(expect, message.c_str());
             break;
         }
         case 4:
@@ -188,8 +187,8 @@ protected:
             EXPECT_EQ(g_sandesh_constants.SANDESH_KEY_HINT, header.get_Hints());
             EXPECT_EQ(SandeshLevel::SYS_DEBUG, header.get_Level());
             EXPECT_EQ("ObjectLogAnnTest", header.get_Category());
-            const char *expect = "<ObjectLogAnnTest type=\"sandesh\"><f1 type=\"i32\" identifier=\"1\" format=\"%i\" key=\"ObjectIPTable\">1</f1><file type=\"string\" identifier=\"-32768\"></file><line type=\"i32\" identifier=\"-32767\">0</line></ObjectLogAnnTest>";
-            EXPECT_STREQ(expect, msg.c_str() + header_offset);
+            const char *expect = "<ObjectLogAnnTest type=\"sandesh\"><f1 type=\"i32\" identifier=\"1\" format=\"%i\" key=\"ObjectIPTable\">1</f1><file type=\"string\" identifier=\"-32768\">Test</file><line type=\"i32\" identifier=\"-32767\">0</line></ObjectLogAnnTest>";
+            EXPECT_STREQ(expect, message.c_str());
             break;
         }
         case 5:
@@ -202,8 +201,8 @@ protected:
             EXPECT_EQ(g_sandesh_constants.SANDESH_KEY_HINT, header.get_Hints());
             EXPECT_EQ(SandeshLevel::SYS_INFO, header.get_Level());
             EXPECT_EQ("ObjectLogInnerAnnTest", header.get_Category());
-            const char *expect = "<ObjectLogInnerAnnTest type=\"sandesh\"><f1 type=\"struct\" identifier=\"1\"><SAT3_struct><f1 type=\"string\" identifier=\"1\" key=\"ObjectVNTable\">&quot;sat3string1&quot;</f1><f2 type=\"i32\" identifier=\"2\" format=\"%x\">1</f2></SAT3_struct></f1><file type=\"string\" identifier=\"-32768\"></file><line type=\"i32\" identifier=\"-32767\">0</line></ObjectLogInnerAnnTest>";
-            EXPECT_STREQ(expect, msg.c_str() + header_offset);
+            const char *expect = "<ObjectLogInnerAnnTest type=\"sandesh\"><f1 type=\"struct\" identifier=\"1\"><SAT3_struct><f1 type=\"string\" identifier=\"1\" key=\"ObjectVNTable\">&quot;sat3string1&quot;</f1><f2 type=\"i32\" identifier=\"2\" format=\"%x\">1</f2></SAT3_struct></f1><file type=\"string\" identifier=\"-32768\">Test</file><line type=\"i32\" identifier=\"-32767\">0</line></ObjectLogInnerAnnTest>";
+            EXPECT_STREQ(expect, message.c_str());
             asyncserver_done = true;
             break;
         }
@@ -238,8 +237,8 @@ TEST_F(SandeshAsyncTest, Async) {
     // Set the logging parameters
     Sandesh::SetLoggingParams(true, "SystemLogTest", SandeshLevel::SYS_INFO);
     // Send the Asyncs (systemlog)
-    SystemLogTest::Send("SystemLogTest", SandeshLevel::SYS_INFO, "", 0, 100, "sat1string100"); // case 0
-    SystemLogTest::Send("SystemLogTest", SandeshLevel::SYS_DEBUG, "", 0, 101, "<'sat1string101'>"); // case 1
+    SystemLogTest::Send("SystemLogTest", SandeshLevel::SYS_INFO, "Test", 0, 100, "sat1string100"); // case 0
+    SystemLogTest::Send("SystemLogTest", SandeshLevel::SYS_DEBUG, "Test", 0, 101, "<'sat1string101'>"); // case 1
     SystemLogTest::Send("SystemLogTest", SandeshLevel::SYS_CRIT, "Test", 1, 102, "sat1string102&"); // case 2
 
     // Set the logging category
@@ -248,17 +247,17 @@ TEST_F(SandeshAsyncTest, Async) {
     SAT2_struct s1;
     s1.f1 = "sat2string100";
     s1.f2 = 100;
-    ObjectLogTest::Send("ObjectLogTest", SandeshLevel::SYS_INFO, "", 0, s1, 100); // case 3
+    ObjectLogTest::Send("ObjectLogTest", SandeshLevel::SYS_INFO, "Test", 0, s1, 100); // case 3
 
     // Set logging category and level
     Sandesh::SetLoggingCategory("");
     Sandesh::SetLoggingLevel(SandeshLevel::SYS_DEBUG);
-    ObjectLogAnnTest::Send("ObjectLogAnnTest", SandeshLevel::SYS_DEBUG, "", 0, 1); // case 4
+    ObjectLogAnnTest::Send("ObjectLogAnnTest", SandeshLevel::SYS_DEBUG, "Test", 0, 1); // case 4
 
     SAT3_struct s3;
     s3.f1 = "\"sat3string1\"";
     s3.f2 = 1;
-    ObjectLogInnerAnnTest::Send("ObjectLogInnerAnnTest", SandeshLevel::SYS_INFO, "", 0, s3); // case 5
+    ObjectLogInnerAnnTest::Send("ObjectLogInnerAnnTest", SandeshLevel::SYS_INFO, "Test", 0, s3); // case 5
 
     // Wait server is done receiving msgs
     TASK_UTIL_EXPECT_TRUE(asyncserver_done);
@@ -349,7 +348,7 @@ protected:
     virtual void SetUp() {
         evm_.reset(new EventManager());
         server_ = new SandeshServerTest(evm_.get(),
-                boost::bind(&SandeshRequestTest::ReceiveSandeshMsg, this, _1, _2, _3, _4, _5));
+                boost::bind(&SandeshRequestTest::ReceiveSandeshMsg, this, _1, _2));
         thread_.reset(new ServerThread(evm_.get()));
     }
 
@@ -371,10 +370,15 @@ protected:
     }
 
     bool ReceiveSandeshMsg(SandeshSession *session,
-           const string& cmsg, const string& message_type,
-           const SandeshHeader& header, uint32_t xml_offset) {
+           const SandeshMessage *msg) {
+        const SandeshHeader &header(msg->GetHeader());
+        const SandeshXMLMessage *xmsg(
+            dynamic_cast<const SandeshXMLMessage *>(msg));
+        EXPECT_TRUE(xmsg != NULL);
+        const std::string xml_msg(xmsg->ExtractMessage());
+        const std::string message_type(xmsg->GetMessageType()); 
         // Call the client ReceiveMsg
-        return Sandesh::client()->ReceiveMsg(cmsg, header, message_type, xml_offset);
+        return Sandesh::client()->ReceiveMsg(xml_msg, header, message_type, 0);
     }
 
     std::auto_ptr<ServerThread> thread_;
@@ -452,6 +456,70 @@ TEST_F(SandeshBufferTest, ReadWrite) {
     EXPECT_EQ(error, 0);
     EXPECT_EQ(num_encoded, context.num_decoded_);
 }
+
+class SandeshHeaderTest : public ::testing::Test {
+protected:
+    SandeshHeaderTest() :
+        buffer_(NULL),
+        offset_(0),
+        wbuffer_(new TMemoryBuffer(1024)),
+        protocol_(new TXMLProtocol(wbuffer_)),
+        builder_(SandeshMessageBuilder::GetInstance(
+            SandeshMessageBuilder::XML)) {
+        // Populate the header
+        header_.set_Namespace("");
+        header_.set_Timestamp(UTCTimestampUsec());
+        header_.set_Module("Test");
+        header_.set_Source("Test-Source");
+        header_.set_Context("");
+        header_.set_SequenceNum(1);
+        header_.set_VersionSig(123456789);
+        header_.set_Type(SandeshType::FLOW);
+        header_.set_Hints(0);
+        header_.set_Level(SandeshLevel::SYS_INFO);
+        header_.set_Category("");
+        header_.set_NodeType("Compute");
+        header_.set_InstanceId("0");
+        // Write the sandesh header
+        int ret = header_.write(protocol_);
+        EXPECT_GE(ret, 0);
+        // Get the buffer and populate the string
+        wbuffer_->getBuffer(&buffer_, &offset_);
+        EXPECT_TRUE(buffer_ != NULL);
+        EXPECT_EQ(offset_, ret);
+    }
+
+    SandeshHeader header_;
+    uint8_t *buffer_;
+    uint32_t offset_;
+    boost::shared_ptr<TMemoryBuffer> wbuffer_;
+    boost::shared_ptr<TXMLProtocol> protocol_;
+    SandeshMessageBuilder *builder_;
+};
+
+TEST_F(SandeshHeaderTest, DISABLED_Autogen) {
+    for (int cnt = 0; cnt < 100000; cnt++) {
+        boost::shared_ptr<TMemoryBuffer> rbuffer(
+            new TMemoryBuffer(buffer_, offset_));
+        boost::shared_ptr<TXMLProtocol> rprotocol(
+            new TXMLProtocol(rbuffer));
+        SandeshHeader lheader;
+        // Read the sandesh header
+        int ret = lheader.read(rprotocol);
+        ASSERT_GE(ret, 0);
+        EXPECT_EQ(header_, lheader);
+    }
+}
+
+TEST_F(SandeshHeaderTest, DISABLED_PugiXML) {
+    for (int cnt = 0; cnt < 100000; cnt++) { 
+        const SandeshMessage *msg = builder_->Create(buffer_, offset_);
+        const SandeshHeader &lheader(msg->GetHeader());
+        EXPECT_EQ(header_, lheader);
+        delete msg;
+    }
+}
+
 } // namespace
 
 void SandeshRequestEmptyTest::HandleRequest() const {

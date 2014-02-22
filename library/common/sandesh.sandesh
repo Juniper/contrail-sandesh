@@ -58,7 +58,9 @@ enum SandeshLevel {
 
 const i32 SANDESH_KEY_HINT = 0x1
 const i32 SANDESH_CONTROL_HINT = 0x2
-    
+
+// Update ParseHeader function in sandesh_message_builder.cc
+// when modifying SandeshHeader below 
 struct SandeshHeader {
     1: string Namespace;
     2: i64 Timestamp;

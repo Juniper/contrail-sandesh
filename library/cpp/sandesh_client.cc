@@ -164,11 +164,6 @@ bool SandeshClient::ReceiveMsg(const std::string& msg,
     namespace sandesh_prot = contrail::sandesh::protocol;
     namespace sandesh_trans = contrail::sandesh::transport;
 
-    if (header_offset == 0) {
-        Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, true);
-        return false;
-    }
-
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
         bool success = ReceiveCtrlMsg(msg, header, sandesh_name, header_offset);
         Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, !success);

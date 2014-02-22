@@ -30,6 +30,7 @@
 #include <sandesh/sandesh.h>
 #include <sandesh/sandesh_session.h>
 #include <sandesh/sandesh_uve_types.h>
+#include <sandesh/sandesh_message_builder.h>
 #include "sandesh_statistics.h"
 #include "sandesh_connection.h"
 #include "sandesh_state_machine.h"
@@ -120,18 +121,13 @@ struct EvTcpDeleteSession : sc::event<EvTcpDeleteSession> {
 };
 
 struct EvSandeshMessageRecv : sc::event<EvSandeshMessageRecv> {
-    EvSandeshMessageRecv(const std::string &msg, const SandeshHeader& header,
-            const std::string &msg_type, const uint32_t &header_offset) :
-        msg(msg), header(header), msg_type(msg_type),
-        header_offset(header_offset) {
+    EvSandeshMessageRecv(const SandeshMessage *msg) :
+        msg(msg) {
     };
     static const char * Name() {
         return "EvSandeshMessageRecv";
     }
-    const std::string msg;
-    const SandeshHeader header;
-    const std::string msg_type;
-    const uint32_t header_offset;
+    boost::shared_ptr<const SandeshMessage> msg;
 };
 
 struct EvSandeshCtrlMessageRecv : sc::event<EvSandeshCtrlMessageRecv> {
@@ -148,16 +144,6 @@ struct EvSandeshCtrlMessageRecv : sc::event<EvSandeshCtrlMessageRecv> {
     const SandeshHeader header;
     const std::string msg_type;
     const uint32_t header_offset;
-};
-
-struct EvMessageRecv : sc::event<EvMessageRecv> {
-    EvMessageRecv(ssm::Message *msg) :
-        msg(msg) {
-    };
-    static const char * Name() {
-        return "EvMessageRecv";
-    }
-    boost::shared_ptr<ssm::Message> msg;
 };
 
 struct EvResourceUpdate : sc::event<EvResourceUpdate> {
@@ -325,8 +311,7 @@ struct ServerInit : public sc::state<ServerInit, SandeshStateMachine> {
         SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name());
         SandeshConnection *connection = state_machine->connection();
-        if (!connection->ProcessSandeshMessage(event.msg, event.header,
-                event.msg_type, event.header_offset, true)) {
+        if (!connection->ProcessSandeshMessage(event.msg.get(), true)) {
             state_machine->set_session(NULL);
             return transit<Idle>();
         }
@@ -382,8 +367,7 @@ struct Established : public sc::state<Established, SandeshStateMachine> {
     sc::result react(const EvSandeshMessageRecv &event) {
         SandeshStateMachine *state_machine = &context<SandeshStateMachine>();
         SandeshConnection *connection = state_machine->connection();
-        if (!connection->ProcessSandeshMessage(event.msg, event.header,
-                event.msg_type, event.header_offset, 
+        if (!connection->ProcessSandeshMessage(event.msg.get(),
                 state_machine->get_resource())) {
             state_machine->set_session(NULL);
             return transit<Idle>();
@@ -410,6 +394,8 @@ SandeshStateMachine::SandeshStateMachine(const char *prefix, SandeshConnection *
       deleted_(false),
       resource_(false) {
     state_ = ssm::IDLE;
+    SandeshMessageBuilder::Type type(SandeshMessageBuilder::XML);
+    builder_ = SandeshMessageBuilder::GetInstance(type);
     initiate();
 }
 
@@ -610,25 +596,38 @@ void SandeshStateMachine::PassiveOpen(SandeshSession *session) {
 void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
                                            const std::string &msg) {
     // Demux based on Sandesh message type
-    SandeshHeader header;
-    std::string message_type;
-    uint32_t xml_offset = 0;
-
-    // Extract the header and message type
-    SandeshReader::ExtractMsgHeader(msg, header, message_type, xml_offset);
+    SandeshMessage *xmessage = builder_->Create(
+        reinterpret_cast<const uint8_t *>(msg.c_str()), msg.size());
+    const SandeshHeader &header(xmessage->GetHeader());
+    const std::string &message_type(xmessage->GetMessageType()); 
     // Update message statistics
     tbb::mutex::scoped_lock lock(smutex_);
     message_stats_.Update(message_type, msg.size(), false, false);
     lock.release();
     
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
+        SandeshHeader ctrl_header;
+        std::string ctrl_message_type;
+        uint32_t ctrl_xml_offset = 0;
+        // Extract the header and message type
+        int ret = SandeshReader::ExtractMsgHeader(msg, ctrl_header,
+            ctrl_message_type, ctrl_xml_offset);
+        if (ret) {
+            SM_LOG(ERROR, "OnMessage control in state: " << StateName() <<
+                " session " << session->ToString() << ": Extract FAILED ("
+                << ret << ")");
+            delete xmessage;
+            return;
+        } 
+        assert(header == ctrl_header);
+        assert(message_type == ctrl_message_type);
         SM_LOG(DEBUG, "OnMessage control in state: " << StateName() <<
                 " session " << session->ToString());
-        Enqueue(ssm::EvSandeshCtrlMessageRecv(msg, header,
-                message_type, xml_offset));
+        Enqueue(ssm::EvSandeshCtrlMessageRecv(msg, ctrl_header,
+                ctrl_message_type, ctrl_xml_offset));
+        delete xmessage;
     } else {
-        Enqueue(ssm::EvSandeshMessageRecv(msg, header, message_type,
-                xml_offset));
+        Enqueue(ssm::EvSandeshMessageRecv(xmessage));
     }
 }
 

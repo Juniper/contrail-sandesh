@@ -23,6 +23,7 @@ class TcpSession;
 class TcpServer;
 class SandeshUVE;
 class SandeshHeader;
+class SandeshMessage;
 
 class SandeshConnection {
 public:
@@ -67,13 +68,11 @@ public:
     void SetAdminState(bool down);
 
     virtual bool ProcessResourceUpdate(bool res) { return true; }
-    virtual bool ProcessSandeshMessage(const std::string &msg,
-            const SandeshHeader &header, const std::string sandesh_name,
-            const uint32_t header_offset, bool resource) = 0;
+    virtual bool ProcessSandeshMessage(const SandeshMessage *msg,
+            bool resource) = 0;
     virtual bool ProcessSandeshCtrlMessage(const std::string &msg,
             const SandeshHeader &header, const std::string sandesh_name,
             const uint32_t header_offset) = 0;
-    virtual bool ProcessMessage(ssm::Message *msg) = 0;
     virtual void ProcessDisconnect(SandeshSession * sess) = 0;
 
     virtual void ManagedDelete() = 0;
@@ -105,13 +104,11 @@ public:
     virtual ~SandeshServerConnection();
 
     virtual bool ProcessResourceUpdate(bool res); 
-    virtual bool ProcessSandeshMessage(const std::string &msg,
-            const SandeshHeader &header, const std::string sandesh_name,
-            const uint32_t header_offset, bool resource);
+    virtual bool ProcessSandeshMessage(const SandeshMessage *msg,
+            bool resource);
     virtual bool ProcessSandeshCtrlMessage(const std::string &msg,
             const SandeshHeader &header, const std::string sandesh_name,
-            const uint32_t header_offset);
-    virtual bool ProcessMessage(ssm::Message *msg);
+            const uint32_t header_offset);    
     virtual void ProcessDisconnect(SandeshSession *session);
 
     virtual void ManagedDelete();

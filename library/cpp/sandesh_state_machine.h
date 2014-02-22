@@ -40,11 +40,6 @@ typedef enum {
     SERVER_INIT = 3,
 } SsmState;
 
-struct Message {
-    virtual ~Message() {}
-protected:
-    Message() {}
-};
 } // namespace ssm
 
 class SandeshSession;
@@ -55,6 +50,7 @@ class SandeshUVE;
 class SandeshStateMachineStats;
 class SandeshGeneratorStats;
 class SandeshStatistics;
+class SandeshMessageBuilder;
 
 typedef boost::function<bool(SandeshStateMachine *)> EvValidate;
 
@@ -192,6 +188,7 @@ private:
     mutable tbb::mutex smutex_;
     SandeshEventStatistics event_stats_;
     SandeshStatistics message_stats_;
+    SandeshMessageBuilder *builder_;
             
     DISALLOW_COPY_AND_ASSIGN(SandeshStateMachine);
 };
