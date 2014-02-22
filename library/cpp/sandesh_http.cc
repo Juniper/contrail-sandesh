@@ -136,7 +136,7 @@ HttpSendXML(const std::string& context, const u_int8_t * buf, uint32_t len,
 
         size_t total_len = len;
         sprintf(buffer_str,
-            "<?xml-stylesheet type=\"text/xsl\" href=\"universal_parse.xsl\"?>"
+            "<?xml-stylesheet type=\"text/xsl\" href=\"/universal_parse.xsl\"?>"
             );
         sprintf(length_str,
                 "Content-Length: %zu\r\n\r\n", total_len + strlen(buffer_str));
@@ -151,7 +151,7 @@ HttpSendXML(const std::string& context, const u_int8_t * buf, uint32_t len,
 
         // Calculation for Header
         sprintf(buffer_str,
-            "<?xml-stylesheet type=\"text/xsl\" href=\"universal_parse.xsl\"?>"
+            "<?xml-stylesheet type=\"text/xsl\" href=\"/universal_parse.xsl\"?>"
             );
         int hdr_len = strlen(buffer_str);
         sprintf(buffer_str,
@@ -162,7 +162,7 @@ HttpSendXML(const std::string& context, const u_int8_t * buf, uint32_t len,
         SESSION_SEND(length_str);
 
         sprintf(buffer_str,
-            "<?xml-stylesheet type=\"text/xsl\" href=\"universal_parse.xsl\"?>"
+            "<?xml-stylesheet type=\"text/xsl\" href=\"/universal_parse.xsl\"?>"
             );
         SESSION_SEND(buffer_str);
 

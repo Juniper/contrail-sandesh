@@ -89,7 +89,7 @@ class SandeshHttp(object):
 
     @staticmethod
     def create_http_response(sandesh_resp, sandesh_init):
-        universal_xsl_str = '<?xml-stylesheet type="text/xsl" href="universal_parse.xsl"?>'
+        universal_xsl_str = '<?xml-stylesheet type="text/xsl" href="/universal_parse.xsl"?>'
         transport = TTransport.TMemoryBuffer()
         protocol_factory = TXMLProtocol.TXMLProtocolFactory()
         protocol = protocol_factory.getProtocol(transport)
