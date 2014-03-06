@@ -56,9 +56,10 @@ SandeshServer::SandeshServer(EventManager *evm)
     // 1. State machine and lifetime mgr since state machine delete happens
     //    in lifetime mgr task
     if (!task_policy_set_) {
-        TaskPolicy sm_task_policy = boost::assign::list_of
-                (TaskExclusion(lifetime_mgr_task_id_));
-        TaskScheduler::GetInstance()->SetPolicy(sm_task_id_, sm_task_policy);
+        TaskPolicy lm_task_policy = boost::assign::list_of
+                (TaskExclusion(sm_task_id_))
+                (TaskExclusion(session_reader_task_id_));
+        TaskScheduler::GetInstance()->SetPolicy(lifetime_mgr_task_id_, lm_task_policy);
         task_policy_set_ = true;
     }
 }
