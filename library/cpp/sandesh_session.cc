@@ -291,7 +291,7 @@ SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
     keepalive_interval_(kSessionKeepaliveInterval),
     keepalive_probes_(kSessionKeepaliveProbes),
     reader_task_id_(reader_task_id) {
-    if (Sandesh::role() == Sandesh::Collector) {
+    if (Sandesh::role() == Sandesh::SandeshRole::Collector) {
         send_buffer_queue_.reset(new Sandesh::SandeshBufferQueue(writer_task_id,
                 task_instance,
                 boost::bind(&SandeshSession::SendBuffer, this, _1)));
@@ -309,7 +309,7 @@ bool SandeshSession::SessionSendReady() {
 }
 
 void SandeshSession::SetSendQueueWaterMark(
-    SandeshSession::SessionWaterMarkInfo &swmi) {
+    Sandesh::QueueWaterMarkInfo &swmi) {
     Sandesh::SandeshQueue::WaterMarkInfo wm(boost::get<0>(swmi),
         boost::bind(&Sandesh::SetSendingLevel, _1, boost::get<1>(swmi)));
     if (boost::get<2>(swmi)) {
@@ -325,7 +325,7 @@ void SandeshSession::ResetSendQueueWaterMark() {
 }
 
 void SandeshSession::Shutdown() {
-    if (Sandesh::role() == Sandesh::Collector) {
+    if (Sandesh::role() == Sandesh::SandeshRole::Collector) {
         send_buffer_queue_->Shutdown();
     }
     send_queue_->Shutdown();

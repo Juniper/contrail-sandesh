@@ -37,7 +37,6 @@ public:
     virtual void ReceiveMsg(const std::string &msg, SandeshSession *session);
 
     TcpServer *server() { return server_; }
-    SandeshSession *CreateSession();
 
     Endpoint endpoint() { return endpoint_; }
     bool SendSandesh(Sandesh *snh);

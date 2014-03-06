@@ -145,7 +145,10 @@ public:
     const std::string &generator_key() const {
         return generator_key_;
     }
+    void SetQueueWaterMarkInfo(Sandesh::QueueWaterMarkInfo &wm);
+    void ResetQueueWaterMarkInfo();
     bool GetQueueCount(uint64_t &queue_count) const;
+    bool GetMessageDropLevel(std::string &drop_level) const;
     bool GetStatistics(SandeshStateMachineStats &stats, 
                        SandeshGeneratorStats &msg_stats);
 
@@ -162,16 +165,19 @@ private:
     bool IdleHoldTimerExpired();
 
     template <typename Ev> void Enqueue(const Ev &event);
-    bool DequeueEvent(EventContainer ec);
+    bool DequeueEvent(EventContainer &ec);
     bool LogEvent(const sc::event_base *event);
     void UpdateEventDequeue(const sc::event_base &event);
     void UpdateEventDequeueFail(const sc::event_base &event);
     void UpdateEventEnqueue(const sc::event_base &event);
     void UpdateEventEnqueueFail(const sc::event_base &event);
     void UpdateEventStats(const sc::event_base &event, bool enqueue, bool fail);
+    void SetSandeshMessageDropLevel(size_t queue_count,
+        SandeshLevel::type level);
 
     const char *prefix_;
-    WorkQueue<EventContainer> work_queue_;
+    typedef WorkQueue<EventContainer> EventQueue;
+    EventQueue work_queue_;
     SandeshConnection *connection_;
     SandeshSession *session_;
     Timer *idle_hold_timer_;
@@ -189,6 +195,7 @@ private:
     SandeshEventStatistics event_stats_;
     SandeshStatistics message_stats_;
     SandeshMessageBuilder *builder_;
+    SandeshLevel::type message_drop_level_;
             
     DISALLOW_COPY_AND_ASSIGN(SandeshStateMachine);
 };

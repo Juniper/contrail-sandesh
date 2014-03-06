@@ -39,7 +39,7 @@ using namespace contrail::sandesh::protocol;
 using namespace contrail::sandesh::transport;
 
 // Statics
-Sandesh::SandeshRole Sandesh::role_ = Invalid;
+Sandesh::SandeshRole::type Sandesh::role_ = SandeshRole::Invalid;
 bool Sandesh::enable_local_log_ = false;
 uint32_t Sandesh::http_port_ = 0;
 bool Sandesh::enable_trace_print_ = false;
@@ -62,15 +62,15 @@ EventManager* Sandesh::event_manager_ = NULL;
 SandeshStatistics Sandesh::stats_;
 tbb::mutex Sandesh::stats_mutex_;
 
-const char * Sandesh::SandeshRoleToString(SandeshRole role) {
+const char * Sandesh::SandeshRoleToString(SandeshRole::type role) {
     switch (role) {
-    case SandeshGenerator:
-        return "SandeshGenerator";
-    case Collector:
+    case SandeshRole::Generator:
+        return "Generator";
+    case SandeshRole::Collector:
         return "Collector";
-    case Test:
+    case SandeshRole::Test:
         return "Test";
-    case Invalid: 
+    case SandeshRole::Invalid: 
         return "Invalid";
     default:
         return "Unknown";
@@ -100,7 +100,7 @@ extern int PullSandeshGenStatsReq;
 extern int PullSandeshUVE;
 extern int PullSandeshTraceReq;
 
-void Sandesh::Initialize(SandeshRole role,
+void Sandesh::Initialize(SandeshRole::type role,
                          const std::string &module,
                          const std::string &source,
                          const std::string &node_type,
@@ -112,7 +112,7 @@ void Sandesh::Initialize(SandeshRole role,
     PullSandeshUVE = 1;
     PullSandeshTraceReq = 1;
 
-    if (role_ != Invalid || role == Invalid) {
+    if (role_ != SandeshRole::Invalid || role == SandeshRole::Invalid) {
         return;
     }
 
@@ -210,8 +210,8 @@ void Sandesh::InitGenerator(const std::string &module,
                             EventManager *evm,
                             unsigned short http_port,
                             SandeshContext *client_context) {
-    Initialize(SandeshGenerator, module, source, node_type, instance_id, evm,
-               http_port, client_context);
+    Initialize(SandeshRole::Generator, module, source, node_type, instance_id,
+               evm, http_port, client_context);
 }
 
 bool Sandesh::InitGenerator(const std::string &module,
@@ -223,8 +223,8 @@ bool Sandesh::InitGenerator(const std::string &module,
                             CollectorSubFn csf,
                             const std::vector<std::string> &collectors,
                             SandeshContext *client_context) {
-    Initialize(SandeshGenerator, module, source, node_type, instance_id, evm,
-               http_port, client_context);
+    Initialize(SandeshRole::Generator, module, source, node_type, instance_id,
+               evm, http_port, client_context);
     return InitClient(evm, collectors, csf);
 }
 
@@ -237,8 +237,8 @@ void Sandesh::InitCollector(const std::string &module,
                             const std::string &collector_ip, int collector_port,
                             unsigned short http_port,
                             SandeshContext *client_context) {
-    Initialize(Collector, module, source, node_type, instance_id, evm,
-               http_port, client_context);
+    Initialize(SandeshRole::Collector, module, source, node_type, instance_id,
+               evm, http_port, client_context);
     ConnectToCollector(collector_ip, collector_port);
 }
 
@@ -249,8 +249,8 @@ void Sandesh::InitGeneratorTest(const std::string &module,
                                 EventManager *evm,
                                 unsigned short http_port, 
                                 SandeshContext *client_context) {
-    Initialize(Test, module, source, node_type, instance_id, evm, http_port,
-               client_context);
+    Initialize(SandeshRole::Test, module, source, node_type, instance_id, evm,
+               http_port, client_context);
 }
 
 static void WaitForIdle() {
@@ -274,7 +274,7 @@ void Sandesh::Uninit() {
         usleep(1000);
     }
     SandeshHttp::Uninit();
-    role_ = Invalid;
+    role_ = SandeshRole::Invalid;
     if (recv_queue_.get() != NULL) {
         recv_queue_->Shutdown();
         recv_queue_.reset(NULL);
@@ -745,4 +745,21 @@ void SandeshEventStatistics::Update(std::string &event_name, bool enqueue,
             agg_stats.dequeues++;
         }
     }
+}
+
+bool DoDropSandeshMessage(const SandeshHeader &header,
+    const SandeshLevel::type drop_level) {
+    // Only systemlog, objectlog, and flow have level
+    SandeshType::type stype(header.get_Type());
+    if (stype == SandeshType::SYSTEM ||
+        stype == SandeshType::OBJECT ||
+        stype == SandeshType::FLOW) {
+        // Is level above drop level?
+        SandeshLevel::type slevel(
+            static_cast<SandeshLevel::type>(header.get_Level()));
+        if (slevel >= drop_level) {
+            return true;
+        }
+    }
+    return false;
 }
