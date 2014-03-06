@@ -43,7 +43,7 @@ const std::string SandeshClient::kSMTask = "sandesh::SandeshClientSM";
 const std::string SandeshClient::kSessionWriterTask = "sandesh::SandeshClientSession";
 const std::string SandeshClient::kSessionReaderTask = "io::ReaderTask";
 bool SandeshClient::task_policy_set_ = false;
-const std::vector<SandeshSession::SessionWaterMarkInfo> 
+const std::vector<Sandesh::QueueWaterMarkInfo> 
     SandeshClient::kSessionWaterMarkInfo = boost::assign::tuple_list_of
 					       (50000, SandeshLevel::SYS_ERR, true)
                                                (10000, SandeshLevel::SYS_DEBUG, true)
@@ -295,7 +295,7 @@ void SandeshClient::SendUVE(int count,
 }
 
 void SandeshClient::SetSessionWaterMarkInfo(
-    SandeshSession::SessionWaterMarkInfo &scwm) {
+    Sandesh::QueueWaterMarkInfo &scwm) {
     SandeshSession *session = sm_->session();
     if (session) {
         session->SetSendQueueWaterMark(scwm);
@@ -312,7 +312,7 @@ void SandeshClient::ResetSessionWaterMarkInfo() {
 }    
 
 void SandeshClient::GetSessionWaterMarkInfo(
-    std::vector<SandeshSession::SessionWaterMarkInfo> &scwm_info) const {
+    std::vector<Sandesh::QueueWaterMarkInfo> &scwm_info) const {
     scwm_info = session_wm_info_;
 }
 

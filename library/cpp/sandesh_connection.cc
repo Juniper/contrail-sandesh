@@ -86,16 +86,6 @@ bool SandeshConnection::SendSandesh(Sandesh *snh) {
     return true;
 }
 
-SandeshSession *SandeshConnection::CreateSession() {
-    TcpSession *session = server_->CreateSession();
-    SandeshSession *sandesh_session =
-            static_cast<SandeshSession *>(session);
-    sandesh_session->SetReceiveMsgCb(
-            boost::bind(&SandeshConnection::ReceiveMsg, this, _1, _2));
-    sandesh_session->SetConnection(this);
-    return sandesh_session;
-}
-
 void SandeshConnection::AcceptSession(SandeshSession *session) {
     session->SetReceiveMsgCb(boost::bind(&SandeshConnection::ReceiveMsg, this, _1, _2));
     session->SetConnection(this);

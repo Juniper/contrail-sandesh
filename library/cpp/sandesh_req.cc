@@ -115,13 +115,13 @@ void CollectorInfoRequest::HandleRequest() const {
 }
 
 void Sandesh::SendingParamsResponse(std::string context) {
-    std::vector<SandeshSession::SessionWaterMarkInfo> scwm_info;
+    std::vector<Sandesh::QueueWaterMarkInfo> scwm_info;
     std::vector<SandeshSendingParams> ssp_info;
     SandeshClient *client(Sandesh::client());
     if (client) {
         client->GetSessionWaterMarkInfo(scwm_info);
         for (size_t i = 0; i < scwm_info.size(); i++) {
-            SandeshSession::SessionWaterMarkInfo &scwm(scwm_info[i]);
+            Sandesh::QueueWaterMarkInfo &scwm(scwm_info[i]);
             SandeshSendingParams ssp;
             ssp.set_queue_count(boost::get<0>(scwm));
             SandeshLevel::type level(boost::get<1>(scwm));
@@ -148,7 +148,7 @@ void SandeshSendingParamsSet::HandleRequest() const {
         bool high(get_high());
         std::string slevel(get_level());
         SandeshLevel::type level(Sandesh::StringToLevel(slevel));
-        SandeshSession::SessionWaterMarkInfo scwm(qcount, level, high);
+        Sandesh::QueueWaterMarkInfo scwm(qcount, level, high);
         client->SetSessionWaterMarkInfo(scwm);
     }
     // Send response

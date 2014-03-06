@@ -392,10 +392,10 @@ SandeshStateMachine::SandeshStateMachine(const char *prefix, SandeshConnection *
               connection->GetTaskInstance())),
       idle_hold_time_(0),
       deleted_(false),
-      resource_(false) {
+      resource_(false),
+      builder_(SandeshMessageBuilder::GetInstance(SandeshMessageBuilder::XML)),
+      message_drop_level_(SandeshLevel::INVALID) {
     state_ = ssm::IDLE;
-    SandeshMessageBuilder::Type type(SandeshMessageBuilder::XML);
-    builder_ = SandeshMessageBuilder::GetInstance(type);
     initiate();
 }
 
@@ -533,6 +533,15 @@ bool SandeshStateMachine::GetQueueCount(uint64_t &queue_count) const {
     return true;
 }
 
+bool SandeshStateMachine::GetMessageDropLevel(
+    std::string &drop_level) const {
+    if (deleted_ || generator_key_.empty()) {
+        return false;
+    }
+    drop_level = Sandesh::LevelToString(message_drop_level_);
+    return true;
+} 
+
 bool SandeshStateMachine::GetStatistics(
         SandeshStateMachineStats &sm_stats,
         SandeshGeneratorStats &msg_stats) {
@@ -599,12 +608,20 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
     SandeshMessage *xmessage = builder_->Create(
         reinterpret_cast<const uint8_t *>(msg.c_str()), msg.size());
     const SandeshHeader &header(xmessage->GetHeader());
-    const std::string &message_type(xmessage->GetMessageType()); 
+    const std::string &message_type(xmessage->GetMessageType());
+    // Drop ? 
+    if (DoDropSandeshMessage(header, message_drop_level_)) {
+        // Update message statistics
+        tbb::mutex::scoped_lock lock(smutex_);
+        message_stats_.Update(message_type, msg.size(), false, true);
+        lock.release();
+        delete xmessage;
+        return;
+    }
     // Update message statistics
     tbb::mutex::scoped_lock lock(smutex_);
     message_stats_.Update(message_type, msg.size(), false, false);
     lock.release();
-    
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
         SandeshHeader ctrl_header;
         std::string ctrl_message_type;
@@ -685,7 +702,7 @@ void SandeshStateMachine::UpdateEventStats(const sc::event_base &event,
     lock.release();
 }
 
-bool SandeshStateMachine::DequeueEvent(SandeshStateMachine::EventContainer ec) {
+bool SandeshStateMachine::DequeueEvent(SandeshStateMachine::EventContainer &ec) {
     if (deleted_) {
         return true;
     }
@@ -753,4 +770,34 @@ void SandeshStateMachine::Enqueue(const Ev &event) {
     // Update event stats
     UpdateEventEnqueue(event);
     return;
+}
+
+void SandeshStateMachine::SetSandeshMessageDropLevel(size_t queue_count,
+    SandeshLevel::type level) {
+    if (message_drop_level_ != level) {
+        SM_LOG(INFO, "SANDESH MESSAGE DROP LEVEL: [" <<
+            Sandesh::LevelToString(message_drop_level_) << "] -> [" <<
+            Sandesh::LevelToString(level) << "], SM QUEUE COUNT: " <<
+            queue_count);
+        message_drop_level_ = level;
+    }
+}
+
+void SandeshStateMachine::SetQueueWaterMarkInfo(
+    Sandesh::QueueWaterMarkInfo &wm) {
+    bool high(boost::get<2>(wm));
+    size_t queue_count(boost::get<0>(wm));
+    EventQueue::WaterMarkInfo wmi(queue_count, 
+        boost::bind(&SandeshStateMachine::SetSandeshMessageDropLevel, 
+            this, _1, boost::get<1>(wm)));
+    if (high) {
+        work_queue_.SetHighWaterMark(wmi);
+    } else {
+        work_queue_.SetLowWaterMark(wmi);
+    }
+}
+
+void SandeshStateMachine::ResetQueueWaterMarkInfo() {
+    work_queue_.ResetHighWaterMark();
+    work_queue_.ResetLowWaterMark();
 }
