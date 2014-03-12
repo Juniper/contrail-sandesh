@@ -92,7 +92,7 @@ protected:
     virtual TcpSession *AllocSession(Socket *socket);
 
 private:
-    static const int kSMTaskInstance = Task::kTaskInstanceAny;
+    static const int kSMTaskInstance = 0;
     static const std::string kSMTask;
     static const int kSessionTaskInstance = Task::kTaskInstanceAny;
     static const std::string kSessionWriterTask;
