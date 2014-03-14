@@ -609,7 +609,6 @@ int32_t TXMLProtocol::writeString(const string& str) {
   for (string::const_iterator it = str.begin(); it != str.end(); ++it) {
     switch(*it) {
     case '&':  xmlstr << "&amp;";  break;
-    case '\"': xmlstr << "&quot;";  break;
     case '\'': xmlstr << "&apos;"; break;          
     case '<':  xmlstr << "&lt;";   break;         
     case '>':  xmlstr << "&gt;";   break;
@@ -1091,7 +1090,6 @@ int32_t TXMLProtocol::readDouble(double& dub) {
 int32_t TXMLProtocol::readString(std::string &str) {
   readXMLString(str);
   boost::replace_all(str, "&amp;", "&");
-  boost::replace_all(str, "&quot;", "\"");
   boost::replace_all(str, "&apos;", "\'");
   boost::replace_all(str, "&lt;", "<");
   boost::replace_all(str, "&gt;", ">");
