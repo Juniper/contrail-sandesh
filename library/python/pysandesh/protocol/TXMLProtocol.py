@@ -264,7 +264,6 @@ class TXMLProtocol(TProtocolBase):
     match = re.search('<|>|&|\'|\"', string)
     if match is not None:
       string = string.replace('&', '&amp;')
-      string = string.replace('"', '&quot;')
       string = string.replace("'", '&apos;')
       string = string.replace('<', '&lt;')
       string = string.replace('>', '&gt;')
@@ -763,7 +762,6 @@ class TXMLProtocol(TProtocolBase):
     if string is None:
       return (-1, None)
     string = string.replace('&amp;', '&')
-    string = string.replace('&quot;', '"')
     string = string.replace('&apos;', "'")
     string = string.replace('&lt;', '<')
     string = string.replace('&gt;', '>')
