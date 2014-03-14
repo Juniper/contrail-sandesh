@@ -17,17 +17,27 @@ class SandeshLogger(object):
     _logger = None
     _DEFAULT_LOG_FILE = '<stdout>'
 
+    _SANDESH_LEVEL_TO_LOGGER_LEVEL = {
+        SandeshLevel.SYS_EMERG : logging.CRITICAL,
+        SandeshLevel.SYS_ALERT : logging.CRITICAL,
+        SandeshLevel.SYS_CRIT : logging.CRITICAL,
+        SandeshLevel.SYS_ERR : logging.ERROR,
+        SandeshLevel.SYS_WARN : logging.WARNING,
+        SandeshLevel.SYS_NOTICE : logging.WARNING,
+        SandeshLevel.SYS_INFO : logging.INFO,
+        SandeshLevel.SYS_DEBUG : logging.DEBUG
+    }
+
     def __init__(self, generator):
         assert generator, 'SandeshLogger init requires generator name'
 
         self._generator = generator
         self._enable_local_log = False
         self._logging_category = ''
-        self._logging_level = SandeshLevel.SYS_INFO
         self._logging_file = self._DEFAULT_LOG_FILE
         self._logger = logging.getLogger(self._generator)
-        # For now, set the logging level=DEBUG
-        self._logger.setLevel(logging.DEBUG)
+        self._logging_level = SandeshLevel.SYS_INFO
+        self._logger.setLevel(self._SANDESH_LEVEL_TO_LOGGER_LEVEL[self._logging_level])
         self._logging_handler = logging.StreamHandler()
         log_format = logging.Formatter('%(asctime)s [%(name)s]: %(message)s',
                                        datefmt='%m/%d/%Y %I:%M:%S %p')
@@ -59,11 +69,19 @@ class SandeshLogger(object):
                 level = SandeshLevel._NAMES_TO_VALUES[level]
             else:
                 level = SandeshLevel.SYS_INFO
+        # get logging level corresponding to sandesh level
+        try:
+            logger_level = self._SANDESH_LEVEL_TO_LOGGER_LEVEL[level]
+        except KeyError:
+            logger_level = logging.INFO
+            level = SandeshLevel.SYS_INFO
+
         if self._logging_level != level:
             self._logger.info('SANDESH: Logging: LEVEL: [%s] -> [%s]', 
                               SandeshLevel._VALUES_TO_NAMES[self._logging_level],
                               SandeshLevel._VALUES_TO_NAMES[level])
             self._logging_level = level
+            self._logger.setLevel(logger_level)
     #end set_logging_level
     
     def set_logging_category(self, category):

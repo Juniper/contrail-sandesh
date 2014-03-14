@@ -335,6 +335,10 @@ struct Connect : public sc::state<Connect, SandeshClientSMImpl> {
     sc::result react(const EvConnectTimerExpired &event) {
         SandeshClientSMImpl *state_machine = &context<SandeshClientSMImpl>();
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name());
+        // Flip the active and backup collector
+        state_machine->DiscUpdate(
+                SandeshClientSM::CONNECT, false,
+                TcpServer::Endpoint(), TcpServer::Endpoint());
         return ToIdle(state_machine);
     }
 

@@ -82,9 +82,9 @@ class SandeshReqImpl(object):
                 benable = False
             self._sandesh.set_local_logging(benable)
         if sandesh_req.category is not None:
-            self._sandesh.set_logging_category(self.category)
+            self._sandesh.set_logging_category(sandesh_req.category)
         if sandesh_req.level is not None:
-            self._sandesh.set_logging_level(self.level)
+            self._sandesh.set_logging_level(sandesh_req.level)
         # Return the logging params
         sandesh_logging_resp = SandeshLoggingParams(
             enable=self._sandesh.is_local_logging_enabled(),
