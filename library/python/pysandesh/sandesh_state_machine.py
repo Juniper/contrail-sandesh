@@ -66,7 +66,8 @@ class SandeshStateMachine(object):
             self._backup_collector = self._connection.secondary_collector()
             # clean up existing connection
             e.sm._delete_session()
-            e.sm._start_idle_hold_timer()
+            if e.sm._disable != True:
+	        e.sm._start_idle_hold_timer()
         #end _on_idle
 
         def _on_disconnect(e):
@@ -207,6 +208,10 @@ class SandeshStateMachine(object):
                                        'src'  : State._ESTABLISHED,
                                        'dst'  : State._CONNECT_TO_BACKUP
                                       },
+                                      {'name' : Event._EV_STOP,
+                                       'src'  : State._ESTABLISHED,
+                                       'dst'  : State._IDLE
+                                      },
                                       {'name' : Event._EV_COLLECTOR_CHANGE,
                                        'src'  : State._ESTABLISHED,
                                        'dst'  : State._CONNECT
@@ -224,6 +229,7 @@ class SandeshStateMachine(object):
         self._connection = connection
         self._session = None
         self._connects = 0
+        self._disable = False
         self._idle_hold_timer = None
         self._connect_timer = None
         self._active_collector = primary_collector
@@ -248,13 +254,16 @@ class SandeshStateMachine(object):
     #end state 
 
     def shutdown(self):
+        self._disable = True
         self.enqueue_event(Event(event = Event._EV_STOP))
     #end shutdown
 
     def set_admin_state(self, down):
         if down == True:
+            self._disable = True
             self.enqueue_event(Event(event = Event._EV_STOP))
         else:
+            self._disable = False
             self.enqueue_event(Event(event = Event._EV_START))
     #end set_admin_state
 
