@@ -76,8 +76,18 @@ void SandeshServer::SessionShutdown() {
     TcpServer::Shutdown();
 }
 
-void SandeshServer::Initialize(short port) {
-    TcpServer::Initialize(port);
+bool SandeshServer::Initialize(short port) {
+    int count = 0;
+
+    while (count++ < kMaxInitRetries) {
+        if (TcpServer::Initialize(port))
+            break;
+        sleep(1);
+    }
+    if (!(count < kMaxInitRetries)) {
+        LOG(ERROR, "Process EXITING: TCP Server initialization failed for port " << port);
+        exit(1);
+    }
 }
 
 int SandeshServer::AllocConnectionIndex() {
