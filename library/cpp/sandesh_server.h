@@ -33,7 +33,7 @@ public:
     explicit SandeshServer(EventManager *evm);
     virtual ~SandeshServer();
 
-    virtual void Initialize(short port);
+    virtual bool Initialize(short port);
     virtual TcpSession *CreateSession();
     void Initiate();
     void Shutdown();
@@ -66,6 +66,7 @@ protected:
     int session_reader_task_id() const { return session_reader_task_id_; }
 
 private:
+    static const int kMaxInitRetries = 5;
     static const std::string kSessionReaderTask;
     static const std::string kStateMachineTask;
     static const std::string kLifetimeMgrTask;
