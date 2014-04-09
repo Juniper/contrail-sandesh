@@ -156,25 +156,25 @@ public:
         return writer_.get();
     }
     void SetConnection(SandeshConnection *connection) {
+        tbb::mutex::scoped_lock lock(mutex_);
         connection_ = connection;
     }
     SandeshConnection *connection() {
+        tbb::mutex::scoped_lock lock(mutex_);
         return connection_;
     }
     void SetReceiveMsgCb(ReceiveMsgCb cb) {
+        tbb::mutex::scoped_lock lock(mutex_);
         cb_ = cb;
     }
     ReceiveMsgCb receive_msg_cb() {
+        tbb::mutex::scoped_lock lock(mutex_);
         return cb_;
     }
     virtual int GetSessionInstance() const {
         return instance_;
     }
-    virtual void EnqueueClose() {
-        if (observer()) {
-            observer()(this, TcpSession::CLOSE);
-        }
-    }
+    virtual void EnqueueClose();
     virtual boost::system::error_code SetSocketOptions();
     virtual std::string ToString() const;
     static Sandesh * DecodeCtrlSandesh(const std::string& msg, const SandeshHeader& header,
@@ -237,6 +237,7 @@ private:
     boost::scoped_ptr<Sandesh::SandeshBufferQueue> send_buffer_queue_;
     SandeshConnection *connection_;
     ReceiveMsgCb cb_;
+    tbb::mutex mutex_;
     tbb::mutex smutex_;
     int keepalive_idle_time_;
     int keepalive_interval_;
