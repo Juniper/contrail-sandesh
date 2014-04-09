@@ -604,3 +604,13 @@ Sandesh * SandeshSession::DecodeCtrlSandesh(const string& msg,
     }    
 }
 
+void SandeshSession::EnqueueClose() {
+    if (IsClosed()) {
+        return;
+    }
+    tbb::mutex::scoped_lock lock(mutex_);
+    if (connection_) {
+        connection_->state_machine()->OnSessionEvent(this,
+            TcpSession::CLOSE);
+    }
+}

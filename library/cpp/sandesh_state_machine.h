@@ -180,6 +180,7 @@ private:
     EventQueue work_queue_;
     SandeshConnection *connection_;
     SandeshSession *session_;
+    mutable tbb::mutex mutex_;
     Timer *idle_hold_timer_;
     int idle_hold_time_;
     bool deleted_;

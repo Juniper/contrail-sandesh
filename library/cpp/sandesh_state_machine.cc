@@ -442,6 +442,7 @@ void SandeshStateMachine::SetAdminState(bool down) {
 
 // Note this api does not enqueue the deletion of TCP session
 void SandeshStateMachine::clear_session() {
+    tbb::mutex::scoped_lock lock(mutex_);
     if (session_ != NULL) {
         session_->set_observer(NULL);
         session_->SetReceiveMsgCb(NULL);
@@ -454,6 +455,7 @@ void SandeshStateMachine::clear_session() {
 }
 
 void SandeshStateMachine::set_session(SandeshSession *session) {
+    tbb::mutex::scoped_lock lock(mutex_);
     if (session_ != NULL) {
         DeleteSession(session_);
     }
@@ -471,6 +473,7 @@ void SandeshStateMachine::DeleteSession(SandeshSession *session) {
 }
 
 SandeshSession *SandeshStateMachine::session() {
+    tbb::mutex::scoped_lock lock(mutex_);
     return session_;
 }
 
