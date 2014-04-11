@@ -489,11 +489,11 @@ string t_py_generator::render_sandesh_includes() {
     "import cStringIO\n";
   if (module != "sandesh") {
     sandesh_includes +=
+      "import bottle\n"
       "from pysandesh import sandesh_base\n"
       "from pysandesh.sandesh_http import SandeshHttp\n"
       "from pysandesh.sandesh_uve import SandeshUVETypeMaps\n"
       "from pysandesh.util import UTCTimestampUsec, UTCTimestampUsecToString\n"
-      "from pysandesh import bottle\n"
       "from pysandesh.gen_py.sandesh.constants import *\n";
   }
   return sandesh_includes;
