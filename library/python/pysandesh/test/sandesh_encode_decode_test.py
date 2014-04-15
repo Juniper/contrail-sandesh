@@ -63,7 +63,7 @@ class SandeshEncodeDecodeTest(unittest.TestCase):
         xmlmsg = '<sandesh_types><type1>\"systemlog\"</type1><type2>\'objectlog\'</type2><type3>uve & trace</type3></sandesh_types>'
         xml_encode = BasicTypesTest(string_1=xmlmsg)
         self.assertNotEqual(-1, xml_encode.write(self._wprotocol))
-        expected_data = '<BasicTypesTest type="sandesh"><string_1 type="string" identifier="7">&lt;sandesh_types&gt;&lt;type1&gt;&quot;systemlog&quot;&lt;/type1&gt;&lt;type2&gt;&apos;objectlog&apos;&lt;/type2&gt;&lt;type3&gt;uve &amp; trace&lt;/type3&gt;&lt;/sandesh_types&gt;</string_1><str8 type="string" identifier="8">Last field</str8></BasicTypesTest>'
+        expected_data = '<BasicTypesTest type="sandesh"><string_1 type="string" identifier="7">&lt;sandesh_types&gt;&lt;type1&gt;"systemlog"&lt;/type1&gt;&lt;type2&gt;&apos;objectlog&apos;&lt;/type2&gt;&lt;type3&gt;uve &amp; trace&lt;/type3&gt;&lt;/sandesh_types&gt;</string_1><str8 type="string" identifier="8">Last field</str8></BasicTypesTest>'
         actual_data = self._wtransport.getvalue()
         self.assertEqual(expected_data, actual_data)
        
