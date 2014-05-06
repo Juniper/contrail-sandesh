@@ -18,6 +18,7 @@ buffer sandesh BufferTest {
     7: list<u32>                   listElem2;
     8: u64                         u64Elem1;
     9: xml                         xmlElem1;
+    10: ipv4                       ipv4Elem1;
 }
 
 buffer sandesh BufferUpdateTest {

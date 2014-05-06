@@ -566,6 +566,8 @@ string t_c_generator::base_type_name(t_base_type *type) {
       return "uint64_t";
     case t_base_type::TYPE_DOUBLE:
       return "double";
+    case t_base_type::TYPE_IPV4:
+      return "uint32_t";
     default:
       throw "compiler error: no C base type name for base type "
             + t_base_type::t_base_name (tbase);
@@ -617,6 +619,8 @@ string t_c_generator::type_to_enum (t_type *type) {
         return "T_XML";
       case t_base_type::TYPE_DOUBLE:
         return "T_DOUBLE";
+      case t_base_type::TYPE_IPV4:
+        return "T_IPV4";
     }
   } else if (type->is_enum()) {
     return "T_I32";
@@ -660,6 +664,7 @@ string t_c_generator::constant_value(string name, t_type *type, t_const_value *v
       case t_base_type::TYPE_U16:
       case t_base_type::TYPE_U32:
       case t_base_type::TYPE_U64:
+      case t_base_type::TYPE_IPV4:
         render << value->get_integer();
         break;
       case t_base_type::TYPE_DOUBLE:
@@ -795,6 +800,7 @@ string t_c_generator::declare_field(t_field *tfield,
         case t_base_type::TYPE_U16:
         case t_base_type::TYPE_U32:
         case t_base_type::TYPE_U64:
+        case t_base_type::TYPE_IPV4:
           result += " = 0";
           break;
         case t_base_type::TYPE_DOUBLE:
@@ -1383,6 +1389,9 @@ void t_c_generator::generate_serialize_field(ofstream &out,
         case t_base_type::TYPE_DOUBLE:
           out << "double (protocol, " << name;
           break;
+        case t_base_type::TYPE_IPV4:
+          out << "ipv4 (protocol, " << name;
+          break;
         case t_base_type::TYPE_STRING:
           if (((t_base_type *) type)->is_binary()) {
             out << "binary (protocol, ((GByteArray *) " << name <<
@@ -1548,6 +1557,9 @@ void t_c_generator::generate_deserialize_field(ofstream &out,
         break;
       case t_base_type::TYPE_DOUBLE:
         out << "double (protocol, &" << name;
+        break;
+      case t_base_type::TYPE_IPV4:
+        out << "ipv4 (protocol, &" << name;
         break;
       default:
         throw "compiler error: no C reader for base type "

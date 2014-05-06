@@ -650,6 +650,7 @@ string t_py_generator::render_const_value(t_type* type, t_const_value* value) {
     case t_base_type::TYPE_U16:
     case t_base_type::TYPE_U32:
     case t_base_type::TYPE_U64:
+    case t_base_type::TYPE_IPV4:
 #endif
       out << value->get_integer();
       break;
@@ -1765,7 +1766,8 @@ void t_py_generator::generate_py_sandesh_http_attr(ofstream& out,
              bftype == t_base_type::TYPE_I64 ||
              bftype == t_base_type::TYPE_U16 ||
              bftype == t_base_type::TYPE_U32 ||
-             bftype == t_base_type::TYPE_U64);
+             bftype == t_base_type::TYPE_U64 ||
+             bftype == t_base_type::TYPE_IPV4);
       indent(out) <<
         "try:" << endl;
       indent_up();
@@ -2057,6 +2059,11 @@ void t_py_generator::generate_field_log(ofstream& out,
       case t_base_type::TYPE_DOUBLE:
         indent(out) <<
           log_str << ".write(str(" << name << "))" << endl;
+        break;
+      case t_base_type::TYPE_IPV4:
+        indent(out) << "import socket, struct" << endl;
+        indent(out) <<
+          log_str << ".write(socket.inet_ntoa(struct.pack('!L'," << name << ")))" << endl;
         break;
       default:
         throw "compiler error: unrecognized base type " + t_base_type::t_base_name(tbase);
@@ -3213,6 +3220,9 @@ void t_py_generator::generate_deserialize_field(ofstream &out,
       case t_base_type::TYPE_U64:
         out << "readU64();";
         break;
+      case t_base_type::TYPE_IPV4:
+        out << "readIPV4();";
+        break;
 #endif
       case t_base_type::TYPE_DOUBLE:
         out << "readDouble();";
@@ -3508,6 +3518,9 @@ void t_py_generator::generate_serialize_field(ofstream &out,
         break;
       case t_base_type::TYPE_U64:
         out << "writeU64(" << name << ")";
+        break;
+      case t_base_type::TYPE_IPV4:
+        out << "writeIPV4(" << name << ")";
         break;
 #endif
       case t_base_type::TYPE_DOUBLE:
@@ -3897,6 +3910,8 @@ string t_py_generator::type_to_enum(t_type* type) {
       return "TType.U32";
     case t_base_type::TYPE_U64:
       return "TType.U64";
+    case t_base_type::TYPE_IPV4:
+      return "TType.IPV4";
     case t_base_type::TYPE_STATIC_CONST_STRING:
       return "TType.STRING";
     case t_base_type::TYPE_SANDESH_SYSTEM:

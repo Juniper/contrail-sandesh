@@ -80,6 +80,7 @@ t_type* g_type_double;
 t_type* g_type_u16;
 t_type* g_type_u32;
 t_type* g_type_u64;
+t_type* g_type_ipv4;
 t_type* g_type_static_const_string;
 t_type* g_type_sandesh_system;
 t_type* g_type_sandesh_request;
@@ -1329,6 +1330,7 @@ int main(int argc, char** argv) {
   g_type_u16    = new t_base_type("u16", t_base_type::TYPE_U16);
   g_type_u32    = new t_base_type("u32", t_base_type::TYPE_U32);
   g_type_u64    = new t_base_type("u64", t_base_type::TYPE_U64);
+  g_type_ipv4    = new t_base_type("ipv4", t_base_type::TYPE_IPV4);
   g_type_xml    = new t_base_type("xml", t_base_type::TYPE_XML);
   g_type_static_const_string = new t_base_type("static const string", t_base_type::TYPE_STATIC_CONST_STRING);
   g_type_sandesh_system   = new t_base_type("system",   t_base_type::TYPE_SANDESH_SYSTEM);
@@ -1371,6 +1373,7 @@ int main(int argc, char** argv) {
   delete g_type_u16;
   delete g_type_u32;
   delete g_type_u64;
+  delete g_type_ipv4;
   delete g_type_static_const_string;
   delete g_type_sandesh_system;
   delete g_type_sandesh_request;

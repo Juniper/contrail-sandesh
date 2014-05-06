@@ -154,6 +154,7 @@ enum TType {
   T_U16        = 19,
   T_U32        = 20,
   T_XML        = 21,
+  T_IPV4        = 22,
 };
 
 /**
@@ -215,6 +216,11 @@ int32_t skip(Protocol_& prot, TType type) {
     {
       uint64_t u64;
       return prot.readU64(u64);
+    }
+  case T_IPV4:
+    {
+      uint32_t ip4;
+      return prot.readIPV4(ip4);
     }
   case T_DOUBLE:
     {
@@ -458,6 +464,8 @@ class TProtocol {
   
   virtual int32_t writeU64_virt(const uint64_t u64) = 0;
 
+  virtual int32_t writeIPV4_virt(const uint32_t ip4) = 0;
+
   virtual int32_t writeDouble_virt(const double dub) = 0;
 
   virtual int32_t writeString_virt(const std::string& str) = 0;
@@ -573,6 +581,10 @@ class TProtocol {
     return writeU64_virt(u64);
   }
 
+  int32_t writeIPV4(const uint32_t ip4) {
+    return writeIPV4_virt(ip4);
+  }
+
   int32_t writeDouble(const double dub) {
     return writeDouble_virt(dub);
   }
@@ -650,6 +662,8 @@ class TProtocol {
   virtual int32_t readU32_virt(uint32_t& u32) = 0;
   
   virtual int32_t readU64_virt(uint64_t& u64) = 0;
+
+  virtual int32_t readIPV4_virt(uint32_t& ip4) = 0;
 
   virtual int32_t readDouble_virt(double& dub) = 0;
 
@@ -757,6 +771,10 @@ class TProtocol {
 
   int32_t readU64(uint64_t& u64) {
     return readU64_virt(u64);
+  }
+
+  int32_t readIPV4(uint32_t& ip4) {
+    return readIPV4_virt(ip4);
   }
 
   int32_t readDouble(double& dub) {

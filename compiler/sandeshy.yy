@@ -141,6 +141,7 @@ const int struct_is_union = 1;
 %token tok_u16
 %token tok_u32
 %token tok_u64
+%token tok_ipv4
 %token tok_xml
 
 /**
@@ -1284,6 +1285,11 @@ tok_string
     {
       pdebug("BaseType -> tok_u64");
       $$ = g_type_u64;
+    }
+| tok_ipv4
+    {
+      pdebug("BaseType -> tok_ipv4");
+      $$ = g_type_ipv4;
     }
 | tok_xml
     {

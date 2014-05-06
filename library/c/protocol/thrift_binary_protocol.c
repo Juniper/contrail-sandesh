@@ -363,6 +363,13 @@ thrift_binary_protocol_write_u64 (ThriftProtocol *protocol, const uint64_t value
 }
 
 int32_t
+thrift_binary_protocol_write_ipv4 (ThriftProtocol *protocol, const u_int32_t value,
+                                  int *error)
+{
+  return thrift_binary_protocol_write_u32 (protocol, value, error);
+}
+
+int32_t
 thrift_binary_protocol_write_double (ThriftProtocol *protocol,
                                      const double value, int *error)
 {
@@ -819,6 +826,13 @@ thrift_binary_protocol_read_u64 (ThriftProtocol *protocol, uint64_t *value,
 }
 
 int32_t
+thrift_binary_protocol_read_ipv4 (ThriftProtocol *protocol, u_int32_t *value,
+                                 int *error)
+{
+  return thrift_binary_protocol_read_u32 (protocol, value, error);
+}
+
+int32_t
 thrift_binary_protocol_read_double (ThriftProtocol *protocol,
                                     double *value, int *error)
 {
@@ -948,6 +962,7 @@ thrift_binary_protocol_init (ThriftBinaryProtocol *protocol)
   protocol->write_u16 = thrift_binary_protocol_write_u16;
   protocol->write_u32 = thrift_binary_protocol_write_u32;
   protocol->write_u64 = thrift_binary_protocol_write_u64;
+  protocol->write_ipv4 = thrift_binary_protocol_write_ipv4;
   protocol->write_double = thrift_binary_protocol_write_double;
   protocol->write_string = thrift_binary_protocol_write_string;
   protocol->write_binary = thrift_binary_protocol_write_binary;
@@ -974,6 +989,7 @@ thrift_binary_protocol_init (ThriftBinaryProtocol *protocol)
   protocol->read_u16 = thrift_binary_protocol_read_u16;
   protocol->read_u32 = thrift_binary_protocol_read_u32;
   protocol->read_u64 = thrift_binary_protocol_read_u64;
+  protocol->read_ipv4 = thrift_binary_protocol_read_ipv4;
   protocol->read_double = thrift_binary_protocol_read_double;
   protocol->read_string = thrift_binary_protocol_read_string;
   protocol->read_binary = thrift_binary_protocol_read_binary;

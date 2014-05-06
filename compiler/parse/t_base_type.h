@@ -58,6 +58,7 @@ class t_base_type : public t_type {
     TYPE_U32,
     TYPE_U64,
     TYPE_XML,
+    TYPE_IPV4,
 #endif
     TYPE_DOUBLE
   };
@@ -200,6 +201,7 @@ class t_base_type : public t_type {
       case TYPE_U16    : return       "u16"; break;
       case TYPE_U32    : return       "u32"; break;
       case TYPE_U64    : return       "u64"; break;
+      case TYPE_IPV4   : return       "ipv4"; break;
       case TYPE_XML    : return       "xml"; break;
       case TYPE_STATIC_CONST_STRING :
           return    "static const string"; break;

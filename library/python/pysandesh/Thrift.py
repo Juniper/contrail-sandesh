@@ -42,6 +42,7 @@ class TType:
   U16    = 19
   U32    = 20
   XML    = 21
+  IPV4   = 22
 
 
   _VALUES_TO_NAMES = ( 'STOP',
@@ -65,7 +66,8 @@ class TType:
                        'SANDESH',
                        'U16',
                        'U32',
-                       'XML')
+                       'XML'
+                       'IPV4')
 
 class TMessageType:
   CALL  = 1

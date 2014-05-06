@@ -26,6 +26,7 @@ struct SandeshStructTest {
     11: xml                          xmlTest1;
     12: xml                          xmlTest2;
     13: xml                          xmlTest3;
+    14: ipv4                         ipv4Test;
 }
 
 struct SandeshLogTest {

@@ -24,6 +24,7 @@ systemlog sandesh BasicTypesTest {
     13: xml xml_2;
     14: xml xml_3;
     15: xml xml_4;
+    16: ipv4 ipv4_1;
 }
 
 struct StructBasicTypes {
@@ -38,6 +39,7 @@ struct StructBasicTypes {
     9: xml xml_2;
     10: xml xml_3;
     11: xml xml_4;
+    12: ipv4 ipv4_1;
 }
 
 objectlog sandesh StructTest {

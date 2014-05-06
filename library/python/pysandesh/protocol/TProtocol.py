@@ -104,6 +104,9 @@ class TProtocolBase:
   def writeU64(self, u64):
     pass
 
+  def writeIPV4(self, ipv4):
+    pass
+
   def writeDouble(self, dub):
     pass
 
@@ -171,6 +174,9 @@ class TProtocolBase:
     pass
 
   def readU64(self):
+    pass
+
+  def readIPV4(self):
     pass
 
   def readDouble(self):
