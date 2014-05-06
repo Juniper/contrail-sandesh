@@ -57,6 +57,7 @@ static const std::string kTypeNameI64("i64");
 static const std::string kTypeNameU16("u16");
 static const std::string kTypeNameU32("u32");
 static const std::string kTypeNameU64("u64");
+static const std::string kTypeNameIPV4("ipv4");
 static const std::string kTypeNameDouble("double");
 static const std::string kTypeNameStruct("struct");
 static const std::string kTypeNameString("string");
@@ -85,6 +86,7 @@ const std::string& TXMLProtocol::fieldTypeName(TType type) {
     case T_U16    : return kTypeNameU16    ;
     case T_U32    : return kTypeNameU32    ;
     case T_U64    : return kTypeNameU64    ;
+    case T_IPV4   : return kTypeNameIPV4    ;
     case T_DOUBLE : return kTypeNameDouble ;
     case T_STRING : return kTypeNameString ;
     case T_STRUCT : return kTypeNameStruct ;
@@ -124,6 +126,9 @@ TType TXMLProtocol::getTypeIDForTypeName(const std::string &name) {
         break;
       case '6':
         result = T_I64;
+        break;
+      case 'p':
+        result = T_IPV4;
         break;
       }
       break;
@@ -597,6 +602,10 @@ int32_t TXMLProtocol::writeU32(const uint32_t u32) {
 
 int32_t TXMLProtocol::writeU64(const uint64_t u64) {
   return writePlain(integerToString(u64));
+}
+
+int32_t TXMLProtocol::writeIPV4(const uint32_t ip4) {
+  return writePlain(integerToString(ip4));
 }
 
 int32_t TXMLProtocol::writeDouble(const double dub) {
@@ -1081,6 +1090,10 @@ int32_t TXMLProtocol::readU32(uint32_t& u32) {
 
 int32_t TXMLProtocol::readU64(uint64_t& u64) {
   return readXMLInteger(u64);
+}
+
+int32_t TXMLProtocol::readIPV4(uint32_t& ip4) {
+  return readXMLInteger(ip4);
 }
 
 int32_t TXMLProtocol::readDouble(double& dub) {

@@ -258,6 +258,13 @@ int32_t TBinaryProtocolT<Transport_>::writeU64(const uint64_t u64) {
 }
 
 template <class Transport_>
+int32_t TBinaryProtocolT<Transport_>::writeIPV4(const uint32_t ip4) {
+  uint32_t net = (uint32_t)htonl(ip4);
+  this->trans_->write((uint8_t*)&net, 4);
+  return 4;
+}
+
+template <class Transport_>
 int32_t TBinaryProtocolT<Transport_>::writeDouble(const double dub) {
   BOOST_STATIC_ASSERT(sizeof(double) == sizeof(uint64_t));
   BOOST_STATIC_ASSERT(std::numeric_limits<double>::is_iec559);
@@ -598,6 +605,17 @@ int32_t TBinaryProtocolT<Transport_>::readU64(uint64_t& u64) {
   this->trans_->readAll(theBytes.b, 8);
   u64 = (uint64_t)ntohll(theBytes.all);
   return 8;
+}
+
+template <class Transport_>
+int32_t TBinaryProtocolT<Transport_>::readIPV4(uint32_t& ip4) {
+  union bytes {
+    uint8_t b[4];
+    uint32_t all;
+  } theBytes;
+  this->trans_->readAll(theBytes.b, 4);
+  ip4 = (uint32_t)ntohl(theBytes.all);
+  return 4;
 }
 
 template <class Transport_>

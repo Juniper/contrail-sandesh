@@ -883,6 +883,11 @@ string t_cpp_generator::render_const_value(ofstream& out, string name, t_type* t
         render << value->get_double();
       }
       break;
+#ifdef SANDESH
+    case t_base_type::TYPE_IPV4:
+      render << value->get_integer();
+      break;
+#endif
     default:
       throw "compiler error: no const of base type " + t_base_type::t_base_name(tbase);
     }
@@ -3143,10 +3148,19 @@ void t_cpp_generator::generate_logger_field(ofstream& out,
                         " << \" = \" << integerToString(" << name <<
                         ");" << endl;
             } else {
-                out << indent() << "Xbuf << " << prefix <<
-                        "\"" << name << "\"" <<
-                        " << \" = \" << " << name <<
-                        ";" << endl;
+                if (tbase->get_name() == "ipv4") {
+                   out << indent() << "struct in_addr ip_addr;" << endl;
+                   out << indent() << "ip_addr.s_addr = htonl(" << name << ");" << endl;
+                   out << indent() << "Xbuf << " << prefix <<
+                           "\"" << name << "\"" <<
+                           " << \" = \" << inet_ntoa(ip_addr);" << endl;
+                }
+                else {
+                   out << indent() << "Xbuf << " << prefix <<
+                           "\"" << name << "\"" <<
+                           " << \" = \" << " << name <<
+                           ";" << endl;
+                }
             }
         }
     }
@@ -5710,6 +5724,9 @@ void t_cpp_generator::generate_deserialize_field(ofstream& out,
     case t_base_type::TYPE_U64:
       out << "readU64(" << name << ")) < 0) {" << endl;
       break;
+    case t_base_type::TYPE_IPV4:
+      out << "readIPV4(" << name << ")) < 0) {" << endl;
+      break;
 #endif
     case t_base_type::TYPE_DOUBLE:
       out << "readDouble(" << name << ")) < 0) {" << endl;
@@ -6070,6 +6087,9 @@ void t_cpp_generator::generate_serialize_field(ofstream& out,
         break;
       case t_base_type::TYPE_U64:
         out << "writeU64(" << name << ")) < 0) {" << endl;
+        break;
+      case t_base_type::TYPE_IPV4:
+        out << "writeIPV4(" << name << ")) < 0) {" << endl;
         break;
 #endif
       case t_base_type::TYPE_DOUBLE:
@@ -6515,6 +6535,8 @@ string t_cpp_generator::base_type_name(t_base_type::t_base tbase) {
     return "uint32_t";
   case t_base_type::TYPE_U64:
     return "uint64_t";
+  case t_base_type::TYPE_IPV4:
+    return "uint32_t";
 #endif
   case t_base_type::TYPE_DOUBLE:
     return "double";
@@ -6573,6 +6595,7 @@ string t_cpp_generator::declare_field(t_field* tfield, bool init, bool pointer, 
       case t_base_type::TYPE_U16:
       case t_base_type::TYPE_U32:
       case t_base_type::TYPE_U64:
+      case t_base_type::TYPE_IPV4:
 #endif
         result += " = 0";
         break;
@@ -6739,6 +6762,8 @@ string t_cpp_generator::type_to_enum(t_type* type) {
       return "::contrail::sandesh::protocol::T_U32";
     case t_base_type::TYPE_U64:
       return "::contrail::sandesh::protocol::T_U64";
+    case t_base_type::TYPE_IPV4:
+      return "::contrail::sandesh::protocol::T_IPV4";
     case t_base_type::TYPE_STATIC_CONST_STRING:
     case t_base_type::TYPE_SANDESH_SYSTEM:
     case t_base_type::TYPE_SANDESH_REQUEST:

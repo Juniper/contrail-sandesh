@@ -209,6 +209,13 @@ thrift_protocol_write_u64 (ThriftProtocol *protocol, const u_int64_t value,
 }
 
 int32_t
+thrift_protocol_write_ipv4 (ThriftProtocol *protocol, const u_int32_t value,
+                           int *error)
+{
+  return protocol->write_ipv4 (protocol, value, error);
+}
+
+int32_t
 thrift_protocol_write_double (ThriftProtocol *protocol,
                               const double value, int *error)
 {
@@ -401,6 +408,13 @@ thrift_protocol_read_u64 (ThriftProtocol *protocol, u_int64_t *value,
 }
 
 int32_t
+thrift_protocol_read_ipv4 (ThriftProtocol *protocol, u_int32_t *value,
+                          int *error)
+{
+  return protocol->read_ipv4 (protocol, value, error);
+}
+
+int32_t
 thrift_protocol_read_double (ThriftProtocol *protocol,
                              double *value, int *error)
 {
@@ -473,6 +487,11 @@ thrift_protocol_skip (ThriftProtocol *protocol, ThriftType type, int *error)
       {
         u_int64_t u64;
         return thrift_protocol_read_u64 (protocol, &u64, error);
+      }
+    case T_IPV4:
+      {
+        u_int32_t ip4;
+        return thrift_protocol_read_ipv4 (protocol, &ip4, error);
       }
     case T_DOUBLE:
       {

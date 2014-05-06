@@ -55,6 +55,7 @@ TEST_F(SandeshPreCTest, EncodeDecodeC2CPlus) {
     test.set_listElem2(u32_list);
     test.set_u64Elem1(18446744073709551615ull);
     test.set_xmlElem1("xmlElem1");
+    test.set_ipv4Elem1(4294967295u);
     // Write test to buf
     wxfer = test.WriteBinary(buf_, sizeof(buf_), &error);
     EXPECT_GT(wxfer, 0);

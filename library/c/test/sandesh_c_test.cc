@@ -69,6 +69,7 @@ TEST_F(SandeshCTest, ReadWrite) {
     wabc.nested->inner_f = 4294967295u;
     wabc.nested->inner_g = 18446744073709551615ull;
     wabc.nested->inner_h = const_cast<char *>(inner_h.c_str());
+    wabc.nested->inner_i = 4294967295u;
     wxfer = abc_write(&wabc, &protocol, &error);
     EXPECT_GT(wxfer, 0);
 
@@ -86,6 +87,7 @@ TEST_F(SandeshCTest, ReadWrite) {
     EXPECT_EQ(wabc.nested->inner_f, rabc.nested->inner_f);
     EXPECT_EQ(wabc.nested->inner_g, rabc.nested->inner_g);
     EXPECT_STREQ(wabc.nested->inner_h, rabc.nested->inner_h);
+    EXPECT_EQ(wabc.nested->inner_i, rabc.nested->inner_i);
 
     free(wabc.nested);
     wabc.nested = NULL;
@@ -113,6 +115,7 @@ TEST_F(SandeshCTest, EncodeDecode) {
     wabc_sandesh.elem->nested->inner_f = 4294967295u;
     wabc_sandesh.elem->nested->inner_g = 18446744073709551615ull;
     wabc_sandesh.elem->nested->inner_h = const_cast<char *>(inner_h.c_str());
+    wabc_sandesh.elem->nested->inner_i = 4294967295u;
     wabc_sandesh.rwinfo_size = 5;
     wabc_sandesh.rwinfo = (int8_t *)calloc(1, sizeof(*wabc_sandesh.rwinfo) *
             wabc_sandesh.rwinfo_size);
@@ -196,6 +199,7 @@ TEST_F(SandeshCTest, GetEncodeLength) {
     wabc_sandesh.elem->nested->inner_f = 4294967295u;
     wabc_sandesh.elem->nested->inner_g = 18446744073709551615ull;
     wabc_sandesh.elem->nested->inner_h = const_cast<char *>(inner_h.c_str());
+    wabc_sandesh.elem->nested->inner_i = 4294967295u;
     wabc_sandesh.rwinfo_size = 5;
     wabc_sandesh.rwinfo = (int8_t *)calloc(1, sizeof(*wabc_sandesh.rwinfo) *
             wabc_sandesh.rwinfo_size);
@@ -239,6 +243,7 @@ abc_sandesh_process (void *pabc) {
     EXPECT_EQ(psandesh->elem->nested->inner_f, 4294967295u);
     EXPECT_EQ(psandesh->elem->nested->inner_g, 18446744073709551615ull);
     EXPECT_STREQ(psandesh->elem->nested->inner_h, "abc");
+    EXPECT_EQ(psandesh->elem->nested->inner_i, 4294967295u);
 
     for (i = 0; i < psandesh->rwinfo_size; i++) {
         EXPECT_EQ(psandesh->rwinfo[i], i);
@@ -262,6 +267,7 @@ buffer_test_process (void *ptr) {
     EXPECT_EQ(psandesh->u32Elem1, 4294967295u);
     EXPECT_EQ(psandesh->u64Elem1, 18446744073709551615ull);
     EXPECT_STREQ(psandesh->xmlElem1, "xmlElem1");
+    EXPECT_EQ(psandesh->ipv4Elem1, 4294967295u);
 }
 
 void buffer_update_test_process (void *ptr) {

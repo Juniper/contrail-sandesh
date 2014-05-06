@@ -79,6 +79,7 @@ protected:
         wstruct_test_.set_u16Test(65535);
         wstruct_test_.set_u32Test(4294967295u);
         wstruct_test_.set_u64Test(18446744073709551615ull);
+        wstruct_test_.set_ipv4Test(4294967295u);
         wstruct_test_.set_xmlTest("<abc>");
         wstruct_test_.set_xmlTest1("abc");
         wstruct_test_.set_xmlTest2("ab]");

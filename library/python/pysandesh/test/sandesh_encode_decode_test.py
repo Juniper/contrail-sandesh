@@ -41,10 +41,10 @@ class SandeshEncodeDecodeTest(unittest.TestCase):
         # Encode Test
         btype_encode = BasicTypesTest(bool_1=True, byte_1=127, i16_1=4321,
             i32_1=54321, i64_1=654321, double_1=12.345, string_1="Basic Types Test",
-            u16_1=65535, u32_1=4294967295, u64_1=18446744073709551615,
+            u16_1=65535, u32_1=4294967295, u64_1=18446744073709551615, ipv4_1=4294967295,
             xml_1="<abc>", xml_2 ="abc", xml_3="abc]", xml_4="abc]]")
         self.assertNotEqual(-1, btype_encode.write(self._wprotocol))
-        expected_data = '<BasicTypesTest type="sandesh"><bool_1 type="bool" identifier="1">true</bool_1><byte_1 type="byte" identifier="2">127</byte_1><i16_1 type="i16" identifier="3">4321</i16_1><i32_1 type="i32" identifier="4">54321</i32_1><i64_1 type="i64" identifier="5">654321</i64_1><double_1 type="double" identifier="6">12.345</double_1><string_1 type="string" identifier="7">Basic Types Test</string_1><str8 type="string" identifier="8">Last field</str8><u16_1 type="u16" identifier="9">65535</u16_1><u32_1 type="u32" identifier="10">4294967295</u32_1><u64_1 type="u64" identifier="11">18446744073709551615</u64_1><xml_1 type="xml" identifier="12"><![CDATA[<abc>]]></xml_1><xml_2 type="xml" identifier="13"><![CDATA[abc]]></xml_2><xml_3 type="xml" identifier="14"><![CDATA[abc]]]></xml_3><xml_4 type="xml" identifier="15"><![CDATA[abc]]]]></xml_4></BasicTypesTest>'
+        expected_data = '<BasicTypesTest type="sandesh"><bool_1 type="bool" identifier="1">true</bool_1><byte_1 type="byte" identifier="2">127</byte_1><i16_1 type="i16" identifier="3">4321</i16_1><i32_1 type="i32" identifier="4">54321</i32_1><i64_1 type="i64" identifier="5">654321</i64_1><double_1 type="double" identifier="6">12.345</double_1><string_1 type="string" identifier="7">Basic Types Test</string_1><str8 type="string" identifier="8">Last field</str8><u16_1 type="u16" identifier="9">65535</u16_1><u32_1 type="u32" identifier="10">4294967295</u32_1><u64_1 type="u64" identifier="11">18446744073709551615</u64_1><xml_1 type="xml" identifier="12"><![CDATA[<abc>]]></xml_1><xml_2 type="xml" identifier="13"><![CDATA[abc]]></xml_2><xml_3 type="xml" identifier="14"><![CDATA[abc]]]></xml_3><xml_4 type="xml" identifier="15"><![CDATA[abc]]]]></xml_4><ipv4_1 type="ipv4" identifier="16">4294967295</ipv4_1></BasicTypesTest>'
         actual_data = self._wtransport.getvalue()
         self.assertEqual(expected_data, actual_data)
 
@@ -99,11 +99,11 @@ class SandeshEncodeDecodeTest(unittest.TestCase):
         print '-------------------------'
         # Encode Test
         btype_struct1 = StructBasicTypes(bool_1=False, i16_1=9876, u16_1=65535)
-        btype_struct2 = StructBasicTypes(i16_1=1111, u32_1=4294967295, u64_1=18446744073709551615,
+        btype_struct2 = StructBasicTypes(i16_1=1111, u32_1=4294967295, u64_1=18446744073709551615, ipv4_1=4294967295,
                                          xml_1="<abc>", xml_2 ="abc", xml_3="abc]", xml_4="abc]]")
         struct_encode = StructTest(btype_struct1, btype_struct2)
         self.assertNotEqual(-1, struct_encode.write(self._wprotocol))
-        expected_data = '<StructTest type="sandesh"><st_1 type="struct" identifier="1"><StructBasicTypes><str1 type="string" identifier="1">First field</str1><bool_1 type="bool" identifier="2">false</bool_1><i16_1 type="i16" identifier="3">9876</i16_1><str4 type="string" identifier="4">Last field</str4><u16_1 type="u16" identifier="5">65535</u16_1></StructBasicTypes></st_1><st_2 type="struct" identifier="2"><StructBasicTypes><str1 type="string" identifier="1">First field</str1><i16_1 type="i16" identifier="3">1111</i16_1><str4 type="string" identifier="4">Last field</str4><u32_1 type="u32" identifier="6">4294967295</u32_1><u64_1 type="u64" identifier="7">18446744073709551615</u64_1><xml_1 type="xml" identifier="8"><![CDATA[<abc>]]></xml_1><xml_2 type="xml" identifier="9"><![CDATA[abc]]></xml_2><xml_3 type="xml" identifier="10"><![CDATA[abc]]]></xml_3><xml_4 type="xml" identifier="11"><![CDATA[abc]]]]></xml_4></StructBasicTypes></st_2></StructTest>'
+        expected_data = '<StructTest type="sandesh"><st_1 type="struct" identifier="1"><StructBasicTypes><str1 type="string" identifier="1">First field</str1><bool_1 type="bool" identifier="2">false</bool_1><i16_1 type="i16" identifier="3">9876</i16_1><str4 type="string" identifier="4">Last field</str4><u16_1 type="u16" identifier="5">65535</u16_1></StructBasicTypes></st_1><st_2 type="struct" identifier="2"><StructBasicTypes><str1 type="string" identifier="1">First field</str1><i16_1 type="i16" identifier="3">1111</i16_1><str4 type="string" identifier="4">Last field</str4><u32_1 type="u32" identifier="6">4294967295</u32_1><u64_1 type="u64" identifier="7">18446744073709551615</u64_1><xml_1 type="xml" identifier="8"><![CDATA[<abc>]]></xml_1><xml_2 type="xml" identifier="9"><![CDATA[abc]]></xml_2><xml_3 type="xml" identifier="10"><![CDATA[abc]]]></xml_3><xml_4 type="xml" identifier="11"><![CDATA[abc]]]]></xml_4><ipv4_1 type="ipv4" identifier="12">4294967295</ipv4_1></StructBasicTypes></st_2></StructTest>'
         actual_data = self._wtransport.getvalue()
         self.assertEqual(expected_data, actual_data)
 

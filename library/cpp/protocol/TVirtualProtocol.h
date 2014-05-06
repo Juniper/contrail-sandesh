@@ -214,6 +214,13 @@ class TProtocolDefaults : public TProtocol {
     assert(false);
     return -1;
   }
+
+  int32_t readIPV4(uint32_t& ip4) {
+    (void) ip4;
+    LOG(ERROR, __func__ << ": This protocol does not support reading (yet).");
+    assert(false);
+    return -1;
+  }
   
   int32_t readDouble(double& dub) {
     (void) dub;
@@ -423,6 +430,13 @@ class TProtocolDefaults : public TProtocol {
     return -1;
   }
 
+  int32_t writeIPV4(const uint32_t ip4) {
+    (void) ip4;
+    LOG(ERROR, __func__ << ": This protocol does not support writing (yet).");
+    assert(false);
+    return -1;
+  }
+
   int32_t writeDouble(const double dub) {
     (void) dub;
     LOG(ERROR, __func__ << ": This protocol does not support writing (yet).");
@@ -584,6 +598,10 @@ class TVirtualProtocol : public Super_ {
     return static_cast<Protocol_*>(this)->writeU64(u64);
   }
 
+  virtual int32_t writeIPV4_virt(const uint32_t ip4) {
+    return static_cast<Protocol_*>(this)->writeIPV4(ip4);
+  }
+
   virtual int32_t writeDouble_virt(const double dub) {
     return static_cast<Protocol_*>(this)->writeDouble(dub);
   }
@@ -712,6 +730,10 @@ class TVirtualProtocol : public Super_ {
 
   virtual int32_t readU64_virt(uint64_t& u64) {
     return static_cast<Protocol_*>(this)->readU64(u64);
+  }
+
+  virtual int32_t readIPV4_virt(uint32_t& ip4) {
+    return static_cast<Protocol_*>(this)->readIPV4(ip4);
   }
 
   virtual int32_t readDouble_virt(double& dub) {

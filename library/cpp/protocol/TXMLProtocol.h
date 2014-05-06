@@ -110,6 +110,8 @@ class TXMLProtocol : public TVirtualProtocol<TXMLProtocol> {
   int32_t writeU32(const uint32_t u32);
   
   int32_t writeU64(const uint64_t u64);
+
+  int32_t writeIPV4(const uint32_t ip4);
   
   int32_t writeDouble(const double dub);
 
@@ -181,6 +183,8 @@ class TXMLProtocol : public TVirtualProtocol<TXMLProtocol> {
   int32_t readU32(uint32_t& u32);
   
   int32_t readU64(uint64_t& u64);
+
+  int32_t readIPV4(uint32_t& ip4);
 
   int32_t readDouble(double& dub);
 

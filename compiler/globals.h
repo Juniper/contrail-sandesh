@@ -84,6 +84,7 @@ extern t_type* g_type_sandesh_flow;
 extern t_type* g_type_u16;
 extern t_type* g_type_u32;
 extern t_type* g_type_u64;
+extern t_type* g_type_ipv4;
 extern t_type* g_type_xml;
 #endif
 extern t_type* g_type_binary;
