@@ -80,8 +80,6 @@ public:
         Task(taskId, instId) , pImpl_(pImpl), instNum_(instNum) {}
 
     virtual bool Run() {
-        LOG(DEBUG, "RequestPipeline Dispatch Task ID " << GetTaskId() << 
-            " InstN " << instNum_ << " InstId " << GetTaskInstance());
        
         if (!pImpl_.RunInstance(instNum_)) return false;
 

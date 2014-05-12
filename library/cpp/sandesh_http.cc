@@ -111,8 +111,6 @@ HttpSendXML(const std::string& context, const u_int8_t * buf, uint32_t len,
     client_ctx = HttpSession::get_client_context(context);
     HttpXMLState state;
 
-    LOG(DEBUG, __func__ << " Context " << client_ctx <<
-                " more " << more);
     // Calculate current state;
     if (!client_ctx.empty()) {
         state = HXMLIncomplete;
