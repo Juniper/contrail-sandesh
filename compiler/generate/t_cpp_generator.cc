@@ -3149,11 +3149,13 @@ void t_cpp_generator::generate_logger_field(ofstream& out,
                         ");" << endl;
             } else {
                 if (tbase->get_name() == "ipv4") {
-                   out << indent() << "struct in_addr ip_addr;" << endl;
-                   out << indent() << "ip_addr.s_addr = htonl(" << name << ");" << endl;
+                   scope_up(out);
+                   out << indent() << "struct in_addr ip_addr_"<< name <<";" << endl;
+                   out << indent() << "ip_addr_" << name << ".s_addr = htonl(" << name << ");" << endl;
                    out << indent() << "Xbuf << " << prefix <<
                            "\"" << name << "\"" <<
-                           " << \" = \" << inet_ntoa(ip_addr);" << endl;
+                           " << \" = \" << inet_ntoa(ip_addr_" << name << ");" << endl;
+                   scope_down(out);
                 }
                 else {
                    out << indent() << "Xbuf << " << prefix <<
