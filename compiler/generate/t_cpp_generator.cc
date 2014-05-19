@@ -3288,7 +3288,7 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
                 out << indent() << "std::stringstream Xbuf;" << endl;
                 // Timestamp
                 out << indent() <<
-                        "Xbuf << integerToString(UTCUsecToPTime(timestamp())) << \" \";" <<
+                        "Xbuf << integerToString(timestamp()) << \" \";" <<
                         endl;
             }
             prefix = "";

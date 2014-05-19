@@ -27,7 +27,7 @@
                 <script src="js/util.js"></script>
                 <title>HTTP Introspect</title>
             </head>
-            <body>
+            <body onload="transformTraceMsg()">
                 <div id="page-content">
                     <div class="navbar navbar-inverse navbar-fixed-top">
                         <div class="navbar-inner">
@@ -218,11 +218,14 @@
             </xsl:when>
             <xsl:otherwise>
                 <tr>
-                    <td> 
-                        <pre>
-                            <xsl:value-of select="."/>
-                        </pre>
-                    </td>
+                    <xsl:choose>
+                        <xsl:when test="name(/*) = 'SandeshTraceTextResponse'">
+                            <td class="trace"><xsl:value-of select="."/></td>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <td><xsl:value-of select="."/></td>
+                        </xsl:otherwise>
+                    </xsl:choose>
                 </tr>
             </xsl:otherwise>
         </xsl:choose>

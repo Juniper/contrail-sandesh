@@ -2097,7 +2097,7 @@ void t_py_generator::generate_py_sandesh_logger(ofstream &out,
       init = true;
       indent(out) << "if trace:" << endl;
       indent_up();
-      indent(out) << log_str << ".write(UTCTimestampUsecToString(self._timestamp))" << endl;
+      indent(out) << log_str << ".write(str(self._timestamp))" << endl;
       indent(out) << log_str << ".write(' ')" << endl;
       indent_down();
       // Only systemlog, objectlog, and flowlog have valid level and category
