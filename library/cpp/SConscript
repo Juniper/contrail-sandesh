@@ -16,6 +16,7 @@ env.Append(CPPPATH = [
     Dir('.').abspath,
     '#tools',
     SandeshEnv['TOP'] + '/io',
+    SandeshEnv['TOP'],
 ])
 
 # Generate the source files
