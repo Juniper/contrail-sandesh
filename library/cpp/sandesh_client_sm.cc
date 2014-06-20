@@ -22,6 +22,7 @@
 #include <base/logging.h>
 #include <base/timer.h>
 #include <base/task_annotations.h>
+#include <base/connection_info.h>
 #include <io/event_manager.h>
 
 #include <sandesh/sandesh_constants.h>
@@ -232,8 +233,19 @@ struct Idle : public sc::state<Idle, SandeshClientSMImpl> {
     sc::result react(const EvStart &event) {
         SandeshClientSMImpl *state_machine = &context<SandeshClientSMImpl>();
         if (state_machine->idle_hold_time()) {
+            // Update connection info
+            ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+                std::string(), ConnectionStatus::INIT,
+                state_machine->server(),
+                state_machine->StateName() + " : " + event.Name());
             state_machine->StartIdleHoldTimer();
         } else {
+            // Update connection info
+            ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+                std::string(), ConnectionStatus::DOWN,
+                state_machine->server(),
+                state_machine->StateName() + " : " + event.Name() + 
+                    " -> Disconnect");
             return transit<Disconnect>();
         }
         return discard_event();
@@ -257,12 +269,23 @@ struct Idle : public sc::state<Idle, SandeshClientSMImpl> {
         if (state_machine->DiscUpdate(
                 SandeshClientSM::IDLE, false,
                 TcpServer::Endpoint(), TcpServer::Endpoint())) {
+            // Update connection info
+            ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+                std::string(), ConnectionStatus::INIT,
+                state_machine->server(),
+                state_machine->StateName() + " : " + event.Name() + 
+                    " -> Connect");
             return transit<Connect>();
         } 
+        // Update connection info
+        ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+            std::string(), ConnectionStatus::DOWN,
+            state_machine->server(),
+            state_machine->StateName() + " : " + event.Name() + 
+                " -> Disconnect");
         return transit<Disconnect>();
     }
 };
-
 
 struct Disconnect : public sc::state<Disconnect, SandeshClientSMImpl> {
     typedef mpl::list<
@@ -284,13 +307,17 @@ struct Disconnect : public sc::state<Disconnect, SandeshClientSMImpl> {
         if (state_machine->DiscUpdate(
                 SandeshClientSM::DISCONNECT, true,
                 event.active_, event.backup_)) {
+            // Update connection info
+            ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+                std::string(), ConnectionStatus::INIT,
+                state_machine->server(),
+                state_machine->StateName() + " : " + event.Name() + 
+                    " -> Connect");
             return transit<Connect>();
         } 
         return discard_event();
     }
-
 };
-
 
 struct Connect : public sc::state<Connect, SandeshClientSMImpl> {
     typedef mpl::list<
@@ -328,7 +355,7 @@ struct Connect : public sc::state<Connect, SandeshClientSMImpl> {
         state_machine->DiscUpdate(
                 SandeshClientSM::CONNECT, false,
                 TcpServer::Endpoint(), TcpServer::Endpoint());
-        return ToIdle(state_machine);
+        return ToIdle(state_machine, event.Name());
     }
 
 
@@ -339,7 +366,7 @@ struct Connect : public sc::state<Connect, SandeshClientSMImpl> {
         state_machine->DiscUpdate(
                 SandeshClientSM::CONNECT, false,
                 TcpServer::Endpoint(), TcpServer::Endpoint());
-        return ToIdle(state_machine);
+        return ToIdle(state_machine, event.Name());
     }
 
     sc::result react(const EvTcpConnected &event) {
@@ -348,6 +375,10 @@ struct Connect : public sc::state<Connect, SandeshClientSMImpl> {
                 event.Name() << " : " << "Cancelling Connect timer");
         state_machine->CancelConnectTimer();
         SandeshSession *session = event.session;
+        // Update connection info
+        ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+            std::string(), ConnectionStatus::INIT, session->remote_endpoint(),
+            state_machine->StateName() + " : " + event.Name());       
         // Start the send queue runner XXX move this to Established or later
         session->send_queue()->MayBeStartRunner();
         return transit<ClientInit>();
@@ -356,7 +387,7 @@ struct Connect : public sc::state<Connect, SandeshClientSMImpl> {
     sc::result react(const EvTcpClose &event) {
         SandeshClientSMImpl *state_machine = &context<SandeshClientSMImpl>();
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name());
-        return ToIdle(state_machine);
+        return ToIdle(state_machine, event.Name());
     }
 
     sc::result react(const EvDiscUpdate &event) {
@@ -364,7 +395,7 @@ struct Connect : public sc::state<Connect, SandeshClientSMImpl> {
         if (state_machine->DiscUpdate(
                 SandeshClientSM::CONNECT, true,
                 event.active_, event.backup_)) {
-            return ToIdle(state_machine);
+            return ToIdle(state_machine, event.Name());
         }  
         return discard_event();
     }
@@ -381,7 +412,13 @@ struct Connect : public sc::state<Connect, SandeshClientSMImpl> {
         state_machine->set_session(session);
     }
 
-    sc::result ToIdle(SandeshClientSMImpl *state_machine) {
+    sc::result ToIdle(SandeshClientSMImpl *state_machine,
+        const char *event_name) {
+        // Update connection info
+        ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+            std::string(), ConnectionStatus::DOWN,
+            state_machine->session()->remote_endpoint(),
+            state_machine->StateName() + " : " + event_name);       
         state_machine->set_idle_hold_time(state_machine->GetConnectTime() * 1000);
         state_machine->OnIdle<EvStop>(EvStop());
         state_machine->StartIdleHoldTimer();
@@ -421,13 +458,13 @@ struct ClientInit : public sc::state<ClientInit, SandeshClientSMImpl> {
         state_machine->DiscUpdate(
                 SandeshClientSM::CLIENT_INIT, false,
                 TcpServer::Endpoint(), TcpServer::Endpoint());
-        return ToIdle(state_machine);
+        return ToIdle(state_machine, event.Name());
     }
 
     sc::result react(const EvConnectTimerExpired &event) {
         SandeshClientSMImpl *state_machine = &context<SandeshClientSMImpl>();
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name());
-        return ToIdle(state_machine);
+        return ToIdle(state_machine, event.Name());
     }
 
     sc::result react(const EvSandeshMessageRecv &event) {
@@ -436,11 +473,16 @@ struct ClientInit : public sc::state<ClientInit, SandeshClientSMImpl> {
 
         if (!state_machine->GetMgr()->ReceiveMsg(event.msg, event.header,
                     event.msg_type, event.header_offset)) {
-            return ToIdle(state_machine);
+            return ToIdle(state_machine, event.Name());
         }
         state_machine->set_collector_name(event.header.get_Source());
 
         if (event.header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
+            // Update connection info
+            ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+                std::string(), ConnectionStatus::UP,
+                state_machine->session()->remote_endpoint(),
+                state_machine->StateName() + " : Control " + event.Name());       
             return transit<Established>();
         }
         return discard_event();
@@ -466,12 +508,18 @@ struct ClientInit : public sc::state<ClientInit, SandeshClientSMImpl> {
         if (state_machine->DiscUpdate(
                 SandeshClientSM::CLIENT_INIT, true,
                 event.active_, event.backup_)) {
-            return ToIdle(state_machine);
+            return ToIdle(state_machine, event.Name());
         }  
         return discard_event();
     }
 
-    sc::result ToIdle(SandeshClientSMImpl *state_machine) {
+    sc::result ToIdle(SandeshClientSMImpl *state_machine,
+        const char *event_name) {
+        // Update connection info
+        ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+            std::string(), ConnectionStatus::DOWN,
+            state_machine->session()->remote_endpoint(),
+            state_machine->StateName() + " : " + event_name);
         state_machine->OnIdle<EvStop>(EvStop());
         state_machine->StartIdleHoldTimer();
         SM_LOG(INFO, "Return to idle with " << state_machine->idle_hold_time()); 
@@ -494,6 +542,11 @@ struct Established : public sc::state<Established, SandeshClientSMImpl> {
         state_machine->set_state(SandeshClientSM::ESTABLISHED);
         SM_LOG(DEBUG, state_machine->StateName());
         state_machine->connect_attempts_clear();
+        // Update connection info
+        ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+            std::string(), ConnectionStatus::UP,
+            state_machine->session()->remote_endpoint(),
+            state_machine->StateName());
         state_machine->SendUVE();
     }
 
@@ -510,10 +563,16 @@ struct Established : public sc::state<Established, SandeshClientSMImpl> {
         if (state_machine->DiscUpdate(
                 SandeshClientSM::ESTABLISHED, false,
                 TcpServer::Endpoint(), TcpServer::Endpoint())) {
+            // Update connection info
+            ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+                std::string(), ConnectionStatus::INIT,
+                state_machine->session()->remote_endpoint(),
+                state_machine->StateName() + " : " + event.Name() + 
+                    " -> Connect");
             state_machine->OnIdle<EvStop>(EvStop());
             return transit<Connect>();            
         } else {
-            return ToIdle(state_machine);
+            return ToIdle(state_machine, event.Name());
         }  
     }
 
@@ -523,7 +582,7 @@ struct Established : public sc::state<Established, SandeshClientSMImpl> {
 
         if (!state_machine->GetMgr()->ReceiveMsg(event.msg, event.header,
                     event.msg_type, event.header_offset)) {
-            return ToIdle(state_machine);
+            return ToIdle(state_machine, event.Name());
         }
         return discard_event();
     }
@@ -544,13 +603,25 @@ struct Established : public sc::state<Established, SandeshClientSMImpl> {
         if (state_machine->DiscUpdate(
                 SandeshClientSM::ESTABLISHED, true,
                 event.active_, event.backup_)) {
+            // Update connection info
+            ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+                std::string(), ConnectionStatus::INIT,
+                state_machine->session()->remote_endpoint(),
+                state_machine->StateName() + " : " + event.Name() + 
+                    " -> Connect");
             state_machine->OnIdle<EvStop>(EvStop());
             return transit<Connect>();            
         }  
         return discard_event();
     }
 
-    sc::result ToIdle(SandeshClientSMImpl *state_machine) {
+    sc::result ToIdle(SandeshClientSMImpl *state_machine,
+        const char *event_name) {
+        // Update connection info
+        ConnectionState::GetInstance()->Update(ConnectionType::COLLECTOR,
+            std::string(), ConnectionStatus::DOWN,
+            state_machine->session()->remote_endpoint(),
+            state_machine->StateName() + " : " + event_name);
         state_machine->OnIdle<EvStop>(EvStop());
         state_machine->StartIdleHoldTimer();
         return transit<Idle>();
