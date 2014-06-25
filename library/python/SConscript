@@ -67,7 +67,8 @@ pysandesh_modules = [
                      'sandesh_uve.py',
                      'sandesh_req_impl.py',
                      'sandesh_stats.py',
-                     'sandesh_trace.py'
+                     'sandesh_trace.py',
+                     'connection_info.py',
                     ]
 
 pysandesh_modules_rules = []
@@ -117,6 +118,8 @@ sandesh_trace_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_trac
 # Generate the io files and install in sandesh_uve
 io_pkg = env.SandeshGenPy('#controller/src/io/io.sandesh', 'pysandesh/gen_py/sandesh_uve/', False)
 env.Depends(io_pkg, sandesh_uve_pkg)
+# Auto-generated Connection Info package
+conn_info_pkg = env.SandeshGenPy('#controller/src/base/sandesh/connection_info.sandesh', 'pysandesh/')
 
 sdist_depends = [local_modules_rules, web_srv_rules,
                  pysandesh_modules_rules, transport_modules_rules, 
@@ -124,7 +127,7 @@ sdist_depends = [local_modules_rules, web_srv_rules,
                  sandesh_ctrl_pkg, sandesh_uve_pkg,
                  sandesh_trace_pkg,
                  fysom_sources_rules,
-                 io_pkg]
+                 io_pkg, conn_info_pkg]
 
 env['pysandesh_target'] = sdist_depends
 

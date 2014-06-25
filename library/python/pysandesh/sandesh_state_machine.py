@@ -58,6 +58,31 @@ class SandeshStateMachine(object):
     def __init__(self, connection, logger, primary_collector, 
                  secondary_collector):
 
+        def _update_connection_state(e, status):
+            from connection_info import ConnectionState
+            from gen_py.connection_info.ttypes import ConnectionType
+            ConnectionState.update(conn_type = ConnectionType.COLLECTOR,
+                name = '',
+                status = status,
+                server_addrs = [e.sm._active_collector],
+                message = '%s to %s on %s' % (e.src, e.dst, e.event))
+        #end _update_connection_state
+
+        def _connection_state_up(e):
+            from gen_py.connection_info.ttypes import ConnectionStatus
+            _update_connection_state(e, ConnectionStatus.UP)
+        #end _connection_state_up
+
+        def _connection_state_down(e):
+            from gen_py.connection_info.ttypes import ConnectionStatus
+            _update_connection_state(e, ConnectionStatus.DOWN)
+        #end _connection_state_down
+
+        def _connection_state_init(e):
+            from gen_py.connection_info.ttypes import ConnectionStatus
+            _update_connection_state(e, ConnectionStatus.INIT)
+        #end _connection_state_init
+
         def _on_idle(e):
             if e.sm._connect_timer is not None:
                 e.sm._cancel_connect_timer()
@@ -68,10 +93,13 @@ class SandeshStateMachine(object):
             e.sm._delete_session()
             if e.sm._disable != True:
 	        e.sm._start_idle_hold_timer()
+            # update connection state
+            _connection_state_down(e)
         #end _on_idle
 
         def _on_disconnect(e):
-            pass
+            # update connection state
+            _connection_state_down(e)
         #end _on_disconnect
 
         def _on_connect(e):
@@ -81,6 +109,8 @@ class SandeshStateMachine(object):
             # clean up existing connection
             e.sm._delete_session()
             if e.sm._active_collector is not None:
+                # update connection state
+                _connection_state_init(e)
                 e.sm._create_session()
                 e.sm._start_connect_timer()
                 e.sm._session.connect()
@@ -97,6 +127,8 @@ class SandeshStateMachine(object):
             if e.sm._backup_collector is not None:
                 e.sm._active_collector, e.sm._backup_collector = \
                     e.sm._backup_collector, e.sm._active_collector
+                # update connection state
+                _connection_state_init(e)
                 e.sm._create_session()
                 e.sm._start_connect_timer()
                 e.sm._session.connect()
@@ -109,6 +141,8 @@ class SandeshStateMachine(object):
             gevent.spawn(e.sm._session.read)
             e.sm._connection.handle_initialized(e.sm._connects)
             e.sm._connection.sandesh_instance().send_generator_info()
+            # update connection state
+            _connection_state_init(e)
         #end _on_client_init
         
         def _on_established(e):
@@ -116,6 +150,8 @@ class SandeshStateMachine(object):
             e.sm._connection.set_collector(e.sm_event.source)
             e.sm._connection.handle_sandesh_ctrl_msg(e.sm_event.msg)
             e.sm._connection.sandesh_instance().send_generator_info()
+            # update connection state
+            _connection_state_up(e)
         #end _on_established
 
         # FSM - Fysom
