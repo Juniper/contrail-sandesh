@@ -131,8 +131,7 @@ sdist_depends = [local_modules_rules, web_srv_rules,
 
 env['pysandesh_target'] = sdist_depends
 
-sdist_gen = env.Command('dist/sandesh-0.1dev.tar.gz',
-                        'setup.py', 'python setup.py sdist', chdir=Dir('.'))
+sdist_gen = env.Command('dist', 'setup.py', 'python setup.py sdist', chdir=1)
 
 # install everything before building distribution
 env.Depends(sdist_gen, sdist_depends)
