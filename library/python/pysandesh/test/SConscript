@@ -45,8 +45,10 @@ sandesh_pkgs = [
                  env['TOP']+'/sandesh/common',
                  env['TOP']+'/tools/sandesh/library/python'
                ]
-env.Requires(env['sandesh_test'], env['TOP']+'/tools/sandesh/library/python/dist')
-env.Requires(env['sandesh_test'], env['TOP']+'/sandesh/common/dist')
+env.Requires(env['sandesh_test'],
+             env['TOP']+'/tools/sandesh/library/python/dist/sandesh-0.1dev.tar.gz')
+env.Requires(env['sandesh_test'],
+             env['TOP']+'/sandesh/common/dist/')
 
 _deps = []
 _deps += env.venv_add_pip_pkg(venv, pip_pkgs)
