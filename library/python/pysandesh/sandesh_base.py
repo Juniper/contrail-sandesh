@@ -25,6 +25,7 @@ from gen_py.sandesh.constants import *
 
 class Sandesh(object):
     _DEFAULT_LOG_FILE = SandeshLogger._DEFAULT_LOG_FILE
+    _DEFAULT_SYSLOG_FACILITY = SandeshLogger._DEFAULT_SYSLOG_FACILITY
 
     class SandeshRole:
         INVALID = 0
@@ -109,9 +110,12 @@ class Sandesh(object):
 
     def set_logging_params(self, enable_local_log=False, category='',
                            level=SandeshLevel.SYS_INFO,
-                           file=SandeshLogger._DEFAULT_LOG_FILE):
+                           file=SandeshLogger._DEFAULT_LOG_FILE,
+                           enable_syslog=False,
+                           syslog_facility=_DEFAULT_SYSLOG_FACILITY):
         self._sandesh_logger.set_logging_params(
-            enable_local_log, category, level, file)
+            enable_local_log, category, level, file,
+            enable_syslog, syslog_facility)
     # end set_logging_params
 
     def set_local_logging(self, enable_local_log):
@@ -240,6 +244,14 @@ class Sandesh(object):
     def logging_category(self):
         return self._sandesh_logger.logging_category()
     # end logging_category
+
+    def is_syslog_logging_enabled(self):
+        return self._sandesh_logger.is_syslog_logging_enabled()
+    #end is_syslog_logging_enabled
+
+    def logging_syslog_facility(self):
+        return self._sandesh_logger.logging_syslog_facility()
+    #end logging_syslog_facility
 
     def is_unit_test(self):
         return self._role == self.SandeshRole.INVALID
