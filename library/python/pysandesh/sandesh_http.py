@@ -8,6 +8,7 @@
 
 import pkgutil
 import importlib
+import gevent
 import bottle
 import cStringIO
 from transport import TTransport
@@ -74,6 +75,7 @@ class SandeshHttp(object):
     #end __init__
 
     def start_http_server(self):
+        gevent.monkey.patch_all()
         self._http_app.run(host=SandeshHttp._HTTP_SERVER_IP,
             port=self._http_port, server='gevent')
     #end start_http_server
