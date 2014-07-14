@@ -1,0 +1,9 @@
+Verified+2: Zuul <zuul@lists.opencontrail.org>
+Code-Review+1: Hampapur Ajay <hajay@juniper.net>
+Approved+1: Megh Bhatt <meghb@juniper.net>
+Code-Review+2: Megh Bhatt <meghb@juniper.net>
+Submitted-by: Zuul <zuul@lists.opencontrail.org>
+Submitted-at: Mon, 14 Jul 2014 11:40:45 -0700
+Reviewed-on: https://review.opencontrail.org/742
+Project: Juniper/contrail-sandesh
+Branch: refs/heads/R1.06
