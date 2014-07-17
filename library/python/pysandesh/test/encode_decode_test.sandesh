@@ -25,6 +25,7 @@ systemlog sandesh BasicTypesTest {
     14: xml xml_3;
     15: xml xml_4;
     16: ipv4 ipv4_1;
+    17: uuid uuid_1;
 }
 
 struct StructBasicTypes {
@@ -40,6 +41,8 @@ struct StructBasicTypes {
     10: xml xml_3;
     11: xml xml_4;
     12: ipv4 ipv4_1;
+    13: uuid uuid_1;
+    14: uuid uuid_2 = "00010203-0405-0607-0423-023434265323";
 }
 
 objectlog sandesh StructTest {
@@ -51,6 +54,7 @@ struct StructContainerTypes {
     1: list<i32> li32_1;
     2: list<string> lstring_1;
     3: list<StructBasicTypes> lbst_1;
+    4: list<uuid> luuid_1;
 }
 
 objectlog sandesh ContainerTypesTest {

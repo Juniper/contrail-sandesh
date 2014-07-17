@@ -62,6 +62,7 @@ static const std::string kTypeNameDouble("double");
 static const std::string kTypeNameStruct("struct");
 static const std::string kTypeNameString("string");
 static const std::string kTypeNameXML("xml");
+static const std::string kTypeNameUUID("uuid");
 static const std::string kTypeNameMap("map");
 static const std::string kTypeNameList("list");
 static const std::string kTypeNameSet("set");
@@ -86,7 +87,7 @@ const std::string& TXMLProtocol::fieldTypeName(TType type) {
     case T_U16    : return kTypeNameU16    ;
     case T_U32    : return kTypeNameU32    ;
     case T_U64    : return kTypeNameU64    ;
-    case T_IPV4   : return kTypeNameIPV4    ;
+    case T_IPV4   : return kTypeNameIPV4   ;
     case T_DOUBLE : return kTypeNameDouble ;
     case T_STRING : return kTypeNameString ;
     case T_STRUCT : return kTypeNameStruct ;
@@ -95,6 +96,7 @@ const std::string& TXMLProtocol::fieldTypeName(TType type) {
     case T_LIST   : return kTypeNameList   ;
     case T_SANDESH: return kTypeNameSandesh;
     case T_XML    : return kTypeNameXML    ;
+    case T_UUID   : return kTypeNameUUID   ;
     default: return kTypeNameUnknown;
   }
 }
@@ -168,6 +170,9 @@ TType TXMLProtocol::getTypeIDForTypeName(const std::string &name) {
           break;
         case '6':
           result = T_U64;
+          break;
+        case 'u':
+          result = T_UUID;
           break;
       }
       break;
@@ -641,6 +646,10 @@ int32_t TXMLProtocol::writeXML(const string& str) {
   return writePlain(xmlstr);
 }
 
+int32_t TXMLProtocol::writeUUID(const boost::uuids::uuid& uuid) {
+  const std::string str = boost::uuids::to_string(uuid);
+  return writeString(str);
+}
 /**
  * Reading functions
  */
@@ -1137,6 +1146,18 @@ int32_t TXMLProtocol::readBinary(std::string &str) {
 
 int32_t TXMLProtocol::readXML(std::string &str) {
   return readXMLCDATA(str);
+}
+
+int32_t TXMLProtocol::readUUID(boost::uuids::uuid &uuid) {
+  int32_t ret;
+  std::string str;
+  if ((ret = readXMLString(str)) < 0) {
+    return ret;
+  }
+  std::stringstream ss;
+  ss << str;
+  ss >> uuid;
+  return ret;
 }
 
 }}} // contrail::sandesh::protocol

@@ -24,6 +24,8 @@
 extern "C" {
 #endif
 
+#include<uuid/uuid.h>
+
 /*! \file thrift_protocol.h
  *  \brief Abstract class for Thrift protocol implementations.
  */
@@ -56,6 +58,7 @@ typedef enum {
   T_U32    = 20,
   T_XML    = 21,
   T_IPV4   = 22,
+  T_UUID   = 23,
 } ThriftType;
 
 /**
@@ -137,6 +140,8 @@ struct _ThriftProtocol
                           const u_int32_t len, int *error);
   int32_t (*write_xml) (struct _ThriftProtocol *protocol, const char *str,
                         int *error);
+  int32_t (*write_uuid) (struct _ThriftProtocol *protocol, const uuid_t value,
+                        int *error);
 
   int32_t (*read_sandesh_begin) (struct _ThriftProtocol *protocol, char **name,
                                  int *error);
@@ -178,6 +183,7 @@ struct _ThriftProtocol
   int32_t (*read_binary) (struct _ThriftProtocol *protocol, void **buf,
                           u_int32_t *len, int *error);
   int32_t (*read_xml) (struct _ThriftProtocol *protocol, char **str, int *error);
+  int32_t (*read_uuid) (struct _ThriftProtocol *protocol, uuid_t *value, int *error);
 };
 typedef struct _ThriftProtocol ThriftProtocol;
 
@@ -281,6 +287,9 @@ int32_t thrift_protocol_write_binary (ThriftProtocol *protocol,
 int32_t thrift_protocol_write_xml (ThriftProtocol *protocol,
                                    const char *str, int *error);
 
+int32_t thrift_protocol_write_uuid (ThriftProtocol *protocol,
+                                   const uuid_t value, int *error);
+
 int32_t thrift_protocol_read_message_begin (ThriftProtocol *thrift_protocol,
                                             char **name,
                                             ThriftMessageType *message_type,
@@ -370,6 +379,9 @@ int32_t thrift_protocol_read_binary (ThriftProtocol *protocol,
 
 int32_t thrift_protocol_read_xml (ThriftProtocol *protocol,
                                   char **str, int *error);
+
+int32_t thrift_protocol_read_uuid (ThriftProtocol *protocol,
+                                  uuid_t *value, int *error);
 
 int32_t thrift_protocol_skip (ThriftProtocol *protocol, ThriftType type,
                               int *error);

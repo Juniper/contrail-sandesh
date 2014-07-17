@@ -143,6 +143,7 @@ const int struct_is_union = 1;
 %token tok_u64
 %token tok_ipv4
 %token tok_xml
+%token tok_uuid
 
 /**
  * Complex type keywords
@@ -1296,6 +1297,11 @@ tok_string
       pdebug("BaseType -> tok_xml");
       $$ = g_type_xml;
     }    
+| tok_uuid
+    {
+      pdebug("BaseType -> tok_uuid");
+      $$ = g_type_uuid;
+    }
 
 ContainerType: SimpleContainerType TypeAnnotations
     {

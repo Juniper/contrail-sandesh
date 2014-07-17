@@ -92,6 +92,8 @@ t_type* g_type_sandesh_uve;
 t_type* g_type_sandesh_object;
 t_type* g_type_sandesh_flow;
 t_type* g_type_xml;
+t_type* g_type_uuid;
+
 #endif
 
 
@@ -780,6 +782,12 @@ void validate_const_rec(std::string name, t_type* type, t_const_value* value) {
       if (value->get_type() != t_const_value::CV_INTEGER) {
         throw "type error: const \"" + name + "\" was declared as u64";
       }
+      break;
+    case t_base_type::TYPE_UUID:
+      if (value->get_type() != t_const_value::CV_STRING) {
+        throw "type error: const \"" + name + "\" was declared as uuid";
+      }
+      break;
 #endif
     case t_base_type::TYPE_BOOL:
       if (value->get_type() != t_const_value::CV_INTEGER) {
@@ -1332,6 +1340,7 @@ int main(int argc, char** argv) {
   g_type_u64    = new t_base_type("u64", t_base_type::TYPE_U64);
   g_type_ipv4    = new t_base_type("ipv4", t_base_type::TYPE_IPV4);
   g_type_xml    = new t_base_type("xml", t_base_type::TYPE_XML);
+  g_type_uuid    = new t_base_type("uuid", t_base_type::TYPE_UUID);
   g_type_static_const_string = new t_base_type("static const string", t_base_type::TYPE_STATIC_CONST_STRING);
   g_type_sandesh_system   = new t_base_type("system",   t_base_type::TYPE_SANDESH_SYSTEM);
   g_type_sandesh_request  = new t_base_type("request",  t_base_type::TYPE_SANDESH_REQUEST);
@@ -1385,6 +1394,8 @@ int main(int argc, char** argv) {
   delete g_type_sandesh_object;
   delete g_type_sandesh_flow;
   delete g_type_xml;
+  delete g_type_uuid;
+
 #endif
 
   // Finished
