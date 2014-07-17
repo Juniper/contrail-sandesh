@@ -121,6 +121,8 @@ class TXMLProtocol : public TVirtualProtocol<TXMLProtocol> {
 
   int32_t writeXML(const std::string& str);
 
+  int32_t writeUUID(const boost::uuids::uuid& uuid);
+
   /**
    * Reading functions
    */
@@ -193,6 +195,8 @@ class TXMLProtocol : public TVirtualProtocol<TXMLProtocol> {
   int32_t readBinary(std::string& str);
 
   int32_t readXML(std::string& str);
+
+  int32_t readUUID(boost::uuids::uuid& uuid);
 
   class LookaheadReader {
 
@@ -273,6 +277,8 @@ class TXMLProtocol : public TVirtualProtocol<TXMLProtocol> {
   int32_t readXMLInteger(NumberType &num);
 
   int32_t readXMLDouble(double &num);
+
+  int32_t readXMLUuid(boost::uuids::uuid &uuid);
 
   void indentUp();
   void indentDown();

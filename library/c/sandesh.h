@@ -48,6 +48,8 @@ extern "C" {
 #define os_log(level, format, arg...)    syslog(level, format, ##arg)
 #endif /* __KERNEL__ */
 
+typedef unsigned char uuid_t[16];
+
 static inline uint64_t os_get_value64(const uint8_t *data) {
     uint64_t value = 0;
     int i = 0;

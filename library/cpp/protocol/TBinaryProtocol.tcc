@@ -299,6 +299,12 @@ int32_t TBinaryProtocolT<Transport_>::writeXML(const std::string& str) {
   return TBinaryProtocolT<Transport_>::writeString(str);
 }
 
+template <class Transport_>
+int32_t TBinaryProtocolT<Transport_>::writeUUID(const boost::uuids::uuid& uuid) {
+  this->trans_->write((uint8_t*)&uuid, 16);
+  return 16;
+}
+
 /**
  * Reading functions
  */
@@ -657,6 +663,12 @@ int32_t TBinaryProtocolT<Transport_>::readBinary(std::string& str) {
 template <class Transport_>
 int32_t TBinaryProtocolT<Transport_>::readXML(std::string& str) {
   return TBinaryProtocolT<Transport_>::readString(str);
+}
+
+template <class Transport_>
+int32_t TBinaryProtocolT<Transport_>::readUUID(boost::uuids::uuid& uuid) {
+  this->trans_->readAll(uuid.data, 16);
+  return 16;
 }
 
 template <class Transport_>
