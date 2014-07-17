@@ -244,6 +244,13 @@ thrift_protocol_write_xml (ThriftProtocol *protocol,
 }
 
 int32_t
+thrift_protocol_write_uuid_t (ThriftProtocol *protocol,
+                           const uuid_t value, int *error)
+{
+  return protocol->write_uuid_t (protocol, value, error);
+}
+
+int32_t
 thrift_protocol_read_message_begin (ThriftProtocol *protocol,
                                     char **name,
                                     ThriftMessageType *message_type,
@@ -443,6 +450,13 @@ thrift_protocol_read_xml (ThriftProtocol *protocol,
 }
 
 int32_t
+thrift_protocol_read_uuid_t (ThriftProtocol *protocol,
+                          uuid_t *value, int *error)
+{
+  return protocol->read_uuid_t (protocol, value, error);
+}
+
+int32_t
 thrift_protocol_skip (ThriftProtocol *protocol, ThriftType type, int *error)
 {
   switch (type)
@@ -506,6 +520,11 @@ thrift_protocol_skip (ThriftProtocol *protocol, ThriftType type, int *error)
         u_int32_t ret = thrift_protocol_read_binary (protocol, &data, &len, error);
         os_free (data);
         return ret;
+      }
+    case T_UUID:
+      {
+        uuid_t uuid;
+        return thrift_protocol_read_uuid_t (protocol, &uuid, error);
       }
     case T_STRUCT:
       {

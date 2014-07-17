@@ -22,6 +22,8 @@
 #include "gen-c/sandesh_buffer_test_types.h"
 #include "sandesh_c_test_types.h"
 
+#include <uuid/uuid.h>
+
 namespace {
 class SandeshCTest : public ::testing::Test {
 public:
@@ -53,6 +55,9 @@ TEST_F(SandeshCTest, ReadWrite) {
     ThriftMemoryBuffer transport;
     int error = 0, wxfer, rxfer;
     std::string inner_h("abc");
+    uuid_t uuid_test = 
+           {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+            0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
 
     /* Initialize the transport and protocol */
     memset(buf, 0, sizeof(buf));
@@ -70,6 +75,7 @@ TEST_F(SandeshCTest, ReadWrite) {
     wabc.nested->inner_g = 18446744073709551615ull;
     wabc.nested->inner_h = const_cast<char *>(inner_h.c_str());
     wabc.nested->inner_i = 4294967295u;
+    uuid_copy(wabc.nested->inner_j, uuid_test);
     wxfer = abc_write(&wabc, &protocol, &error);
     EXPECT_GT(wxfer, 0);
 
@@ -88,6 +94,7 @@ TEST_F(SandeshCTest, ReadWrite) {
     EXPECT_EQ(wabc.nested->inner_g, rabc.nested->inner_g);
     EXPECT_STREQ(wabc.nested->inner_h, rabc.nested->inner_h);
     EXPECT_EQ(wabc.nested->inner_i, rabc.nested->inner_i);
+    EXPECT_EQ(0, uuid_compare(wabc.nested->inner_j, rabc.nested->inner_j));
 
     free(wabc.nested);
     wabc.nested = NULL;
@@ -103,6 +110,9 @@ TEST_F(SandeshCTest, EncodeDecode) {
     u_int32_t i;
     u_int8_t buf[256];
     std::string inner_h("abc");
+    uuid_t uuid_test = 
+           {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+            0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
 
     memset(buf, 0, sizeof(buf));
     wabc_sandesh.elem = (abc *)calloc(1, sizeof(*wabc_sandesh.elem));
@@ -116,6 +126,7 @@ TEST_F(SandeshCTest, EncodeDecode) {
     wabc_sandesh.elem->nested->inner_g = 18446744073709551615ull;
     wabc_sandesh.elem->nested->inner_h = const_cast<char *>(inner_h.c_str());
     wabc_sandesh.elem->nested->inner_i = 4294967295u;
+    uuid_copy(wabc_sandesh.elem->nested->inner_j, uuid_test);
     wabc_sandesh.rwinfo_size = 5;
     wabc_sandesh.rwinfo = (int8_t *)calloc(1, sizeof(*wabc_sandesh.rwinfo) *
             wabc_sandesh.rwinfo_size);
@@ -186,6 +197,9 @@ TEST_F(SandeshCTest, GetEncodeLength) {
     u_int32_t i;
     u_int8_t buf[256];
     std::string inner_h("abc");
+    uuid_t uuid_test = 
+           {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+            0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
 
     memset(buf, 0, sizeof(buf));
 
@@ -200,6 +214,7 @@ TEST_F(SandeshCTest, GetEncodeLength) {
     wabc_sandesh.elem->nested->inner_g = 18446744073709551615ull;
     wabc_sandesh.elem->nested->inner_h = const_cast<char *>(inner_h.c_str());
     wabc_sandesh.elem->nested->inner_i = 4294967295u;
+    uuid_copy(wabc_sandesh.elem->nested->inner_j, uuid_test);
     wabc_sandesh.rwinfo_size = 5;
     wabc_sandesh.rwinfo = (int8_t *)calloc(1, sizeof(*wabc_sandesh.rwinfo) *
             wabc_sandesh.rwinfo_size);
@@ -233,6 +248,9 @@ TEST_F(SandeshCTest, GetEncodeLength) {
 void
 abc_sandesh_process (void *pabc) {
     u_int32_t i;
+    uuid_t uuid_value = 
+           {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+            0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
     abc_sandesh *psandesh = (abc_sandesh *)pabc;
     assert(psandesh);
     EXPECT_EQ(psandesh->elem->nested->inner_a, 3);
@@ -244,6 +262,7 @@ abc_sandesh_process (void *pabc) {
     EXPECT_EQ(psandesh->elem->nested->inner_g, 18446744073709551615ull);
     EXPECT_STREQ(psandesh->elem->nested->inner_h, "abc");
     EXPECT_EQ(psandesh->elem->nested->inner_i, 4294967295u);
+    EXPECT_EQ(0, uuid_compare(psandesh->elem->nested->inner_j, uuid_value));
 
     for (i = 0; i < psandesh->rwinfo_size; i++) {
         EXPECT_EQ(psandesh->rwinfo[i], i);
@@ -254,6 +273,9 @@ abc_sandesh_process (void *pabc) {
 void
 buffer_test_process (void *ptr) {
     int i;
+    uuid_t uuid_value = 
+           {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+            0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
     BufferTest *psandesh = (BufferTest *)ptr;
     assert(psandesh);
     EXPECT_EQ(psandesh->i32Elem1, 1);
@@ -262,12 +284,17 @@ buffer_test_process (void *ptr) {
     for (i = 0; i < 5; i++) {
         EXPECT_EQ(psandesh->listElem1[i], i);
         EXPECT_EQ(psandesh->listElem2[i], i);
+        uuid_t uuid_temp = 
+               {0x00+i,0x00+i,0x01+i,0x01+i,0x02+i,0x02+i,0x03+i,0x03+i,
+                0x04+i,0x04+i,0x05+i,0x05+i,0x06+i,0x06+i,0x07+i,0x07+i};
+        EXPECT_EQ(0, uuid_compare(psandesh->listElem3[i], uuid_temp));
     }
     EXPECT_EQ(psandesh->u16Elem1, 65535);
     EXPECT_EQ(psandesh->u32Elem1, 4294967295u);
     EXPECT_EQ(psandesh->u64Elem1, 18446744073709551615ull);
     EXPECT_STREQ(psandesh->xmlElem1, "xmlElem1");
     EXPECT_EQ(psandesh->ipv4Elem1, 4294967295u);
+    EXPECT_EQ(0, uuid_compare(psandesh->uuidElem1, uuid_value));
 }
 
 void buffer_update_test_process (void *ptr) {
