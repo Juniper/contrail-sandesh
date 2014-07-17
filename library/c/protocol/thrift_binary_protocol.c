@@ -370,6 +370,19 @@ thrift_binary_protocol_write_ipv4 (ThriftProtocol *protocol, const u_int32_t val
 }
 
 int32_t
+thrift_binary_protocol_write_uuid_t (ThriftProtocol *protocol, const uuid_t value,
+                                  int *error)
+{
+  if (thrift_transport_write (protocol->transport,
+                              (const void *) value, 16, error))
+  {
+    return 16;
+  } else {
+    return -1;
+  }
+}
+
+int32_t
 thrift_binary_protocol_write_double (ThriftProtocol *protocol,
                                      const double value, int *error)
 {
@@ -833,6 +846,21 @@ thrift_binary_protocol_read_ipv4 (ThriftProtocol *protocol, u_int32_t *value,
 }
 
 int32_t
+thrift_binary_protocol_read_uuid_t (ThriftProtocol *protocol, uuid_t *value,
+                                 int *error)
+{
+  int32_t ret;
+
+  if ((ret =
+       thrift_transport_read (protocol->transport,
+                              value, 16, error)) < 0)
+  {
+    return -1;
+  }
+  return ret;
+}
+
+int32_t
 thrift_binary_protocol_read_double (ThriftProtocol *protocol,
                                     double *value, int *error)
 {
@@ -967,6 +995,7 @@ thrift_binary_protocol_init (ThriftBinaryProtocol *protocol)
   protocol->write_string = thrift_binary_protocol_write_string;
   protocol->write_binary = thrift_binary_protocol_write_binary;
   protocol->write_xml = thrift_binary_protocol_write_string;
+  protocol->write_uuid_t = thrift_binary_protocol_write_uuid_t;
   protocol->read_message_begin = thrift_binary_protocol_read_message_begin;
   protocol->read_message_end = thrift_binary_protocol_read_message_end;
   protocol->read_sandesh_begin = thrift_binary_protocol_read_sandesh_begin;
@@ -994,4 +1023,5 @@ thrift_binary_protocol_init (ThriftBinaryProtocol *protocol)
   protocol->read_string = thrift_binary_protocol_read_string;
   protocol->read_binary = thrift_binary_protocol_read_binary;
   protocol->read_xml = thrift_binary_protocol_read_string;
+  protocol->read_uuid_t = thrift_binary_protocol_read_uuid_t;
 }

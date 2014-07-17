@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#include <boost/uuid/uuid.hpp>
 
 #ifndef _SANDESH_PROTOCOL_TVIRTUALPROTOCOL_H_
 #define _SANDESH_PROTOCOL_TVIRTUALPROTOCOL_H_ 1
@@ -250,6 +251,13 @@ class TProtocolDefaults : public TProtocol {
     return -1;
   }
 
+  int32_t readUUID(boost::uuids::uuid& uuid) {
+    (void) uuid;
+    LOG(ERROR, __func__ << ": This protocol does not support reading (yet).");
+    assert(false);
+    return -1;
+  }
+
   int32_t writeMessageBegin(const std::string& name,
                              const TMessageType messageType,
                              const int32_t seqid) {
@@ -465,6 +473,13 @@ class TProtocolDefaults : public TProtocol {
     return -1;
   }
 
+  int32_t writeUUID(const boost::uuids::uuid& uuid) {
+    (void) uuid;
+    LOG(ERROR, __func__ << ": This protocol does not support writing (yet).");
+    assert(false);
+    return -1;
+  }
+
   int32_t skip(TType type) {
     return ::contrail::sandesh::protocol::skip(*this, type);
   }
@@ -618,6 +633,10 @@ class TVirtualProtocol : public Super_ {
     return static_cast<Protocol_*>(this)->writeXML(str);
   }
 
+  virtual int32_t writeUUID_virt(const boost::uuids::uuid& uuid) {
+    return static_cast<Protocol_*>(this)->writeUUID(uuid);
+  }
+
   /**
    * Reading functions
    */
@@ -750,6 +769,10 @@ class TVirtualProtocol : public Super_ {
 
   virtual int32_t readXML_virt(std::string& str) {
     return static_cast<Protocol_*>(this)->readXML(str);
+  }
+
+  virtual int32_t readUUID_virt(boost::uuids::uuid& uuid) {
+    return static_cast<Protocol_*>(this)->readUUID(uuid);
   }
 
   virtual int32_t skip_virt(TType type) {

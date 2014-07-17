@@ -154,7 +154,8 @@ enum TType {
   T_U16        = 19,
   T_U32        = 20,
   T_XML        = 21,
-  T_IPV4        = 22,
+  T_IPV4       = 22,
+  T_UUID       = 23,
 };
 
 /**
@@ -236,6 +237,11 @@ int32_t skip(Protocol_& prot, TType type) {
     {
       std::string str;
       return prot.readXML(str);
+    }
+  case T_UUID:
+    {
+      boost::uuids::uuid uuid;
+      return prot.readUUID(uuid);
     }
   case T_STRUCT:
     {
@@ -474,6 +480,8 @@ class TProtocol {
 
   virtual int32_t writeXML_virt(const std::string& str) = 0;
 
+  virtual int32_t writeUUID_virt(const boost::uuids::uuid& uuid) = 0;
+
   int32_t writeMessageBegin(const std::string& name,
                             const TMessageType messageType,
                             const int32_t seqid) {
@@ -601,6 +609,10 @@ class TProtocol {
     return writeXML_virt(str);
   }
 
+  int32_t writeUUID(const boost::uuids::uuid& uuid) {
+    return writeUUID_virt(uuid);
+  }
+
   /**
    * Reading functions
    */
@@ -672,6 +684,8 @@ class TProtocol {
   virtual int32_t readBinary_virt(std::string& str) = 0;
 
   virtual int32_t readXML_virt(std::string& str) = 0;
+
+  virtual int32_t readUUID_virt(boost::uuids::uuid& uuid) = 0;
 
   int32_t readMessageBegin(std::string& name,
                            TMessageType& messageType,
@@ -791,6 +805,10 @@ class TProtocol {
 
   int32_t readXML(std::string& str) {
     return readXML_virt(str);
+  }
+
+  int32_t readUUID(boost::uuids::uuid& uuid) {
+    return readUUID_virt(uuid);
   }
 
   /*

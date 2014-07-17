@@ -58,6 +58,7 @@ class t_type : public t_doc {
   virtual bool is_base_type() const { return false; }
   virtual bool is_string()    const { return false; }
 #ifdef SANDESH
+  virtual bool is_uuid()      const { return false; }
   virtual bool is_xml()       const { return false; }
   virtual bool is_static_const_string() const { return false; }
   virtual bool is_sandesh()   const { return false; }

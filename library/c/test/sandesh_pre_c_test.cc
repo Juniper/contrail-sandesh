@@ -32,7 +32,7 @@ protected:
     virtual void TearDown() {
     }
 
-    u_int8_t buf_[256];
+    u_int8_t buf_[512];
 };
 
 TEST_F(SandeshPreCTest, EncodeDecodeC2CPlus) {
@@ -40,6 +40,7 @@ TEST_F(SandeshPreCTest, EncodeDecodeC2CPlus) {
     BufferTest test;
     std::vector<int8_t> rwinfo;
     std::vector<uint32_t> u32_list;
+    std::vector<boost::uuids::uuid> uuid_list;
     int32_t wxfer, wxfer1, error = 0;
     // Populate test
     test.set_i32Elem1(1);
@@ -47,6 +48,12 @@ TEST_F(SandeshPreCTest, EncodeDecodeC2CPlus) {
     for (int i = 0; i < 5; i++) {
         rwinfo.push_back(i);
         u32_list.push_back(i);
+        boost::uuids::uuid temp;
+        for (int j = 0; j < 8; j++) {
+            temp.data[2*j] = i + j;
+            temp.data[2*j + 1] = i + j;
+        }
+        uuid_list.push_back(temp);
     }
     test.set_listElem1(rwinfo);
     test.set_i64Elem1(1);
@@ -56,6 +63,11 @@ TEST_F(SandeshPreCTest, EncodeDecodeC2CPlus) {
     test.set_u64Elem1(18446744073709551615ull);
     test.set_xmlElem1("xmlElem1");
     test.set_ipv4Elem1(4294967295u);
+    boost::uuids::uuid uuid_test = 
+          {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+           0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
+    test.set_uuidElem1(uuid_test);
+    test.set_listElem3(uuid_list);
     // Write test to buf
     wxfer = test.WriteBinary(buf_, sizeof(buf_), &error);
     EXPECT_GT(wxfer, 0);
