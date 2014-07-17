@@ -116,6 +116,9 @@ class TProtocolBase:
   def writeXML(self, str):
     pass
 
+  def writeUUID(self, str):
+    pass
+
   def readMessageBegin(self):
     pass
 
@@ -186,6 +189,9 @@ class TProtocolBase:
     pass
 
   def readXML(self):
+    pass
+
+  def readUUID(self):
     pass
   
   def skip(self, type):

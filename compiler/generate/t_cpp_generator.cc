@@ -875,6 +875,9 @@ string t_cpp_generator::render_const_value(ofstream& out, string name, t_type* t
     case t_base_type::TYPE_U64:
       render << value->get_integer() << "ULL";
       break;
+    case t_base_type::TYPE_UUID:
+      render << "boost::uuids::string_generator()(\"" << value->get_uuid_t() << "\")";
+      break;
 #endif
     case t_base_type::TYPE_DOUBLE:
       if (value->get_type() == t_const_value::CV_INTEGER) {
@@ -1320,7 +1323,16 @@ void t_cpp_generator::generate_sandesh_member_init_list(ofstream& out,
         if (t->is_enum()) {
             dval += "(" + type_name(t) + ")";
         }
-        dval += t->is_string() || t->is_xml() ? "\"\"" : "0";
+        if (t->is_uuid_t()) {
+            dval += "boost::uuids::nil_uuid()";
+        }
+        else {
+          if (t->is_string() || t->is_xml()) {
+              dval += "\"\"";
+          } else {
+              dval += "0";
+            }
+        }
         t_const_value* cv = (*m_iter)->get_value();
         if (cv != NULL) {
             dval = render_const_value(out, (*m_iter)->get_name(), t, cv);
@@ -1939,7 +1951,16 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
         if (t->is_enum()) {
           dval += "(" + type_name(t) + ")";
         }
-        dval += t->is_string() || t->is_xml() ? "\"\"" : "0";
+        if (t->is_uuid_t()) {
+          dval += "boost::uuids::nil_uuid()";
+        }
+        else {
+          if (t->is_string() || t->is_xml()) {
+              dval += "\"\"";
+          } else {
+              dval += "0";
+            }
+        }
         t_const_value* cv = (*m_iter)->get_value();
         if (cv != NULL) {
           dval = render_const_value(out, (*m_iter)->get_name(), t, cv);
@@ -5700,6 +5721,9 @@ void t_cpp_generator::generate_deserialize_field(ofstream& out,
     case t_base_type::TYPE_XML:
       out << "readXML(" << name << ")) < 0) {" << endl;
       break;
+    case t_base_type::TYPE_UUID:
+      out << "readUUID(" << name << ")) < 0) {" << endl;
+      break;
 #endif
     case t_base_type::TYPE_BOOL:
       out << "readBool(" << name << ")) < 0) {" << endl;
@@ -6063,6 +6087,9 @@ void t_cpp_generator::generate_serialize_field(ofstream& out,
 #ifdef SANDESH
       case t_base_type::TYPE_XML:
         out << "writeXML(" << name << ")) < 0) {" << endl;
+        break;
+      case t_base_type::TYPE_UUID:
+        out << "writeUUID(" << name << ")) < 0) {" << endl;
         break;
 #endif
       case t_base_type::TYPE_BOOL:
@@ -6539,6 +6566,8 @@ string t_cpp_generator::base_type_name(t_base_type::t_base tbase) {
     return "uint64_t";
   case t_base_type::TYPE_IPV4:
     return "uint32_t";
+  case t_base_type::TYPE_UUID:
+    return "boost::uuids::uuid";
 #endif
   case t_base_type::TYPE_DOUBLE:
     return "double";
@@ -6580,6 +6609,9 @@ string t_cpp_generator::declare_field(t_field* tfield, bool init, bool pointer, 
       case t_base_type::TYPE_VOID:
         break;
 #ifdef SANDESH
+      case t_base_type::TYPE_UUID:
+        result += " = boost::uuids::nil_uuid()";
+        break;
       case t_base_type::TYPE_STATIC_CONST_STRING:
       case t_base_type::TYPE_XML:
 #endif
@@ -6758,6 +6790,8 @@ string t_cpp_generator::type_to_enum(t_type* type) {
 #ifdef SANDESH
     case t_base_type::TYPE_XML:
       return "::contrail::sandesh::protocol::T_XML";
+    case t_base_type::TYPE_UUID:
+      return "::contrail::sandesh::protocol::T_UUID";
     case t_base_type::TYPE_U16:
       return "::contrail::sandesh::protocol::T_U16";
     case t_base_type::TYPE_U32:

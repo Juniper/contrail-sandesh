@@ -159,6 +159,8 @@ class TBinaryProtocolT
 
   inline int32_t writeXML(const std::string& str);
 
+  inline int32_t writeUUID(const boost::uuids::uuid& uuid);
+
   /**
    * Reading functions
    */
@@ -229,6 +231,8 @@ class TBinaryProtocolT
   inline int32_t readBinary(std::string& str);
 
   inline int32_t readXML(std::string& str);
+
+  inline int32_t readUUID(boost::uuids::uuid& uuid);
 
  protected:
   int32_t readStringBody(std::string& str, int32_t sz);

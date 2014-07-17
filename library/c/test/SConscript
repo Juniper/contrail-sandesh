@@ -48,6 +48,7 @@ SandeshLibs = ['gunit',
                'xslt',
                'task_test',
                'pugixml',
+               'uuid',
                ]
 
 env.Append(LIBPATH = SandeshLibPath)
