@@ -59,6 +59,15 @@ protected:
             test_basic_type_list.push_back(i); // 0, 1, 2, 3, 4
         }
         wstruct_test_.set_basicTypeListTest(test_basic_type_list);
+        // Create a vector of uuid
+        std::vector<boost::uuids::uuid> test_uuid_list;
+        for (uint32_t i = 0; i < test_list_size; i++) {
+            boost::uuids::uuid uuid_temp = 
+                {0x00+i,0x00+i,0x01+i,0x01+i,0x02+i,0x02+i,0x03+i,0x03+i,
+                 0x04+i,0x04+i,0x05+i,0x05+i,0x06+i,0x06+i,0x07+i,0x07+i};
+            test_uuid_list.push_back(uuid_temp);
+        }
+        wstruct_test_.set_uuidListTest(test_uuid_list);
         // Create a map of <int32_t, string>
         std::map<int32_t, std::string> test_basic_type_map;
         for (uint32_t i = 0; i < test_list_size; i++) {
@@ -80,12 +89,20 @@ protected:
         wstruct_test_.set_u32Test(4294967295u);
         wstruct_test_.set_u64Test(18446744073709551615ull);
         wstruct_test_.set_ipv4Test(4294967295u);
+        boost::uuids::uuid uuid_test = 
+             {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+              0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
+        wstruct_test_.set_uuidTest(uuid_test);
         wstruct_test_.set_xmlTest("<abc>");
         wstruct_test_.set_xmlTest1("abc");
         wstruct_test_.set_xmlTest2("ab]");
         wstruct_test_.set_xmlTest3("abc]]");
         // Write the struct
         wxfer = wstruct_test_.write(prot);
+        // Verify Default values
+        EXPECT_EQ(true, wstruct_test_.get_uuidDefaultTest() == 
+             boost::uuids::string_generator()
+             ("00010203-0405-0607-0423-023434265323"));
         // Get the buffer
         btrans->getBuffer(&buffer, &offset);
         EXPECT_EQ(wxfer, offset);

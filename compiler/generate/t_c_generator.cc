@@ -568,6 +568,8 @@ string t_c_generator::base_type_name(t_base_type *type) {
       return "double";
     case t_base_type::TYPE_IPV4:
       return "uint32_t";
+    case t_base_type::TYPE_UUID:
+      return "uuid_t";
     default:
       throw "compiler error: no C base type name for base type "
             + t_base_type::t_base_name (tbase);
@@ -621,6 +623,8 @@ string t_c_generator::type_to_enum (t_type *type) {
         return "T_DOUBLE";
       case t_base_type::TYPE_IPV4:
         return "T_IPV4";
+      case t_base_type::TYPE_UUID:
+        return "T_UUID";
     }
   } else if (type->is_enum()) {
     return "T_I32";
@@ -666,6 +670,9 @@ string t_c_generator::constant_value(string name, t_type *type, t_const_value *v
       case t_base_type::TYPE_U64:
       case t_base_type::TYPE_IPV4:
         render << value->get_integer();
+        break;
+      case t_base_type::TYPE_UUID:
+        render << value->get_uuid(); // Need to fix later, c structure is not getting initialize.
         break;
       case t_base_type::TYPE_DOUBLE:
         if (value->get_type() == t_const_value::CV_INTEGER) {
@@ -809,6 +816,9 @@ string t_c_generator::declare_field(t_field *tfield,
         case t_base_type::TYPE_STRING:
         case t_base_type::TYPE_XML:
           result += " = NULL";
+          break;
+        case t_base_type::TYPE_UUID:
+          result += "{0}";
           break;
         default:
           throw "compiler error: no C intializer for base type "
@@ -1404,6 +1414,9 @@ void t_c_generator::generate_serialize_field(ofstream &out,
         case t_base_type::TYPE_XML:
           out << "xml (protocol, " << name;
           break;
+        case t_base_type::TYPE_UUID:
+          out << "uuid_t (protocol, " << name;
+          break;
         default:
           throw "compiler error: no C writer for base type "
                 + t_base_type::t_base_name (tbase) + name;
@@ -1560,6 +1573,9 @@ void t_c_generator::generate_deserialize_field(ofstream &out,
         break;
       case t_base_type::TYPE_IPV4:
         out << "ipv4 (protocol, &" << name;
+        break;
+      case t_base_type::TYPE_UUID:
+        out << "uuid_t (protocol, &" << name;
         break;
       default:
         throw "compiler error: no C reader for base type "

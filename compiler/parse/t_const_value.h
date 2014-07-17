@@ -25,6 +25,8 @@
 #include <map>
 #include <vector>
 #include <string>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/string_generator.hpp>
 
 /**
  * A const value is something parsed that could be a map, set, list, struct
@@ -96,6 +98,16 @@ class t_const_value {
 
   double get_double() const {
     return doubleVal_;
+  }
+
+  std::string get_uuid() {
+    try {
+       boost::uuids::string_generator()(stringVal_);
+    }
+    catch (...) {
+       throw "Invalid UUID value \"" + stringVal_ + "\"" ;
+    }
+    return stringVal_;
   }
 
   void set_map() {
