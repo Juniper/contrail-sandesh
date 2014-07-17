@@ -486,7 +486,8 @@ string t_py_generator::render_sandesh_includes() {
   std::string module = get_real_py_module(program_, gen_twisted_);
   std::string sandesh_includes("\n");
   sandesh_includes += 
-    "import cStringIO\n";
+    "import cStringIO\n"
+    "import uuid\n";
   if (module != "sandesh") {
     sandesh_includes +=
       "import bottle\n"
@@ -661,6 +662,11 @@ string t_py_generator::render_const_value(t_type* type, t_const_value* value) {
         out << value->get_double();
       }
       break;
+#ifdef SANDESH
+    case t_base_type::TYPE_UUID:
+      out << "uuid.UUID('{" << get_escaped_string(value) <<"}')";
+      break;
+#endif
     default:
       throw "compiler error: no const of base type " + t_base_type::t_base_name(tbase);
     }
@@ -1767,7 +1773,8 @@ void t_py_generator::generate_py_sandesh_http_attr(ofstream& out,
              bftype == t_base_type::TYPE_U16 ||
              bftype == t_base_type::TYPE_U32 ||
              bftype == t_base_type::TYPE_U64 ||
-             bftype == t_base_type::TYPE_IPV4);
+             bftype == t_base_type::TYPE_IPV4 ||
+             bftype == t_base_type::TYPE_UUID);
       indent(out) <<
         "try:" << endl;
       indent_up();
@@ -2064,6 +2071,10 @@ void t_py_generator::generate_field_log(ofstream& out,
         indent(out) << "import socket, struct" << endl;
         indent(out) <<
           log_str << ".write(socket.inet_ntoa(struct.pack('!L'," << name << ")))" << endl;
+        break;
+      case t_base_type::TYPE_UUID:
+        indent(out) <<
+          log_str << ".write(str(" << name << "))" << endl;
         break;
       default:
         throw "compiler error: unrecognized base type " + t_base_type::t_base_name(tbase);
@@ -3194,6 +3205,9 @@ void t_py_generator::generate_deserialize_field(ofstream &out,
       case t_base_type::TYPE_XML:
         out << "readXML();";
         break;
+      case t_base_type::TYPE_UUID:
+        out << "readUUID();";
+        break;
 #endif
       case t_base_type::TYPE_BOOL:
         out << "readBool();";
@@ -3492,6 +3506,9 @@ void t_py_generator::generate_serialize_field(ofstream &out,
 #ifdef SANDESH
       case t_base_type::TYPE_XML:
         out << "writeXML(" << name << ")";
+        break;
+      case t_base_type::TYPE_UUID:
+        out << "writeUUID(" << name << ")";
         break;
 #endif
       case t_base_type::TYPE_BOOL:
@@ -3904,6 +3921,8 @@ string t_py_generator::type_to_enum(t_type* type) {
 #ifdef SANDESH
     case t_base_type::TYPE_XML:
       return "TType.XML";
+    case t_base_type::TYPE_UUID:
+      return "TType.UUID";
     case t_base_type::TYPE_U16:
       return "TType.U16";
     case t_base_type::TYPE_U32:

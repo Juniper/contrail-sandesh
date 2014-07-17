@@ -19,7 +19,7 @@ for flag in rmflags:
 
 env['CCFLAGS'] = cflags
 
-env.Append(CPPPATH = ['#tools/sandesh/compiler'])
+env.Append(CPPPATH = ['#tools/sandesh/compiler','#build/include'])
 
 # Lex and Yacc
 env.Append(YACCFLAGS = '-d')

@@ -19,6 +19,8 @@ buffer sandesh BufferTest {
     8: u64                         u64Elem1;
     9: xml                         xmlElem1;
     10: ipv4                       ipv4Elem1;
+    11: uuid_t                     uuidElem1;
+    12: list<uuid_t>               listElem3;
 }
 
 buffer sandesh BufferUpdateTest {
