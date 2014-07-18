@@ -71,6 +71,9 @@ env.Prepend(LIBS = SandeshLibs)
 if sys.platform != 'darwin':
     env.Append(LIBS = ['rt'])
 
+if sys.platform.startswith('freebsd'):
+    env.Append(LIBS = ['z', 'lzma', 'iconv'])
+
 sandesh_perf_test = env.UnitTest('sandesh_perf_test',
                                  SandeshPerfTestGenSrcs + 
                                  ['sandesh_perf_test.cc'],
