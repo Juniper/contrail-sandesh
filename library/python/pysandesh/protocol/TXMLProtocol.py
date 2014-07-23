@@ -206,7 +206,7 @@ class TXMLProtocol(TProtocolBase):
     try:
       self.writeBuffer(str(ctypes.c_byte(byte).value))
     except TypeError:
-      self._logger.error('TXML Protocol: Invalid byte value %s') % (byte)
+      self._logger.error('TXML Protocol: Invalid byte value %s' % str(byte))
       return -1
     return 0
 
@@ -214,7 +214,7 @@ class TXMLProtocol(TProtocolBase):
     try:
       self.writeBuffer(str(ctypes.c_short(i16).value))
     except TypeError:
-      self._logger.error('TXML Protocol: Invalid i16 value %s') % (i16)
+      self._logger.error('TXML Protocol: Invalid i16 value %s' % str(i16))
       return -1
     return 0
 
@@ -222,7 +222,7 @@ class TXMLProtocol(TProtocolBase):
     try:
       self.writeBuffer(str(ctypes.c_int(i32).value))
     except TypeError:
-      self._logger.error('TXML Protocol: Invalid i32 value %s') % (i32)
+      self._logger.error('TXML Protocol: Invalid i32 value %s' % str(i32))
       return -1
     return 0
 
@@ -230,7 +230,7 @@ class TXMLProtocol(TProtocolBase):
     try:
       self.writeBuffer(str(ctypes.c_long(i64).value))
     except TypeError:
-      self._logger.error('TXML Protocol: Invalid i64 value %s') % (i64)
+      self._logger.error('TXML Protocol: Invalid i64 value %s' % str(i64))
       return -1
     return 0
 
@@ -238,7 +238,7 @@ class TXMLProtocol(TProtocolBase):
     try:
       self.writeBuffer(str(ctypes.c_ushort(u16).value))
     except TypeError:
-      self._logger.error('TXML Protocol: Invalid u16 value %s') % (u16)
+      self._logger.error('TXML Protocol: Invalid u16 value %s' % str(u16))
       return -1
     return 0
 
@@ -246,7 +246,7 @@ class TXMLProtocol(TProtocolBase):
     try:
       self.writeBuffer(str(ctypes.c_uint(u32).value))
     except TypeError:
-      self._logger.error('TXML Protocol: Invalid u32 value %s') % (u32)
+      self._logger.error('TXML Protocol: Invalid u32 value %s' % str(u32))
       return -1
     return 0
 
@@ -254,7 +254,7 @@ class TXMLProtocol(TProtocolBase):
     try:
       self.writeBuffer(str(ctypes.c_ulonglong(u64).value))
     except TypeError:
-      self._logger.error('TXML Protocol: Invalid u64 value %s') %(u64)
+      self._logger.error('TXML Protocol: Invalid u64 value %s' % str(u64))
       return -1
     return 0
 
@@ -262,7 +262,7 @@ class TXMLProtocol(TProtocolBase):
     try:
       self.writeBuffer(str(ctypes.c_uint(ipv4).value))
     except TypeError:
-      self._logger.error('TXML Protocol: Invalid ipv4 value %s') %(ipv4)
+      self._logger.error('TXML Protocol: Invalid ipv4 value %s' % str(ipv4))
       return -1
     return 0
 
@@ -271,7 +271,11 @@ class TXMLProtocol(TProtocolBase):
     return 0
 
   def writeString(self, string):
-    match = re.search('<|>|&|\'|\"', string)
+    try:
+        match = re.search('<|>|&|\'|\"', string)
+    except TypeError:
+        self._logger.error('TXML Protocol: Invalid string value %s' % str(string))
+        return -1
     if match is not None:
       string = string.replace('&', '&amp;')
       string = string.replace("'", '&apos;')

@@ -61,10 +61,13 @@ class SandeshStateMachine(object):
         def _update_connection_state(e, status):
             from connection_info import ConnectionState
             from gen_py.connection_info.ttypes import ConnectionType
+            collector_addr = e.sm._active_collector
+            if collector_addr is None:
+                collector_addr = ''
             ConnectionState.update(conn_type = ConnectionType.COLLECTOR,
                 name = '',
                 status = status,
-                server_addrs = [e.sm._active_collector],
+                server_addrs = [collector_addr],
                 message = '%s to %s on %s' % (e.src, e.dst, e.event))
         #end _update_connection_state
 
