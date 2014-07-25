@@ -30,6 +30,8 @@ extern "C" {
 #define os_realloc(ptr, size)            krealloc(ptr, size, GFP_KERNEL)
 #define os_free(ptr)                     kfree(ptr)
 #define os_log(level, format, arg...)    printk(level format, ##arg)
+
+extern int vrouter_dbg;
 #else
 
 #include <stdlib.h>
