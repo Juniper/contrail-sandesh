@@ -19,6 +19,10 @@
 
 #include "sandesh.h"
 
+#ifdef __KERNEL__
+extern int vrouter_dbg;
+#endif
+
 static u_int32_t
 available_read (ThriftMemoryBuffer *t)
 {
@@ -48,8 +52,11 @@ ensure_can_write (ThriftMemoryBuffer *t, u_int32_t len)
   if (!t->owner)
   {
 #ifdef __KERNEL__
-    os_log(OS_LOG_DEBUG, "Insufficient space in external memory buffer of size %d "
-           "bytes for writing %d bytes", t->buf_size, len);
+    if (vrouter_dbg)
+    {
+      os_log(OS_LOG_DEBUG, "Insufficient space in external memory buffer of size %d "
+             "bytes for writing %d bytes", t->buf_size, len);
+    }
 #else
     os_log(OS_LOG_ERR, "Insufficient space in external memory buffer of size %d "
            "bytes for writing %d bytes", t->buf_size, len);
@@ -172,8 +179,11 @@ thrift_memory_buffer_write (ThriftTransport *transport,
   {
     *error = THRIFT_TRANSPORT_ERROR_SEND;
 #ifdef __KERNEL__
-    os_log(OS_LOG_DEBUG, "Unable to write %d bytes to buffer of length %d"
-           " at write offset %d", len, t->buf_size, t->buf_woffset);
+    if (vrouter_dbg)
+    {
+      os_log(OS_LOG_DEBUG, "Unable to write %d bytes to buffer of length %d"
+             " at write offset %d", len, t->buf_size, t->buf_woffset);
+    }
 #else
     os_log(OS_LOG_ERR, "Unable to write %d bytes to buffer of length %d"
            " at write offset %d", len, t->buf_size, t->buf_woffset);

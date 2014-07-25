@@ -10,6 +10,10 @@
 
 #include "sandesh.h"
 
+#ifdef __KERNEL__
+extern int vrouter_dbg;
+#endif
+
 /**
  * Extract sandesh information corresponding to sandesh name
  *
@@ -166,7 +170,10 @@ sandesh_encode (void *sandesh, const char *sname,
     wxfer = sinfo->write(sandesh, &protocol, error);
     if (wxfer < 0) {
 #ifdef __KERNEL__
-        os_log(OS_LOG_DEBUG, "Write: Encode sandesh %s FAILED(%d)", sname, *error);
+        if (vrouter_dbg) {
+            os_log(OS_LOG_DEBUG, "Write: Encode sandesh %s FAILED(%d)",
+                   sname, *error);
+        }
 #else
         os_log(OS_LOG_ERR, "Write: Encode sandesh %s FAILED(%d)", sname, *error);
 #endif
