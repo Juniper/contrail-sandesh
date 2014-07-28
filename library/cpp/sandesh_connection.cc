@@ -153,12 +153,7 @@ SandeshServerConnection::~SandeshServerConnection() {
 }
 
 void SandeshServerConnection::ManagedDelete() {
-    SandeshServer *sserver = dynamic_cast<SandeshServer *>(server());
-    if (!sserver) {
-        CONNECTION_LOG(ERROR, __func__ << " No Server");
-        return;
-    }
-    sserver->lifetime_manager()->Enqueue(deleter_.get());
+    deleter_->Delete();
 }
 
 bool SandeshServerConnection::ProcessSandeshCtrlMessage(const std::string &msg,
