@@ -9,50 +9,56 @@ Import('SandeshEnv')
 
 env = SandeshEnv.Clone();
 
-test_depend_modules = [ 
-                        '__init__.py',
-                        'test_utils.py' 
+test_depend_modules = [
+                       '__init__.py',
+                       'test_utils.py'
                       ]
+
 test_depend_modules_rules = []
 for module in test_depend_modules:
     test_depend_modules_rules.append(
         env.Install('', File(module).srcnode()))
-env.Depends(test_depend_modules_rules, env['pysandesh_target'])
 
 test_modules = [
-                 'sandesh_encode_decode_test.py',
-                 'sandesh_msg_test.py',
-                 'sandesh_session_test.py',
-                 'sandesh_trace_test.py',
-                ]
+                'sandesh_encode_decode_test.py',
+                'sandesh_msg_test.py',
+                'sandesh_session_test.py',
+                'sandesh_trace_test.py'
+               ]
 
 test_modules_rules = []
 for module in test_modules:
-    test_modules_rules.append(env.Install('', File(module).srcnode()))
+    test_modules_rules.append(
+        env.Install('', File(module).srcnode()))
 env.Depends(test_modules_rules, test_depend_modules_rules)
 
 gen_test_pkg = env.SandeshGenPy('encode_decode_test.sandesh')
 gen_test_pkg += env.SandeshGenPy('msg_test.sandesh')
+env.Depends(test_modules_rules, gen_test_pkg)
 
-venv = env.setup_venv('sandesh_test', 'sandesh_test')
+venv = env.setup_venv('pysandesh_test', 'pysandesh_test')
 env['env_venv'] = venv
 pip_pkgs = ['greenlet==0.4.1', 'gevent==0.13.8', 'eventlet==0.9.17',
-        'testtools==0.9.21', 'fixtures==0.3.12', 'requests==1.1.0',
-        'lxml==2.3.3', 'geventhttpclient==1.0a', 'prettytable==0.7.2',
-        'psutil==0.4.1', 'xmltodict', 'bottle==0.11.6']
+        'testtools==0.9.21', 'geventhttpclient==1.0a', 'bottle==0.11.6']
 
 sandesh_pkgs = [
                  env['TOP']+'/sandesh/common',
                  env['TOP']+'/tools/sandesh/library/python'
                ]
-env.Requires(env['sandesh_test'],
+env.Requires(env['pysandesh_test'],
              env['TOP']+'/tools/sandesh/library/python/dist/sandesh-0.1dev.tar.gz')
-env.Requires(env['sandesh_test'],
+env.Requires(env['pysandesh_test'],
              env['TOP']+'/sandesh/common/dist/')
 
 _deps = []
 _deps += env.venv_add_pip_pkg(venv, pip_pkgs)
 _deps += env.venv_add_build_pkg(venv, map(lambda x: Dir(x).abspath, sandesh_pkgs))
 
-pysandesh_ut = env.PyTestSuiteCov('pysandesh-ut', test_modules)
-env.Alias('tools/sandesh/library/python:pysandesh_ut', pysandesh_ut)
+pysandesh_ut = env.PyTestSuite('sandesh-test', test_modules, venv=env['env_venv'])
+for d in _deps:
+    env.Requires(pysandesh_ut, d.name)
+env.Depends(pysandesh_ut, test_depend_modules_rules)
+env.Depends(pysandesh_ut, test_modules_rules)
+env.Depends(pysandesh_ut, gen_test_pkg)
+env.Alias('sandesh:pysandesh_test', pysandesh_ut)
+Return('pysandesh_ut')

@@ -23,4 +23,5 @@ libsandeshc = env.Library(target = 'sandesh-c',
 tgt = env.Install(env['TOP_LIB'], libsandeshc)
 env.Default(tgt)
 
-SandeshEnv.SConscript('test/SConscript', exports='SandeshEnv', duplicate = 0)
+test_suite = SandeshEnv.SConscript('test/SConscript', exports='SandeshEnv', duplicate = 0)
+Return('test_suite')
