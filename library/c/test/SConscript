@@ -71,14 +71,24 @@ sandesh_c_test = env.UnitTest('sandesh_c_test',
                               )
 
 env.Alias('src/sandesh:sandesh_c_test', sandesh_c_test)
+env.Depends(sandesh_c_test, env.Alias('src/sandesh:sandesh_pre_c_test'))
 
-#pre_test = env.TestSuite('sandesh-prectest',
-#                         [sandesh_pre_c_test])
+test_suite = [sandesh_pre_c_test,
+              sandesh_c_test]
 
-#env.Alias('src/sandesh:prectest', pre_test) 
+test = env.TestSuite('sandesh-test', test_suite)
+env.Alias('src/sandesh:ctest', test)
+Return('test_suite')
 
-#test = env.TestSuite('sandesh-ctest',
-#                     [sandesh_c_test])
+'''
+pre_test = env.TestSuite('sandesh-test',
+                         [sandesh_pre_c_test])
 
-#env.Depends(sandesh_c_test, env.Alias('src/sandesh:prectest'))
-#env.Alias('src/sandesh:ctest', test) 
+env.Alias('src/sandesh:prectest', pre_test) 
+
+test = env.TestSuite('sandesh-test',
+                     [sandesh_c_test])
+
+env.Depends(sandesh_c_test, env.Alias('src/sandesh:prectest'))
+env.Alias('src/sandesh:ctest', test)
+'''
