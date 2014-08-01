@@ -36,8 +36,9 @@ using boost::system::error_code;
 using std::string;
 using std::map;
 using std::vector;
-
-using boost::system::error_code;
+using process::ConnectionState;
+using process::ConnectionType;
+using process::ConnectionStatus;
 
 namespace mpl = boost::mpl;
 namespace sc = boost::statechart;

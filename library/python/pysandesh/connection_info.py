@@ -8,10 +8,10 @@
 
 import gevent
 
-from gen_py.connection_info.constants import ConnectionTypeNames, \
-    ConnectionStatusNames, ConnectivityStatusNames
-from gen_py.connection_info.ttypes import ConnectionInfo, \
-    ProcessConnectivityStatus
+from gen_py.process_info.constants import ConnectionTypeNames, \
+    ConnectionStatusNames, ProcessStateNames
+from gen_py.process_info.ttypes import ConnectionInfo, \
+    ProcessStatus
 
 class ConnectionState(object):
     _CONN_INFO_INTVL = 60
@@ -29,23 +29,23 @@ class ConnectionState(object):
     def _conn_info_timer_expiry_handler():
         while True:
             conn_infos = ConnectionState._connection_map.values()
-            (connectivity_status, message) = \
+            (process_state, message) = \
                 ConnectionState._status_cb(conn_infos)
-            process_conn_status = ProcessConnectivityStatus(
+            process_status = ProcessStatus(
                 module_id = ConnectionState._module_id,
                 instance_id = ConnectionState._instance_id,
-                status = ConnectivityStatusNames[connectivity_status],
-                connection_infos = conn_infos) 
+                state = ProcessStateNames[process_state],
+                connection_infos = conn_infos,
+                description = message)
             uve_data = ConnectionState._uve_data_type_cls(
                 name = ConnectionState._hostname,
-                connection_status = [process_conn_status],
-                description = message)
+                process_status = [process_status])
             uve = ConnectionState._uve_type_cls(data = uve_data,
                     sandesh = ConnectionState._sandesh)
             uve.send(sandesh = ConnectionState._sandesh)
             gevent.sleep(ConnectionState._CONN_INFO_INTVL)
     #end _conn_info_timer_expiry_handler
-      
+
     @staticmethod
     def init(sandesh, hostname, module_id, instance_id, status_cb,
              uve_type_cls, uve_data_type_cls):
@@ -61,6 +61,15 @@ class ConnectionState(object):
                 ConnectionState._CONN_INFO_INTVL,
                 ConnectionState._conn_info_timer_expiry_handler)
     #end init
+
+    @staticmethod
+    def get_process_state_cb(conn_infos):
+        for conn_info in conn_infos:
+            if conn_info.status != ConnectionStatusNames[ConnectionStatus.UP]:
+                return (ProcessState.NON_FUNCTIONAL,
+                        conn_info.type + ':' + conn_info.name)
+        return (ProcessState.FUNCTIONAL, '')
+    #end get_process_state_cb
 
     @staticmethod     
     def update(conn_type, name, status, server_addrs, message):
