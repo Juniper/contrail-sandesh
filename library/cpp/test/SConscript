@@ -46,7 +46,7 @@ SandeshLibs = ['gunit',
                'curl',
                'io',
                'sandeshvns',
-               'connection_info',
+               'process_info',
                'base',
                'boost_regex',
                'boost_system',
@@ -136,8 +136,8 @@ test_suite = [sandesh_message_test,
 #             sandesh_client_test,
            ]
 
-#test = env.TestSuite('sandesh-test', test_suite)
+test = env.TestSuite('sandesh-test', test_suite)
 
-#env.Alias('src/sandesh:test', test)
+env.Alias('sandesh:cpp_test', test)
 
 Return('test_suite')

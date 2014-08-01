@@ -168,3 +168,5 @@ if env['OPT'] == 'coverage':
     test_coverage = env.Command(Dir('test_coverage'), '', code_coverage)
     env.AlwaysBuild(test_coverage)
     env.Alias('tools/sandesh:test_coverage', test_coverage)
+
+Return('test_suite')
