@@ -201,7 +201,7 @@ protected:
             EXPECT_EQ(g_sandesh_constants.SANDESH_KEY_HINT, header.get_Hints());
             EXPECT_EQ(SandeshLevel::SYS_INFO, header.get_Level());
             EXPECT_EQ("ObjectLogInnerAnnTest", header.get_Category());
-            const char *expect = "<ObjectLogInnerAnnTest type=\"sandesh\"><f1 type=\"struct\" identifier=\"1\"><SAT3_struct><f1 type=\"string\" identifier=\"1\" key=\"ObjectVNTable\">&quot;sat3string1&quot;</f1><f2 type=\"i32\" identifier=\"2\" format=\"%x\">1</f2></SAT3_struct></f1><file type=\"string\" identifier=\"-32768\">Test</file><line type=\"i32\" identifier=\"-32767\">0</line></ObjectLogInnerAnnTest>";
+            const char *expect = "<ObjectLogInnerAnnTest type=\"sandesh\"><f1 type=\"struct\" identifier=\"1\"><SAT3_struct><f1 type=\"string\" identifier=\"1\" key=\"ObjectVNTable\">\"sat3string1\"</f1><f2 type=\"i32\" identifier=\"2\" format=\"%x\">1</f2></SAT3_struct></f1><file type=\"string\" identifier=\"-32768\">Test</file><line type=\"i32\" identifier=\"-32767\">0</line></ObjectLogInnerAnnTest>";
             EXPECT_STREQ(expect, message.c_str());
             asyncserver_done = true;
             break;
