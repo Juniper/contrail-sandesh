@@ -11,7 +11,7 @@ import gevent
 from gen_py.process_info.constants import ConnectionTypeNames, \
     ConnectionStatusNames, ProcessStateNames
 from gen_py.process_info.ttypes import ConnectionInfo, \
-    ProcessStatus
+    ProcessStatus, ProcessState, ConnectionStatus
 
 class ConnectionState(object):
     _CONN_INFO_INTVL = 60
