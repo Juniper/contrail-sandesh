@@ -958,6 +958,8 @@ SandeshClientSMImpl::~SandeshClientSMImpl() {
     //
     TimerManager::DeleteTimer(connect_timer_);
     TimerManager::DeleteTimer(idle_hold_timer_);
+
+    statistics_timer_->Cancel();
     TimerManager::DeleteTimer(statistics_timer_);
 }
 
