@@ -47,6 +47,7 @@ request sandesh SandeshLoggingParamsSet {
     2: optional string category;
     3: optional string level;
     4: optional bool trace_print;
+    5: optional bool enable_flow_log;
 }
 
 request sandesh SandeshLoggingParamsStatus {
@@ -79,6 +80,7 @@ response sandesh SandeshLoggingParams {
     2: string category;
     3: string level;
     4: bool trace_print;
+    5: bool enable_flow_log;
 }
 
 request sandesh SandeshSendQueueSet {

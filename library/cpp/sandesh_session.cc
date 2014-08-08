@@ -360,14 +360,16 @@ void SandeshSession::OnRead(Buffer buffer) {
 bool SandeshSession::SendMsg(Sandesh *sandesh) {
     tbb::mutex::scoped_lock lock(smutex_);
     if (!IsEstablished()) {
-        LOG(ERROR, __func__ << " Not Connected : Dropping Message: " << 
+        if (sandesh->IsLoggingDroppedAllowed()) {
+            LOG(ERROR, __func__ << " Not Connected : Dropping Message: " <<
                 sandesh->ToString());
+        }
         increment_send_msg_fail();
         Sandesh::UpdateSandeshStats(sandesh->Name(), 0, true, true);
         sandesh->Release();
         return true;
     }
-    if (Sandesh::IsLocalLoggingEnabled() && sandesh->IsLoggingAllowed()) {
+    if (sandesh->IsLoggingAllowed()) {
         sandesh->Log();
     }
     bool more = !send_queue_->IsQueueEmpty();
