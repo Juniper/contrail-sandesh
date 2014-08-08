@@ -199,15 +199,19 @@ public:
 
     // Logging and category APIs
     static void SetLoggingParams(bool enable_local_log, std::string category,
-            std::string level, bool enable_trace_print = false);
+            std::string level, bool enable_trace_print = false,
+            bool enable_flow_log = false);
     static void SetLoggingParams(bool enable_local_log, std::string category,
-            SandeshLevel::type level, bool enable_trace_print = false);
+            SandeshLevel::type level, bool enable_trace_print = false,
+            bool enable_flow_log = false);
     static void SetLoggingLevel(std::string level);
     static void SetLoggingLevel(SandeshLevel::type level);
     static SandeshLevel::type LoggingLevel() { return logging_level_; }
     static SandeshLevel::type LoggingUtLevel() { return logging_ut_level_; }
     static bool IsLocalLoggingEnabled() { return enable_local_log_; }
     static void SetLocalLogging(bool enable);
+    static bool IsFlowLoggingEnabled() { return enable_flow_log_; }
+    static void SetFlowLogging(bool enable);
     static bool IsTracePrintEnabled() { return enable_trace_print_; }
     static void SetTracePrint(bool enable);
     static void SetLoggingCategory(std::string category);
@@ -254,7 +258,8 @@ public:
     virtual int32_t WriteBinary(u_int8_t *buf, u_int32_t buf_len, int *error);
     virtual int32_t ReadBinary(u_int8_t *buf, u_int32_t buf_len, int *error);
 
-    bool IsLoggingAllowed();
+    bool IsLoggingAllowed() const;
+    bool IsLoggingDroppedAllowed() const;
 
     // Accessors
     static void set_source(std::string &source) { source_ = source; }
@@ -346,6 +351,7 @@ private:
             SandeshContext *client_context = NULL);
 
     bool IsLevelUT();
+    bool IsLevelCategoryLoggingAllowed() const;
 
     static SandeshRole::type role_;
     static std::string module_;
@@ -357,6 +363,7 @@ private:
     static int recv_task_id_;
     static SandeshContext *client_context_;
     static bool enable_local_log_;  // whether to just enable local logging
+    static bool enable_flow_log_;  // whether to enable flow sandesh message logging
     static SandeshLevel::type logging_level_; // current logging level
     static SandeshLevel::type logging_ut_level_; // ut_debug logging level
     static std::string logging_category_; // current logging category

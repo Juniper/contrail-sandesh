@@ -41,6 +41,7 @@ using namespace contrail::sandesh::transport;
 // Statics
 Sandesh::SandeshRole::type Sandesh::role_ = SandeshRole::Invalid;
 bool Sandesh::enable_local_log_ = false;
+bool Sandesh::enable_flow_log_ = false;
 uint32_t Sandesh::http_port_ = 0;
 bool Sandesh::enable_trace_print_ = false;
 bool Sandesh::send_queue_enabled_ = true;
@@ -294,19 +295,22 @@ void Sandesh::Uninit() {
 }
 
 void Sandesh::SetLoggingParams(bool enable_local_log, std::string category,
-        std::string level, bool enable_trace_print) {
+        std::string level, bool enable_trace_print, bool enable_flow_log) {
     SetLocalLogging(enable_local_log);
     SetLoggingCategory(category);
     SetLoggingLevel(level);
     SetTracePrint(enable_trace_print);
+    SetFlowLogging(enable_flow_log);
 }
 
 void Sandesh::SetLoggingParams(bool enable_local_log, std::string category,
-        SandeshLevel::type level, bool enable_trace_print) {
+        SandeshLevel::type level, bool enable_trace_print,
+        bool enable_flow_log) {
     SetLocalLogging(enable_local_log);
     SetLoggingCategory(category);
     SetLoggingLevel(level);
     SetTracePrint(enable_trace_print);
+    SetFlowLogging(enable_flow_log);
 }
 
 void Sandesh::SetLoggingLevel(std::string level) {
@@ -359,10 +363,21 @@ void Sandesh::SetSendingLevel(size_t count, SandeshLevel::type level) {
     }
 }
 
+void Sandesh::SetFlowLogging(bool enable_flow_log) {
+    if (enable_flow_log_ != enable_flow_log) {
+        LOG(INFO, "SANDESH: Flow Logging: " <<
+            (enable_flow_log_ ? "ENABLED" : "DISABLED") << " -> " <<
+            (enable_flow_log ? "ENABLED" : "DISABLED"));
+        enable_flow_log_ = enable_flow_log;
+    }
+}
+
 bool Sandesh::Enqueue(SandeshQueue *queue) {
     if (!queue) {
-        LOG(ERROR, __func__ << ": SandeshQueue NULL : Dropping Message: "
+        if (IsLoggingDroppedAllowed()) {
+            LOG(ERROR, __func__ << ": SandeshQueue NULL : Dropping Message: "
                 << ToString());
+         }
         Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
         return false;
@@ -482,7 +497,7 @@ int32_t Sandesh::ReceiveBinaryMsg(u_int8_t *buf, u_int32_t buf_len,
 bool Sandesh::HandleTest() {
     // Handle unit test scenario
     if (IsUnitTest() || IsLevelUT()) {
-        if (IsLoggingAllowed()) {
+        if (IsLevelCategoryLoggingAllowed()) {
             Log();
         }
         Release();
@@ -493,13 +508,17 @@ bool Sandesh::HandleTest() {
 
 bool Sandesh::SendEnqueue() {
     if (!client_) {
-        LOG(ERROR, "Sandesh: Send: No client: " << ToString());
+        if (IsLoggingDroppedAllowed()) {
+            LOG(ERROR, "Sandesh: Send: No client: " << ToString());
+        }
         Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
         return false;        
     } 
     if (!client_->SendSandesh(this)) {
-        LOG(ERROR, "Sandesh: Send: FAILED: " << ToString());
+        if (IsLoggingDroppedAllowed()) {
+            LOG(ERROR, "Sandesh: Send: FAILED: " << ToString());
+        }
         Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
         return false;
@@ -585,11 +604,35 @@ bool Sandesh::IsLevelUT() {
             level_ <= SandeshLevel::UT_END;
 }
 
-bool Sandesh::IsLoggingAllowed() {
+bool Sandesh::IsLevelCategoryLoggingAllowed() const {
     bool level_allowed = logging_level_ >= level_;
     bool category_allowed = !logging_category_.empty() ?
             logging_category_ == category_ : true;
     return level_allowed && category_allowed;
+}
+
+bool Sandesh::IsLoggingAllowed() const {
+    if (type_ == SandeshType::FLOW) {
+        if (enable_flow_log_) {
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return IsLocalLoggingEnabled() && IsLevelCategoryLoggingAllowed();
+    }
+}
+
+bool Sandesh::IsLoggingDroppedAllowed() const {
+    if (type_ == SandeshType::FLOW) {
+        if (enable_flow_log_) {
+            return true;
+        } else {
+            return false;
+        }
+    } else {
+        return true;
+    }
 }
 
 const char * Sandesh::LevelToString(SandeshLevel::type level) {
