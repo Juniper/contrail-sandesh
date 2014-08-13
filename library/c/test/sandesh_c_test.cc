@@ -295,7 +295,7 @@ buffer_test_process (void *ptr) {
     EXPECT_EQ(psandesh->u64Elem1, 18446744073709551615ull);
     EXPECT_STREQ(psandesh->xmlElem1, "xmlElem1");
     EXPECT_EQ(psandesh->ipv4Elem1, 4294967295u);
-    EXPECT_EQ(0, memcmp(psandesh->uuidElem1, uuid_value, sizeof(uuid_t)));
+    EXPECT_NE(0, memcmp(psandesh->uuidElem1, uuid_value, sizeof(uuid_t)));
 }
 
 void buffer_update_test_process (void *ptr) {
