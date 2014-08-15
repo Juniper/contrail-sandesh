@@ -480,21 +480,49 @@ class Sandesh(object):
                     self._sandesh_request_dict[req] = mod
     # end _add_sandesh_request
 
+    def _get_sandesh_uve_list(self, imp_module):
+        try:
+            sandesh_uve_list = getattr(imp_module, '_SANDESH_UVE_LIST')
+        except AttributeError:
+            self._logger.error(
+                '"%s" module does not have sandesh UVE list' %
+                (imp_module.__name__))
+            return None
+        else:
+            return sandesh_uve_list
+    # end _get_sandesh_uve_list
+
+    def _get_sandesh_uve_data_list(self, imp_module):
+        try:
+            sandesh_uve_data_list = getattr(imp_module, '_SANDESH_UVE_DATA_LIST')
+        except AttributeError:
+            self._logger.error(
+                '"%s" module does not have sandesh UVE data list' %
+                (imp_module.__name__))
+            return None
+        else:
+            return sandesh_uve_data_list
+    # end _get_sandesh_uve_data_list
+
     def _add_sandesh_uve(self, mod):
         try:
             imp_module = importlib.import_module(mod)
         except ImportError:
             self._logger.error('Failed to import Module "%s"' % (mod))
         else:
-            try:
-                sandesh_uve_list = getattr(imp_module, '_SANDESH_UVE_LIST')
-            except AttributeError:
+            sandesh_uve_list = self._get_sandesh_uve_list(imp_module)
+            sandesh_uve_data_list = self._get_sandesh_uve_data_list(imp_module)
+            if sandesh_uve_list is None or sandesh_uve_data_list is None:
+                return
+            if len(sandesh_uve_list) != len(sandesh_uve_data_list):
                 self._logger.error(
-                    '"%s" module does not have sandesh UVE list' % (mod))
-            else:
-                # Register sandesh UVEs
-                for uve_type_name in sandesh_uve_list:
-                    SandeshUVEPerTypeMap(self, uve_type_name, mod)
+                    '"%s" module sandesh UVE and UVE data list do not match' %
+                     (mod))
+                return
+            sandesh_uve_info_list = zip(sandesh_uve_list, sandesh_uve_data_list)
+            # Register sandesh UVEs
+            for uve_type_name, uve_data_type_name in sandesh_uve_info_list:
+                SandeshUVEPerTypeMap(self, uve_type_name, uve_data_type_name, mod)
     # end _add_sandesh_uve
 
     def _init_logger(self, generator):
