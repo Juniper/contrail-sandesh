@@ -106,8 +106,10 @@ class SandeshReqImpl(object):
 
     def sandesh_uve_cache_req_handle_request(self, sandesh_req):
         count = 0
-        uve_type_map = self._sandesh._uve_type_maps.get_uve_type_map(
+        uve_type_name = self._sandesh._uve_type_maps.get_uve_type_name(
             sandesh_req.tname)
+        uve_type_map = self._sandesh._uve_type_maps.get_uve_type_map(
+            uve_type_name)
         if uve_type_map:
             count = uve_type_map.sync_uve(
                 0, sandesh_req.context(), True, self._sandesh)
@@ -120,7 +122,7 @@ class SandeshReqImpl(object):
         uve_type_info_list = []
         for uve_type_key, uve_type_map in uve_global_map.iteritems():
             uve_type_info = SandeshUVETypeInfo(
-                uve_type_key, uve_type_map.uve_type_seqnum())
+                uve_type_map.uve_data_type(), uve_type_map.uve_type_seqnum())
             uve_type_info_list.append(uve_type_info)
         uve_types_res = SandeshUVETypesResp(uve_type_info_list)
         uve_types_res.response(sandesh_req.context())

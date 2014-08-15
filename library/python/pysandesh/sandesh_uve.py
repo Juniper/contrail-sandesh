@@ -15,11 +15,34 @@ class SandeshUVETypeMaps(object):
 
     def __init__(self):
         self._uve_global_map = {}
+        self._uve_data_type_map = {}
     #end __init__
 
     def get_uve_global_map(self):
         return self._uve_global_map
     #end get_uve_global_map
+
+    def get_uve_type_name(self, uve_data_type_name):
+        try:
+            uve_name = self._uve_data_type_map[uve_data_type_name]
+        except KeyError:
+            logger.error('UVE data "%s" not present in the UVE Data Type map' %
+                (uve_data_type_name))
+            return None
+        else:
+            return uve_name
+    #end get_uve_type_name
+
+    def add_uve_data_type_mapping(self, uve_data_type_name, uve_type_name):
+        try:
+            uve_type = self._uve_data_type_map[uve_data_type_name]
+        except KeyError:
+            self._uve_data_type_map[uve_data_type_name] = uve_type_name
+        else:
+            logger.error('UVE data type "%s" to UVE "%s" already added' %
+                (uve_data_type_name, uve_type_name))
+            assert 0
+    #end add_uve_data_type_mapping
 
     def register_uve_type_map(self, uve_type_key, uve_type_map):
         try:
@@ -74,13 +97,20 @@ class SandeshUVEPerTypeMap(object):
 
     #end class UVEMapEntry
 
-    def __init__(self, sandesh, uve_type_name, uve_module):
+    def __init__(self, sandesh, uve_type_name, uve_data_type_name, uve_module):
         self._sandesh = sandesh
         self._uve_type = uve_type_name
+        self._uve_data_type = uve_data_type_name
         self._uve_module = uve_module
         self._uve_map = {}
         sandesh._uve_type_maps.register_uve_type_map(uve_type_name, self)
+        sandesh._uve_type_maps.add_uve_data_type_mapping(uve_data_type_name,
+            uve_type_name)
     #end __init__
+
+    def uve_data_type(self):
+        return self._uve_data_type
+    #end uve_data_type
 
     def uve_type_seqnum(self):
         seqnum = 0

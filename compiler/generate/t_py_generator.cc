@@ -162,6 +162,7 @@ class t_py_generator : public t_generator {
   void generate_py_sandesh_response(std::ofstream& out, t_sandesh* tsandesh);
   void generate_py_sandesh_uve(std::ofstream& out, t_sandesh* tsandesh);
   void generate_py_sandesh_uve_list(std::ofstream& out);
+  void generate_py_sandesh_uve_data_list(std::ofstream& out);
   void generate_py_sandesh_trace(std::ofstream& out, t_sandesh* tsandesh);
 #endif
 
@@ -336,6 +337,11 @@ class t_py_generator : public t_generator {
    * Sandesh UVE List
    */
   std::vector<std::string> sandesh_uve_list_;
+
+  /**
+   * Sandesh UVE Data List
+   */
+  std::vector<std::string> sandesh_uve_data_list_;
 #endif
 
   /**
@@ -547,6 +553,7 @@ void t_py_generator::close_generator() {
 #ifdef SANDESH
   generate_py_sandesh_request_list(f_types_);
   generate_py_sandesh_uve_list(f_types_);
+  generate_py_sandesh_uve_data_list(f_types_);
 #endif
   // Close types file
   f_types_.close();
@@ -2253,6 +2260,8 @@ void t_py_generator::generate_py_sandesh_uve(std::ofstream& out,
 
   // Update sandesh UVE list
   sandesh_uve_list_.push_back(tsandesh->get_name());
+  // Update sandesh UVE data list
+  sandesh_uve_data_list_.push_back(ts->get_name());
 }
 
 void t_py_generator::generate_py_sandesh_uve_list(ofstream& out) {
@@ -2260,6 +2269,16 @@ void t_py_generator::generate_py_sandesh_uve_list(ofstream& out) {
   out << "_SANDESH_UVE_LIST = [" << endl;
   std::vector<std::string>::const_iterator it;
   for (it = sandesh_uve_list_.begin(); it != sandesh_uve_list_.end(); ++it) {
+    indent(out) << "'" << *it << "'," << endl;
+  }
+  out << "]" << endl;
+}
+
+void t_py_generator::generate_py_sandesh_uve_data_list(ofstream& out) {
+  out << endl << endl;
+  out << "_SANDESH_UVE_DATA_LIST = [" << endl;
+  std::vector<std::string>::const_iterator it;
+  for (it = sandesh_uve_data_list_.begin(); it != sandesh_uve_data_list_.end(); ++it) {
     indent(out) << "'" << *it << "'," << endl;
   }
   out << "]" << endl;
