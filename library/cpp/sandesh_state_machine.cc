@@ -474,6 +474,14 @@ SandeshSession *SandeshStateMachine::session() {
     return session_;
 }
 
+int SandeshStateMachine::task_id() const {
+    return connection_->GetTaskId();
+}
+
+int SandeshStateMachine::task_instance() const {
+    return connection_->GetTaskInstance();
+}
+
 template <class Ev>
 void SandeshStateMachine::OnIdle(const Ev &event) {
     // Release all resources

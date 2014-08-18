@@ -135,6 +135,9 @@ public:
         last_event_ = "";
     }
 
+    int task_id() const;
+    int task_instance() const;
+
     void Shutdown(void);
     void unconsumed_event(const sc::event_base &event);
     const char *prefix() { return prefix_; }
