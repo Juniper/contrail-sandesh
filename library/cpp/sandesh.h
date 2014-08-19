@@ -106,37 +106,14 @@ public:
     virtual ~SandeshContext() { }
 };
 
-class SandeshConnection;
 //
 // Sandesh
 //
-class Sandesh;
-template<>
-struct WorkQueueDelete<Sandesh *> {
-    template <typename QueueT>
-    void operator()(QueueT &q) {
-        for (typename QueueT::iterator iter = q.unsafe_begin();
-             iter != q.unsafe_end(); ++iter) {
-            (*iter)->Release();
-        }
-    }
-};
-
-class SandeshRequest;
-template<>
-struct WorkQueueDelete<SandeshRequest *> {
-    template <typename QueueT>
-    void operator()(QueueT &q) {
-        for (typename QueueT::iterator iter = q.unsafe_begin();
-             iter != q.unsafe_end(); ++iter) {
-            (*iter)->Release();
-        }
-    }
-};
-
 class SandeshStatistics;
 class SandeshMessageTypeStats;
 class SandeshMessageStats;
+class SandeshConnection;
+class SandeshRequest;
 
 class Sandesh {
 public:
@@ -478,6 +455,28 @@ protected:
   
  private:
     bool more_;
+};
+
+template<>
+struct WorkQueueDelete<Sandesh *> {
+    template <typename QueueT>
+    void operator()(QueueT &q, bool delete_entry) {
+        Sandesh *sandesh;
+        while (q.try_pop(sandesh)) {
+            sandesh->Release();
+        }
+    }
+};
+
+template<>
+struct WorkQueueDelete<SandeshRequest *> {
+    template <typename QueueT>
+    void operator()(QueueT &q, bool delete_entry) {
+        SandeshRequest *rsandesh;
+        while (q.try_pop(rsandesh)) {
+            rsandesh->Release();
+        }
+    }
 };
 
 template<typename T> Sandesh* createT() { return new T; }

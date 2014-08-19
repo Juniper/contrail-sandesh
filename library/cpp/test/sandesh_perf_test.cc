@@ -123,7 +123,7 @@ protected:
 template <>
 struct WorkQueueDelete<SandeshPerfTestEnqueue::TestStructPool *> {
     template <typename QueueT>
-    void operator()(QueueT &q) {
+    void operator()(QueueT &q, bool delete_entry) {
         for (typename QueueT::iterator iter = q.unsafe_begin();
              iter != q.unsafe_end(); ++iter) {
              (*iter)->Release();
