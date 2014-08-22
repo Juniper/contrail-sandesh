@@ -8,4 +8,5 @@ Import('env')
 SandeshEnv = env.Clone()
 
 SConscript('example/SConscript', exports='SandeshEnv', duplicate = 0)
-SConscript('test/SConscript', exports='SandeshEnv', duplicate = 0)
+test_suite = SConscript('test/SConscript', exports='SandeshEnv', duplicate = 0)
+Return('test_suite')

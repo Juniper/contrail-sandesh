@@ -7,6 +7,7 @@
 Import('SandeshEnv');
 
 SConscript('common/SConscript', exports='SandeshEnv', duplicate = 0)
-SConscript('cpp/SConscript', exports='SandeshEnv', duplicate = 0)
-SConscript('c/SConscript', exports='SandeshEnv', duplicate = 0)
-SConscript('python/SConscript', exports='SandeshEnv', duplicate = 0)
+test_suite = SConscript('cpp/SConscript', exports='SandeshEnv', duplicate = 0)
+test_suite += SConscript('c/SConscript', exports='SandeshEnv', duplicate = 0)
+test_suite += SConscript('python/SConscript', exports='SandeshEnv', duplicate = 0)
+SandeshEnv.Alias('sandesh:test', test_suite)

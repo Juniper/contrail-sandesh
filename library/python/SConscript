@@ -148,4 +148,5 @@ if 'install' in BUILD_TARGETS:
     env.Depends(install_cmd, sdist_depends)
     env.Alias('install', install_cmd)
 
-SConscript('pysandesh/SConscript', exports='env', duplicate = 0)
+test_suite = SConscript('pysandesh/SConscript', exports='env', duplicate = 0)
+Return('test_suite')
