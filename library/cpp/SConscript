@@ -3,12 +3,11 @@
 #
 # Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
 #
-
 Import('SandeshEnv')
 
 env = SandeshEnv.Clone();
 
-env.AppendUnique(CCFLAGS='-fno-exceptions')
+env.CppDisableExceptions()  
 
 env.Append(CPPPATH = [
     '#build/include',
