@@ -7,6 +7,7 @@
 #
 
 import importlib
+import copy
 from sandesh_logger import SandeshLogger
 
 logger = SandeshLogger('SandeshUVE').logger()
@@ -131,7 +132,8 @@ class SandeshUVEPerTypeMap(object):
             logger.debug('Add uve <%s, %s> in the [%s] map' \
                 % (uve_name, uve_sandesh.seqnum(), self._uve_type))
             self._uve_map[uve_name] = \
-                SandeshUVEPerTypeMap.UVEMapEntry(uve_sandesh.data, uve_sandesh.seqnum())
+                SandeshUVEPerTypeMap.UVEMapEntry( \
+                    copy.deepcopy(uve_sandesh.data), uve_sandesh.seqnum())
         else:
             if uve_entry.data.deleted is True:
                 if uve_sandesh.data.deleted is not True:
