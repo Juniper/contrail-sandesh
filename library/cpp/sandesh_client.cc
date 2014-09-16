@@ -283,10 +283,10 @@ void SandeshClient::SendUVE(int count,
     sci.set_primary(pri.str());
     sci.set_secondary(sec.str());
     // Sandesh client socket statistics
-    TcpServerSocketStats rx_stats;
+    SocketIOStats rx_stats;
     GetRxSocketStats(rx_stats);
     sci.set_rx_socket_stats(rx_stats);
-    TcpServerSocketStats tx_stats;
+    SocketIOStats tx_stats;
     GetTxSocketStats(tx_stats);
     sci.set_tx_socket_stats(tx_stats);
 

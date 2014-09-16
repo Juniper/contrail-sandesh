@@ -149,8 +149,8 @@ struct SandeshClientInfo {
     6: optional string collector_name
     7: optional string primary
     8: optional string secondary
-    9: optional io.TcpServerSocketStats rx_socket_stats
-    10: optional io.TcpServerSocketStats tx_socket_stats
+    9: optional io.SocketIOStats rx_socket_stats
+    10: optional io.SocketIOStats tx_socket_stats
 }
 
 struct SandeshSessionStats {
@@ -173,8 +173,8 @@ struct ModuleClientState {
     5: optional u64                        sm_queue_count (aggtype="stats", hbin="50")
     6: optional SandeshStateMachineStats   sm_stats
     7: optional SandeshSessionStats        session_stats
-    8: optional io.TcpServerSocketStats    session_rx_socket_stats
-    9: optional io.TcpServerSocketStats    session_tx_socket_stats
+    8: optional io.SocketIOStats           session_rx_socket_stats
+    9: optional io.SocketIOStats           session_tx_socket_stats
 }
 
 uve sandesh SandeshModuleClientTrace {

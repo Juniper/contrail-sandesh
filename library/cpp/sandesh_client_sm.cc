@@ -995,10 +995,10 @@ bool SandeshClientSMImpl::StatisticsTimerExpired() {
     SandeshSession *session = this->session();
     if (session) {
         mcs.set_session_stats(session->GetStats());
-        TcpServerSocketStats rx_stats;
+        SocketIOStats rx_stats;
         session->GetRxSocketStats(rx_stats);
         mcs.set_session_rx_socket_stats(rx_stats);
-        TcpServerSocketStats tx_stats;
+        SocketIOStats tx_stats;
         session->GetTxSocketStats(tx_stats);
         mcs.set_session_tx_socket_stats(tx_stats);
     }
