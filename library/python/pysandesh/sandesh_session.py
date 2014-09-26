@@ -309,10 +309,14 @@ class SandeshSession(TcpSession):
         else:
             more = True
         if not self._connected:
-            self._logger.debug(sandesh.log())
+            self._logger.log(
+                SandeshLogger.get_py_logger_level(sandesh.level()),
+                sandesh.log())
             return
         if sandesh.is_logging_allowed(self._sandesh_instance):
-            self._logger.debug(sandesh.log())
+            self._logger.log(
+                SandeshLogger.get_py_logger_level(sandesh.level()),
+                sandesh.log())
         self._writer.send_msg(sandesh, more)
     # end _send_sandesh
 

@@ -40,13 +40,18 @@ class SandeshLogger(object):
         self._logging_syslog_facility = self._DEFAULT_SYSLOG_FACILITY
         self._logger = logging.getLogger(self._generator)
         self._logging_level = SandeshLevel.SYS_INFO
-        self._logger.setLevel(self._SANDESH_LEVEL_TO_LOGGER_LEVEL[self._logging_level])
+        self._logger.setLevel(SandeshLogger.get_py_logger_level(self._logging_level))
         self._logging_file_handler = logging.StreamHandler()
         log_format = logging.Formatter('%(asctime)s [%(name)s]: %(message)s',
                                        datefmt='%m/%d/%Y %I:%M:%S %p')
         self._logging_file_handler.setFormatter(log_format)
         self._logger.addHandler(self._logging_file_handler)
     #end __init__
+
+    @staticmethod
+    def get_py_logger_level(sandesh_level):
+        return SandeshLogger._SANDESH_LEVEL_TO_LOGGER_LEVEL[sandesh_level]
+    #end get_py_logger_level
 
     def logger(self):
         return self._logger
