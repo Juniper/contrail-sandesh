@@ -49,7 +49,7 @@ void Sandesh::SendLoggingResponse(std::string context) {
         category = "*";
     }
     slogger->set_category(category);
-    slogger->set_level(LevelToString(LoggingLevel()));
+    slogger->set_log_level(LevelToString(LoggingLevel()));
     slogger->set_trace_print(IsTracePrintEnabled());
     slogger->set_enable_flow_log(IsFlowLoggingEnabled());
     slogger->set_context(context);
@@ -58,8 +58,8 @@ void Sandesh::SendLoggingResponse(std::string context) {
 
 void SandeshLoggingParamsSet::HandleRequest() const {
     // Set the logging parameters
-    if (__isset.level) {
-        Sandesh::SetLoggingLevel(get_level());
+    if (__isset.log_level) {
+        Sandesh::SetLoggingLevel(get_log_level());
     }
     if (__isset.category) {
         std::string category = get_category();
@@ -129,7 +129,7 @@ void Sandesh::SendingParamsResponse(std::string context) {
             SandeshSendingParams ssp;
             ssp.set_queue_count(boost::get<0>(scwm));
             SandeshLevel::type level(boost::get<1>(scwm));
-            ssp.set_level(Sandesh::LevelToString(level));
+            ssp.set_sending_level(Sandesh::LevelToString(level));
             ssp.set_high(boost::get<2>(scwm));
             ssp_info.push_back(ssp);
         }
@@ -141,7 +141,7 @@ void Sandesh::SendingParamsResponse(std::string context) {
 }
 
 void SandeshSendingParamsSet::HandleRequest() const {
-    if (!(__isset.high && __isset.queue_count &&  __isset.level)) {
+    if (!(__isset.high && __isset.queue_count &&  __isset.sending_level)) {
         // Send response
         Sandesh::SendingParamsResponse(context());
         return;
@@ -150,7 +150,7 @@ void SandeshSendingParamsSet::HandleRequest() const {
     if (client) {
         size_t qcount(get_queue_count());
         bool high(get_high());
-        std::string slevel(get_level());
+        std::string slevel(get_sending_level());
         SandeshLevel::type level(Sandesh::StringToLevel(slevel));
         Sandesh::QueueWaterMarkInfo scwm(qcount, level, high);
         client->SetSessionWaterMarkInfo(scwm);

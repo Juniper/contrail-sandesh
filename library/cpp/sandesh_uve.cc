@@ -26,10 +26,10 @@ SandeshUVETypeMaps::SyncAllMaps(const map<string,uint32_t> & inpMap) {
         map<string,uint32_t>::const_iterator iit = inpMap.find(it->first);
         if (iit == inpMap.end()) {
             uint count = it->second->SyncUVE(0, "", false);
-            LOG(INFO, __func__ << " for " << it->first << " without seqno , total = " << count);
+            SANDESH_LOG(INFO, __func__ << " for " << it->first << " without seqno , total = " << count);
         } else {
             uint count = it->second->SyncUVE(iit->second, "", false);
-            LOG(INFO, __func__ << " for " << it->first << " with seqno " << iit->second << 
+            SANDESH_LOG(INFO, __func__ << " for " << it->first << " with seqno " << iit->second <<
                 ", total = " << count);
         }
     }

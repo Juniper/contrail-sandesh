@@ -18,7 +18,6 @@
 #include <cstdlib>
 #include <boost/bind.hpp>
 #include <boost/tokenizer.hpp>
-#include <base/logging.h>
 
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
@@ -115,7 +114,7 @@ HttpSendXML(const std::string& context, const u_int8_t * buf, uint32_t len,
     if (!client_ctx.empty()) {
         state = HXMLIncomplete;
         if (client_ctx.compare(resp_name)) {
-            LOG(DEBUG, __func__ << " Response Mismatch . Expected " <<
+            SANDESH_LOG(DEBUG, __func__ << " Response Mismatch . Expected " <<
                     client_ctx << " , Got " << resp_name);
         }
     } else {
@@ -286,7 +285,7 @@ HttpSandeshRequestCallback(HttpServer *hs,
     string snh_name = request->UrlPath().substr(5);
     Sandesh *sandesh = SandeshBaseFactory::CreateInstance(snh_name);
     if (sandesh == NULL) {
-        LOG(DEBUG, __func__ << " Unknown sandesh:" <<
+        SANDESH_LOG(DEBUG, __func__ << " Unknown sandesh:" <<
             snh_name << std::endl);
         return;
     }
@@ -387,7 +386,7 @@ SandeshHttp::Init(EventManager *evm, const string module,
 
     index_str_ = index_ss.str();
     const char * index_str = index_str_.c_str();
-    LOG(DEBUG, "HTTP Introspect Init");
+    SANDESH_LOG(DEBUG, "HTTP Introspect Init");
 
     index_hti_ = new HtmlInfo(reinterpret_cast<const unsigned char *>(
                 index_str),strlen(index_str));
@@ -404,7 +403,7 @@ SandeshHttp::Init(EventManager *evm, const string module,
     }
 
     hServ_->Initialize(port);
-    LOG(DEBUG, "Sandesh Http Server Port " << hServ_->GetPort());
+    SANDESH_LOG(DEBUG, "Sandesh Http Server Port " << hServ_->GetPort());
 
     return hServ_->GetPort();
 }

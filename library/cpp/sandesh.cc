@@ -62,6 +62,8 @@ std::string Sandesh::logging_category_;
 EventManager* Sandesh::event_manager_ = NULL;
 SandeshStatistics Sandesh::stats_;
 tbb::mutex Sandesh::stats_mutex_;
+log4cplus::Logger Sandesh::logger_ =
+    log4cplus::Logger::getInstance(LOG4CPLUS_TEXT("SANDESH"));
 
 const char * Sandesh::SandeshRoleToString(SandeshRole::type role) {
     switch (role) {
@@ -117,12 +119,12 @@ void Sandesh::Initialize(SandeshRole::type role,
         return;
     }
 
-    LOG(INFO, "SANDESH: ROLE             : " << SandeshRoleToString(role)); 
-    LOG(INFO, "SANDESH: MODULE           : " << module);
-    LOG(INFO, "SANDESH: SOURCE           : " << source);
-    LOG(INFO, "SANDESH: NODE TYPE        : " << node_type);
-    LOG(INFO, "SANDESH: INSTANCE ID      : " << instance_id);
-    LOG(INFO, "SANDESH: HTTP SERVER PORT : " << http_port);
+    SANDESH_LOG(INFO, "SANDESH: ROLE             : " << SandeshRoleToString(role));
+    SANDESH_LOG(INFO, "SANDESH: MODULE           : " << module);
+    SANDESH_LOG(INFO, "SANDESH: SOURCE           : " << source);
+    SANDESH_LOG(INFO, "SANDESH: NODE TYPE        : " << node_type);
+    SANDESH_LOG(INFO, "SANDESH: INSTANCE ID      : " << instance_id);
+    SANDESH_LOG(INFO, "SANDESH: HTTP SERVER PORT : " << http_port);
 
     role_           = role;
     module_         = module;
@@ -141,13 +143,13 @@ bool Sandesh::ConnectToCollector(const std::string &collector_ip,
     boost::system::error_code ec;
     address collector_addr = address::from_string(collector_ip, ec);
     if (ec) {
-        LOG(ERROR, __func__ << ": Invalid collector address: " <<
+        SANDESH_LOG(ERROR, __func__ << ": Invalid collector address: " <<
                 collector_ip << " Error: " << ec);
         return false;
     }
 
-    LOG(INFO, "SANDESH: COLLECTOR : " << collector_ip);
-    LOG(INFO, "SANDESH: COLLECTOR PORT : " << collector_port);
+    SANDESH_LOG(INFO, "SANDESH: COLLECTOR : " << collector_ip);
+    SANDESH_LOG(INFO, "SANDESH: COLLECTOR PORT : " << collector_port);
 
     tcp::endpoint collector(collector_addr, collector_port);
     InitClient(event_manager_, collector);
@@ -169,7 +171,7 @@ static bool make_endpoint(TcpServer::Endpoint& ep,const std::string& epstr) {
     boost::system::error_code ec;
     address addr = address::from_string(sip, ec);
     if (ec) {
-        LOG(ERROR, __func__ << ": Invalid collector address: " <<
+        SANDESH_LOG(ERROR, __func__ << ": Invalid collector address: " <<
                 sip << " Error: " << ec);
         return false;
     }
@@ -194,7 +196,7 @@ bool Sandesh::InitClient(EventManager *evm,
         }
     }
     if (collectors.size()>2) {
-        LOG(ERROR, __func__ << " Too many collectors");
+        SANDESH_LOG(ERROR, __func__ << " Too many collectors");
         return false;
     }
 
@@ -318,18 +320,51 @@ void Sandesh::SetLoggingLevel(std::string level) {
     SetLoggingLevel(nlevel);
 }
 
+log4cplus::LogLevel SandeshLevelTolog4Level(
+    SandeshLevel::type slevel) {
+    switch (slevel) {
+      case SandeshLevel::SYS_EMERG:
+      case SandeshLevel::SYS_ALERT:
+      case SandeshLevel::SYS_CRIT:
+          return log4cplus::FATAL_LOG_LEVEL;
+      case SandeshLevel::SYS_ERR:
+          return log4cplus::ERROR_LOG_LEVEL;
+      case SandeshLevel::SYS_WARN:
+      case SandeshLevel::SYS_NOTICE:
+          return log4cplus::WARN_LOG_LEVEL;
+      case SandeshLevel::SYS_INFO:
+          return log4cplus::INFO_LOG_LEVEL;
+      case SandeshLevel::SYS_DEBUG:
+      default:
+          return log4cplus::DEBUG_LOG_LEVEL;
+      case SandeshLevel::INVALID:
+          return log4cplus::ALL_LOG_LEVEL;
+    }
+}
+
 void Sandesh::SetLoggingLevel(SandeshLevel::type level) {
     if (logging_level_ != level) {
-        LOG(INFO, "SANDESH: Logging: LEVEL: " << "[ " <<
+        log4cplus::LogLevel log4_old_level(
+            SandeshLevelTolog4Level(logging_level_));
+        log4cplus::LogLevel log4_new_level(
+            SandeshLevelTolog4Level(level));
+        const log4cplus::LogLevelManager &log4level_manager(
+            log4cplus::getLogLevelManager());
+        SANDESH_LOG(INFO, "SANDESH: Logging: LEVEL: " << "[ " <<
                 LevelToString(logging_level_) << " ] -> [ " <<
-                LevelToString(level) << " ]");
+                LevelToString(level) << " ] log4level: [ " <<
+                log4level_manager.toString(log4_old_level) <<
+                " ] -> [ " <<
+                log4level_manager.toString(log4_new_level) <<
+                " ]");
         logging_level_ = level;
+        logger_.setLogLevel(log4_new_level);
     }
 }
 
 void Sandesh::SetLoggingCategory(std::string category) {
     if (logging_category_ != category) {
-        LOG(INFO, "SANDESH: Logging: CATEGORY: " <<
+        SANDESH_LOG(INFO, "SANDESH: Logging: CATEGORY: " <<
                 (logging_category_.empty() ? "*" : logging_category_) << " -> " <<
                 (category.empty() ? "*" : category));
         logging_category_ = category;
@@ -338,7 +373,7 @@ void Sandesh::SetLoggingCategory(std::string category) {
 
 void Sandesh::SetLocalLogging(bool enable_local_log) {
     if (enable_local_log_ != enable_local_log) {
-        LOG(INFO, "SANDESH: Logging: " <<
+        SANDESH_LOG(INFO, "SANDESH: Logging: " <<
                 (enable_local_log_ ? "ENABLED" : "DISABLED") << " -> " <<
                 (enable_local_log ? "ENABLED" : "DISABLED"));
         enable_local_log_ = enable_local_log;
@@ -347,7 +382,7 @@ void Sandesh::SetLocalLogging(bool enable_local_log) {
 
 void Sandesh::SetTracePrint(bool enable_trace_print) {
     if (enable_trace_print_ != enable_trace_print) {
-        LOG(INFO, "SANDESH: Trace: PRINT: " <<
+        SANDESH_LOG(INFO, "SANDESH: Trace: PRINT: " <<
                 (enable_trace_print_ ? "ENABLED" : "DISABLED") << " -> " <<
                 (enable_trace_print ? "ENABLED" : "DISABLED"));
         enable_trace_print_ = enable_trace_print;
@@ -356,7 +391,7 @@ void Sandesh::SetTracePrint(bool enable_trace_print) {
 
 void Sandesh::SetSendingLevel(size_t count, SandeshLevel::type level) {
     if (sending_level_ != level) {
-        LOG(INFO, "SANDESH: Sending: LEVEL: " << "[ " <<
+        SANDESH_LOG(INFO, "SANDESH: Sending: LEVEL: " << "[ " <<
             LevelToString(sending_level_) << " ] -> [ " <<
             LevelToString(level) << " ] : " << count);
         sending_level_ = level;
@@ -365,7 +400,7 @@ void Sandesh::SetSendingLevel(size_t count, SandeshLevel::type level) {
 
 void Sandesh::SetFlowLogging(bool enable_flow_log) {
     if (enable_flow_log_ != enable_flow_log) {
-        LOG(INFO, "SANDESH: Flow Logging: " <<
+        SANDESH_LOG(INFO, "SANDESH: Flow Logging: " <<
             (enable_flow_log_ ? "ENABLED" : "DISABLED") << " -> " <<
             (enable_flow_log ? "ENABLED" : "DISABLED"));
         enable_flow_log_ = enable_flow_log;
@@ -375,7 +410,7 @@ void Sandesh::SetFlowLogging(bool enable_flow_log) {
 bool Sandesh::Enqueue(SandeshQueue *queue) {
     if (!queue) {
         if (IsLoggingDroppedAllowed()) {
-            LOG(ERROR, __func__ << ": SandeshQueue NULL : Dropping Message: "
+            SANDESH_LOG(ERROR, __func__ << ": SandeshQueue NULL : Dropping Message: "
                 << ToString());
          }
         Sandesh::UpdateSandeshStats(name_, 0, true, true);
@@ -408,7 +443,7 @@ int32_t Sandesh::WriteBinary(u_int8_t *buf, u_int32_t buf_len,
             boost::shared_ptr<TBinaryProtocol>(new TBinaryProtocol(btrans));
     xfer = Write(prot);
     if (xfer < 0) {
-        LOG(DEBUG, __func__ << "Write sandesh to " << buf_len <<
+        SANDESH_LOG(DEBUG, __func__ << "Write sandesh to " << buf_len <<
                 " bytes FAILED" << std::endl);
         *error = EINVAL;
         return xfer;
@@ -426,7 +461,7 @@ int32_t Sandesh::ReadBinary(u_int8_t *buf, u_int32_t buf_len,
             boost::shared_ptr<TBinaryProtocol>(new TBinaryProtocol(btrans));
     xfer = Read(prot);
     if (xfer < 0) {
-        LOG(DEBUG, __func__ << "Read sandesh from " << buf_len <<
+        SANDESH_LOG(DEBUG, __func__ << "Read sandesh from " << buf_len <<
                 " bytes FAILED" << std::endl);
         *error = EINVAL;
         return xfer;
@@ -446,7 +481,7 @@ int32_t Sandesh::ReceiveBinaryMsgOne(u_int8_t *buf, u_int32_t buf_len,
     // Extract sandesh name
     xfer = prot->readSandeshBegin(sandesh_name);
     if (xfer < 0) {
-        LOG(DEBUG, __func__ << "Read sandesh begin from " << buf_len <<
+        SANDESH_LOG(DEBUG, __func__ << "Read sandesh begin from " << buf_len <<
                 " bytes FAILED" << std::endl);
         *error = EINVAL;
         return xfer;
@@ -454,7 +489,7 @@ int32_t Sandesh::ReceiveBinaryMsgOne(u_int8_t *buf, u_int32_t buf_len,
     // Create and process the sandesh
     Sandesh *sandesh = SandeshBaseFactory::CreateInstance(sandesh_name);
     if (sandesh == NULL) {
-        LOG(DEBUG, __func__ << " Unknown sandesh:" <<
+        SANDESH_LOG(DEBUG, __func__ << " Unknown sandesh:" <<
                 sandesh_name << std::endl);
         *error = EINVAL;
         return -1;
@@ -465,7 +500,7 @@ int32_t Sandesh::ReceiveBinaryMsgOne(u_int8_t *buf, u_int32_t buf_len,
     prot = boost::shared_ptr<TBinaryProtocol>(new TBinaryProtocol(btrans));
     xfer = sandesh->Read(prot);
     if (xfer < 0) {
-        LOG(DEBUG, __func__ << " Decoding " << sandesh_name << " FAILED" <<
+        SANDESH_LOG(DEBUG, __func__ << " Decoding " << sandesh_name << " FAILED" <<
                 std::endl);
         *error = EINVAL;
         return xfer;
@@ -484,7 +519,7 @@ int32_t Sandesh::ReceiveBinaryMsg(u_int8_t *buf, u_int32_t buf_len,
         ret = ReceiveBinaryMsgOne(buf + xfer, buf_len - xfer, error,
                                   client_context);
         if (ret < 0) {
-            LOG(DEBUG, __func__ << "Read sandesh from " << buf_len <<
+            SANDESH_LOG(DEBUG, __func__ << "Read sandesh from " << buf_len <<
                     " bytes at offset " << xfer << " FAILED (" <<
                     error << ")");
             return ret;
@@ -498,7 +533,7 @@ bool Sandesh::HandleTest() {
     // Handle unit test scenario
     if (IsUnitTest() || IsLevelUT()) {
         if (IsLevelCategoryLoggingAllowed()) {
-            Log();
+            ForcedLog();
         }
         Release();
         return true;
@@ -509,7 +544,7 @@ bool Sandesh::HandleTest() {
 bool Sandesh::SendEnqueue() {
     if (!client_) {
         if (IsLoggingDroppedAllowed()) {
-            LOG(ERROR, "Sandesh: Send: No client: " << ToString());
+            SANDESH_LOG(ERROR, "Sandesh: Send: No client: " << ToString());
         }
         Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
@@ -517,7 +552,7 @@ bool Sandesh::SendEnqueue() {
     } 
     if (!client_->SendSandesh(this)) {
         if (IsLoggingDroppedAllowed()) {
-            LOG(ERROR, "Sandesh: Send: FAILED: " << ToString());
+            SANDESH_LOG(ERROR, "Sandesh: Send: FAILED: " << ToString());
         }
         Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
@@ -572,14 +607,14 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
     }
     if (client_) {
         if (!client_->SendSandeshUVE(this)) {
-            LOG(ERROR, "SandeshUVE : Send FAILED: " << ToString());
+            SANDESH_LOG(ERROR, "SandeshUVE : Send FAILED: " << ToString());
             Sandesh::UpdateSandeshStats(Name(), 0, true, true);
             Release();
             return false;
         }
         return true;
     }
-    LOG(ERROR, "SandeshUVE: No Client: " << ToString());
+    SANDESH_LOG(ERROR, "SandeshUVE: No Client: " << ToString());
     Sandesh::UpdateSandeshStats(Name(), 0, true, true);
     Release();
     return false;
@@ -587,7 +622,7 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
 
 bool SandeshRequest::Enqueue(SandeshRxQueue *queue) {
     if (!queue) {
-        LOG(ERROR, "SandeshRequest: No RxQueue: " << ToString());
+        SANDESH_LOG(ERROR, "SandeshRequest: No RxQueue: " << ToString());
         Sandesh::UpdateSandeshStats(Name(), 0, false, true);
         Release();
         return false;
@@ -677,7 +712,7 @@ void Sandesh::GetSandeshStats(
 
 void Sandesh::SetSendQueue(bool enable) {
     if (send_queue_enabled_ != enable) {
-        LOG(INFO, "SANDESH: CLIENT: SEND QUEUE: " <<
+        SANDESH_LOG(INFO, "SANDESH: CLIENT: SEND QUEUE: " <<
             (send_queue_enabled_ ? "ENABLED" : "DISABLED") << " -> " <<
             (enable ? "ENABLED" : "DISABLED"));
         send_queue_enabled_ = enable;

@@ -30,7 +30,7 @@ using boost::system::error_code;
 #define CONNECTION_LOG(_Level, _Msg)                                           \
     do {                                                                       \
         if (LoggingDisabled()) break;                                          \
-        log4cplus::Logger _Xlogger = log4cplus::Logger::getRoot();             \
+        log4cplus::Logger _Xlogger = Sandesh::logger();                        \
         if (_Xlogger.isEnabledFor(log4cplus::_Level##_LOG_LEVEL)) {            \
             log4cplus::tostringstream _Xbuf;                                   \
             if (!state_machine()->generator_key().empty()) {                   \

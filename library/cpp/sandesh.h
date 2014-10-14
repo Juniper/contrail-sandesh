@@ -83,6 +83,7 @@
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <base/logging.h>
 #include <base/queue_task.h>
 #include <base/contrail_ports.h>
 #include <sandesh/sandesh_types.h>
@@ -222,6 +223,7 @@ public:
 
     virtual void Release() { delete this; }
     virtual void Log() const = 0;
+    virtual void ForcedLog() const = 0;
     virtual std::string ToString() const = 0;
     virtual std::string ModuleName() const = 0;
     virtual int32_t Read(
@@ -270,6 +272,7 @@ public:
     std::string category() const { return category_; }
     static const char* LevelToString(SandeshLevel::type level);
     static SandeshLevel::type StringToLevel(std::string level);
+    static log4cplus::Logger& logger() { return logger_; }
 
 protected:
     void set_timestamp(time_t timestamp) { timestamp_ = timestamp; }
@@ -350,6 +353,7 @@ private:
     static SandeshLevel::type sending_level_;
     static SandeshStatistics stats_;
     static tbb::mutex stats_mutex_;
+    static log4cplus::Logger logger_;
 
     const uint32_t seqnum_;
     std::string context_;
@@ -361,6 +365,12 @@ private:
     std::string category_;
     std::string name_;
 };
+
+#define SANDESH_LOG(_Level, _Msg)                                \
+    do {                                                         \
+        if (LoggingDisabled()) break;                            \
+        LOG4CPLUS_##_Level(Sandesh::logger(), _Msg);             \
+    } while (0)
 
 class SandeshRequest : public Sandesh,
                        public boost::enable_shared_from_this<SandeshRequest> {
@@ -535,5 +545,8 @@ private:
 
 bool DoDropSandeshMessage(const SandeshHeader &header,
     SandeshLevel::type drop_level);
+
+log4cplus::LogLevel SandeshLevelTolog4Level(
+    SandeshLevel::type slevel);
 
 #endif // __SANDESH_H__

@@ -113,7 +113,7 @@ class t_cpp_generator : public t_oop_generator {
   void generate_sandesh_request      (std::ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_default_ctor (std::ofstream& out, t_sandesh* tsandesh, bool is_request);
   void generate_sandesh_loggers      (std::ofstream& out, t_sandesh* tsandesh);
-  void generate_sandesh_logger       (std::ofstream& out, t_sandesh* tsandesh, bool buffer);
+  void generate_sandesh_logger       (std::ofstream& out, t_sandesh* tsandesh, bool buffer, bool forced_log);
   void generate_logger_field         (std::ofstream& out, t_field *tfield, string prefix, bool log_value_only, bool no_name_log);
   void generate_logger_struct        (std::ofstream& out, t_struct *tstruct, string prefix, string name);
   void generate_logger_container     (std::ofstream& out, t_type* ttype, string name, bool log_value_only);
@@ -1807,6 +1807,8 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
 
     out << indent() << "void Log() const;" << endl;
     
+    out << indent() << "void ForcedLog() const;" << endl;
+
     out << indent() << "int32_t Read(" <<
         "boost::shared_ptr<contrail::sandesh::protocol::TProtocol> iprot);" << endl;
 
@@ -3274,13 +3276,18 @@ void t_cpp_generator::generate_logger_struct(ofstream& out,
  */
 void t_cpp_generator::generate_sandesh_logger(ofstream& out,
                                               t_sandesh* tsandesh,
-                                              bool buffer) {
+                                              bool buffer, bool forced_log) {
     if (buffer) {
         indent(out) << "std::string " << tsandesh->get_name() <<
                 "::ToString() const {" << endl;
     } else {
-        indent(out) << "void " << tsandesh->get_name() <<
+        if (forced_log) {
+            indent(out) << "void " << tsandesh->get_name() <<
+                "::ForcedLog() const {" << endl;
+        } else {
+            indent(out) << "void " << tsandesh->get_name() <<
                 "::Log() const {" << endl;
+        }
     }
     indent_up();
     const vector<t_field*>& fields = tsandesh->get_members();
@@ -3296,8 +3303,16 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
             init = true;
             if (!buffer) {
                 out << indent() <<
-                        "log4cplus::Logger Xlogger = log4cplus::Logger::getRoot();" <<
-                        endl;
+                    "log4cplus::Logger Xlogger = Sandesh::logger();" << endl;
+                out << indent() << "log4cplus::LogLevel Xlog4level(" <<
+                    "SandeshLevelTolog4Level(Sandesh::level()));" << endl;
+                if (!forced_log) {
+                    out << indent() <<
+                        "if (!Xlogger.isEnabledFor(Xlog4level)) {" << endl;
+                    indent_up();
+                    out << indent() << "return;" << endl;
+                    scope_down(out);
+                }
                 out << indent() << "log4cplus::tostringstream Xbuf;" << endl;
             } else {
                 out << indent() << "std::stringstream Xbuf;" << endl;
@@ -3323,8 +3338,8 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
         if (buffer) {
             out << indent() << "return Xbuf.str();" << endl;
         } else {
-            out << indent() <<
-                    "Xlogger.forcedLog(log4cplus::DEBUG_LOG_LEVEL, Xbuf.str());" << endl;
+            out << indent() << "Xlogger.forcedLog(Xlog4level, Xbuf.str());" <<
+                endl;
         }
     } else {
         if (buffer) {
@@ -3344,9 +3359,11 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
 void t_cpp_generator::generate_sandesh_loggers(ofstream& out,
                                                t_sandesh* tsandesh) {
     // Generate Log printing to log4cplus
-    generate_sandesh_logger(out, tsandesh, false);
+    generate_sandesh_logger(out, tsandesh, false, false);
+    // Generate forcedLog printing to log4cplus
+    generate_sandesh_logger(out, tsandesh, false, true);
     // Generate Log printing to buffer
-    generate_sandesh_logger(out, tsandesh, true);
+    generate_sandesh_logger(out, tsandesh, true, false);
 }
 
 /**

@@ -2,7 +2,6 @@
  * Copyright (c) 2014 Juniper Networks, Inc. All rights reserved.
  */
 
-#include <base/logging.h>
 #include <sandesh/sandesh_message_builder.h>
 
 using namespace pugi;
@@ -96,7 +95,7 @@ bool SandeshXMLMessage::ParseHeader(const xml_node& root,
             header.set_Pid(Pid);
             break;
         default:
-            LOG(ERROR, __func__ << ": Unknown identifier: " << identifier);
+            SANDESH_LOG(ERROR, __func__ << ": Unknown identifier: " << identifier);
             break;
         }
     }
@@ -107,14 +106,14 @@ bool SandeshXMLMessage::Parse(const uint8_t *xml_msg, size_t size) {
     xml_parse_result result = xdoc_.load_buffer(xml_msg, size,
         parse_default & ~parse_escapes);
     if (!result) {
-        LOG(ERROR, __func__ << ": Unable to load Sandesh XML. (status=" <<
+        SANDESH_LOG(ERROR, __func__ << ": Unable to load Sandesh XML. (status=" <<
             result.status << ", offset=" << result.offset << "): " << 
             xml_msg);
         return false;
     }
     xml_node header_node = xdoc_.first_child();
     if (!ParseHeader(header_node, header_)) {
-        LOG(ERROR, __func__ << ": Sandesh header parse FAILED: " << 
+        SANDESH_LOG(ERROR, __func__ << ": Sandesh header parse FAILED: " <<
             xml_msg);
         return EINVAL;
     }
@@ -138,7 +137,7 @@ bool SandeshSyslogMessage::Parse(const uint8_t *xml_msg, size_t size) {
     xml_parse_result result = xdoc_.load_buffer(xml_msg, size,
         parse_default & ~parse_escapes);
     if (!result) {
-        LOG(ERROR, __func__ << ": Unable to load Sandesh Syslog. (status=" <<
+        SANDESH_LOG(ERROR, __func__ << ": Unable to load Sandesh Syslog. (status=" <<
             result.status << ", offset=" << result.offset << "): " <<
             xml_msg);
         return false;

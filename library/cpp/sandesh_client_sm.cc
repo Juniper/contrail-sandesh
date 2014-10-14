@@ -46,7 +46,7 @@ namespace sc = boost::statechart;
 #define SM_LOG(_Level, _Msg) \
     do { \
         if (LoggingDisabled()) break;                                          \
-        log4cplus::Logger _Xlogger = log4cplus::Logger::getRoot();             \
+        log4cplus::Logger _Xlogger = Sandesh::logger();                        \
         if (_Xlogger.isEnabledFor(log4cplus::_Level##_LOG_LEVEL)) {            \
             log4cplus::tostringstream _Xbuf;                                   \
             _Xbuf << _Msg;                                                     \
@@ -56,7 +56,7 @@ namespace sc = boost::statechart;
     } while (false)
 
 #define SESSION_LOG(session) \
-    LOG(DEBUG, ((session) ? (session)->ToString() : "*") << ":" << Name())
+    SANDESH_LOG(DEBUG, ((session) ? (session)->ToString() : "*") << ":" << Name())
 
 
 namespace scm {
@@ -659,7 +659,7 @@ void SandeshClientSMImpl::OnIdle(const Ev &event) {
 
 template <class Ev>
 void SandeshClientSMImpl::ReleaseSandesh(const Ev &event) {
-    SM_LOG(ERROR, "Wrong state: " << StateName() << " for event: " << event.Name());
+    SM_LOG(DEBUG, "Wrong state: " << StateName() << " for event: " << event.Name());
     event.snh->Release();
 }
 

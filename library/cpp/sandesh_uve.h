@@ -17,7 +17,6 @@
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
 #include <tbb/mutex.h>
-#include <base/logging.h>
 
 class SandeshUVEPerTypeMap;
 
@@ -112,7 +111,7 @@ public:
         if (mapentry == map_.end()) {
             if (!tsnh->get_data().get_deleted())
                 if (false)
-                    LOG(DEBUG, __func__ << " Adding to " << uve_name_ <<" cache: " << s);
+                    SANDESH_LOG(DEBUG, __func__ << " Adding to " << uve_name_ <<" cache: " << s);
                 std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(tsnh->get_data(), tsnh->seqnum()));
                 map_.insert(s, ume);
         } else {
@@ -144,7 +143,7 @@ public:
                 uit!=map_.end(); uit++) {
             if ((seqno < uit->second->seqno) || (seqno == 0)) {
                 if (!more) {
-                    LOG(DEBUG, __func__ << " Syncing " << 
+                    SANDESH_LOG(DEBUG, __func__ << " Syncing " <<
                         " val " << uit->second->data.log() <<
                         " seq " << uit->second->seqno);
                 }

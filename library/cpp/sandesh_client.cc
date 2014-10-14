@@ -11,7 +11,6 @@
 #include <boost/bind.hpp>
 #include <boost/assign.hpp>
 
-#include <base/logging.h>
 #include <base/task_annotations.h>
 #include <io/event_manager.h>
 #include <io/tcp_session.h>
@@ -63,8 +62,8 @@ SandeshClient::SandeshClient(EventManager *evm,
         csf_(csf),
         sm_(SandeshClientSM::CreateClientSM(evm, this, sm_task_instance_, sm_task_id_)),
         session_wm_info_(kSessionWaterMarkInfo) {
-    LOG(INFO,"primary  " << primary_);
-    LOG(INFO,"secondary  " << secondary_);
+    SANDESH_LOG(INFO,"primary  " << primary_);
+    SANDESH_LOG(INFO,"secondary  " << secondary_);
 
     // Set task policy for exclusion between state machine and session tasks since
     // session delete happens in state machine task
@@ -86,11 +85,11 @@ void SandeshClient::CollectorHandler(std::vector<DSResponse> resp) {
     
     if (resp.size()>=1) {
         primary = resp[0].ep;
-        LOG(INFO, "DiscUpdate for primary " << primary);
+        SANDESH_LOG(INFO, "DiscUpdate for primary " << primary);
     }
     if (resp.size()>=2) {
         secondary = resp[1].ep;
-        LOG(INFO, "DiscUpdate for secondary " << secondary);
+        SANDESH_LOG(INFO, "DiscUpdate for secondary " << secondary);
     }
     if (primary!=Endpoint()) {
         sm_->SetCandidates(primary, secondary);
@@ -102,7 +101,7 @@ void SandeshClient::Initiate() {
     if (primary_ != Endpoint())
         sm_->SetCandidates(primary_,secondary_);
     if (csf_!=0){
-        LOG(INFO, "Subscribe to Discovery Service for Collector" );
+        SANDESH_LOG(INFO, "Subscribe to Discovery Service for Collector" );
         csf_(g_vns_constants.ModuleNames.find(Module::COLLECTOR)->second, 2, 
             boost::bind(&SandeshClient::CollectorHandler, this, _1));
     }
@@ -134,16 +133,16 @@ bool SandeshClient::ReceiveCtrlMsg(const std::string &msg,
 
     const SandeshCtrlServerToClient * snh = dynamic_cast<const SandeshCtrlServerToClient *>(sandesh);
     if (!snh) {
-        LOG(ERROR, "Received Ctrl Message with wrong type " << sandesh->Name());
+        SANDESH_LOG(ERROR, "Received Ctrl Message with wrong type " << sandesh->Name());
         sandesh->Release();
         return false;
     }
     if (!snh->get_success()) {
-        LOG(ERROR, "Received Ctrl Message : Connection with server has failed");
+        SANDESH_LOG(ERROR, "Received Ctrl Message : Connection with server has failed");
         sandesh->Release();
         return false;
     }
-    LOG(DEBUG, "Received Ctrl Message with size " << snh->get_type_info().size());
+    SANDESH_LOG(DEBUG, "Received Ctrl Message with size " << snh->get_type_info().size());
 
     map<string,uint32_t> sMap;
     const vector<UVETypeInfo> & vu = snh->get_type_info();
@@ -173,7 +172,7 @@ bool SandeshClient::ReceiveMsg(const std::string& msg,
     // Create and process the sandesh
     Sandesh *sandesh = SandeshBaseFactory::CreateInstance(sandesh_name);
     if (sandesh == NULL) {
-        LOG(ERROR, __func__ << ": Unknown sandesh: " << sandesh_name);
+        SANDESH_LOG(ERROR, __func__ << ": Unknown sandesh: " << sandesh_name);
         Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, true);
         return true;
     }
@@ -185,7 +184,7 @@ bool SandeshClient::ReceiveMsg(const std::string& msg,
             boost::shared_ptr<sandesh_prot::TXMLProtocol>(new sandesh_prot::TXMLProtocol(btrans));
     int32_t xfer = sandesh->Read(prot);
     if (xfer < 0) {
-        LOG(ERROR, __func__ << ": Decoding " << sandesh_name << " FAILED");
+        SANDESH_LOG(ERROR, __func__ << ": Decoding " << sandesh_name << " FAILED");
         Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, true);
         return false;
     }
@@ -214,13 +213,13 @@ SandeshSession *SandeshClient::CreateSMSession(
     error_code ec;
     socket->open(ip::tcp::v4(), ec);
     if (ec) {
-        LOG(ERROR, __func__ << " Open FAILED: " << ec.message());
+        SANDESH_LOG(ERROR, __func__ << " Open FAILED: " << ec.message());
         DeleteSession(session);
         return NULL;
     }
     ec = session->SetSocketOptions();
     if (ec) {
-        LOG(ERROR, __func__ << " Unable to set socket options: " << ec.message());
+        SANDESH_LOG(ERROR, __func__ << " Unable to set socket options: " << ec.message());
         DeleteSession(session);
         return NULL;
     }
@@ -246,7 +245,7 @@ void SandeshClient::InitializeSMSession(int count) {
     for(; it!= SandeshUVETypeMaps::End(); it++) {
         stv.push_back(it->first);
     }
-    LOG(DEBUG, "Sending Ctrl Message for " << Sandesh::source() << ":" <<
+    SANDESH_LOG(DEBUG, "Sending Ctrl Message for " << Sandesh::source() << ":" <<
         Sandesh::module() << ":" << Sandesh::instance_id() << ":" <<
         Sandesh::node_type() << " count " << count);
 

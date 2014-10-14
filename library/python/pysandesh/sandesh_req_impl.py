@@ -83,14 +83,14 @@ class SandeshReqImpl(object):
             self._sandesh.set_local_logging(benable)
         if sandesh_req.category is not None:
             self._sandesh.set_logging_category(sandesh_req.category)
-        if sandesh_req.level is not None:
-            self._sandesh.set_logging_level(sandesh_req.level)
+        if sandesh_req.log_level is not None:
+            self._sandesh.set_logging_level(sandesh_req.log_level)
         # Return the logging params
         sandesh_logging_resp = SandeshLoggingParams(
             enable=self._sandesh.is_local_logging_enabled(),
             category=self._sandesh.logging_category(
             ),
-            level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()])
+            log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()])
         sandesh_logging_resp.response(sandesh_req.context())
     # end sandesh_logging_params_set_handle_request
 
@@ -100,7 +100,7 @@ class SandeshReqImpl(object):
             enable=self._sandesh.is_local_logging_enabled(),
             category=self._sandesh.logging_category(
             ),
-            level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()])
+            log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()])
         sandesh_logging_resp.response(sandesh_req.context())
     # end sandesh_logging_params_status_handle_request
 

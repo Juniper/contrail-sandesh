@@ -12,7 +12,6 @@
 #include <boost/assign.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include <base/logging.h>
 #include <base/parse_object.h>
 
 #include <sandesh/common/vns_types.h>
@@ -57,7 +56,7 @@ void SandeshWriter::WriteReady(const boost::system::error_code &ec) {
     SandeshSession *ssession = session();
     
     if (ec) {
-        LOG(ERROR, "SandeshSession Write error value: " << ec.value()
+        SANDESH_LOG(ERROR, "SandeshSession Write error value: " << ec.value()
             << " category: " << ec.category().name()
             << " message: " << ec.message());
         ssession->increment_write_ready_cb_error();
@@ -104,7 +103,7 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
     btrans->wroteBytes(sandesh_open_.length());
     // Write the sandesh header
     if ((ret = header.write(prot)) < 0) {
-        LOG(ERROR, __func__ << ": Sandesh header write FAILED: " <<
+        SANDESH_LOG(ERROR, __func__ << ": Sandesh header write FAILED: " <<
             sandesh->Name() << " : " << sandesh->source() << ":" <<
             sandesh->module() << ":" << sandesh->instance_id() <<
             " Sequence Number:" << sandesh->seqnum());
@@ -116,7 +115,7 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
     xfer += ret;
     // Write the sandesh
     if ((ret = sandesh->Write(prot)) < 0) {
-        LOG(ERROR, __func__ << ": Sandesh write FAILED: "<<
+        SANDESH_LOG(ERROR, __func__ << ": Sandesh write FAILED: "<<
             sandesh->Name() << " : " << sandesh->source() << ":" <<
             sandesh->module() << ":" << sandesh->instance_id() <<
             " Sequence Number:" << sandesh->seqnum());
@@ -349,7 +348,7 @@ boost::system::error_code SandeshSession::SetSocketOptions() {
 void SandeshSession::OnRead(Buffer buffer) {
     // Check if session is being deleted, then drop the packet
     if (cb_ == NULL) {
-        LOG(ERROR, __func__ << " Session being deleted: Dropping Message");
+        SANDESH_LOG(ERROR, __func__ << " Session being deleted: Dropping Message");
         increment_recv_fail();
         ReleaseBuffer(buffer);
         return;
@@ -361,7 +360,7 @@ bool SandeshSession::SendMsg(Sandesh *sandesh) {
     tbb::mutex::scoped_lock lock(smutex_);
     if (!IsEstablished()) {
         if (sandesh->IsLoggingDroppedAllowed()) {
-            LOG(ERROR, __func__ << " Not Connected : Dropping Message: " <<
+            SANDESH_LOG(ERROR, __func__ << " Not Connected : Dropping Message: " <<
                 sandesh->ToString());
         }
         increment_send_msg_fail();
@@ -417,14 +416,14 @@ int SandeshReader::ExtractMsgHeader(const std::string& msg,
             boost::shared_ptr<TXMLProtocol>(new TXMLProtocol(btrans));
     // Read the sandesh header and note the offset
     if ((ret = header.read(prot)) <= 0) {
-        LOG(ERROR, __func__ << ": Sandesh header read FAILED: " << msg);
+        SANDESH_LOG(ERROR, __func__ << ": Sandesh header read FAILED: " << msg);
         return EINVAL;
     }
     xfer += ret;
     header_offset = xfer;
     // Extract the message name
     if ((ret = prot->readSandeshBegin(msg_type)) <= 0) {
-        LOG(ERROR, __func__ << ": Sandesh begin read FAILED: " << msg);
+        SANDESH_LOG(ERROR, __func__ << ": Sandesh begin read FAILED: " << msg);
         return EINVAL;
     }
     xfer += ret;
@@ -513,16 +512,16 @@ void SandeshReader::OnRead(Buffer buffer) {
     do {
         if (result < 0) {
             // Generate error and close connection
-            LOG(ERROR, __func__ << " Message extract failed: " << result);
+            SANDESH_LOG(ERROR, __func__ << " Message extract failed: " << result);
             const uint8_t *cp = TcpSession::BufferData(buffer);
             size_t cp_size = TcpSession::BufferSize(buffer);
-            LOG(ERROR, __func__ << " OnRead Buffer Size: " << cp_size);
-            LOG(ERROR, __func__ << " OnRead Buffer: ");
+            SANDESH_LOG(ERROR, __func__ << " OnRead Buffer Size: " << cp_size);
+            SANDESH_LOG(ERROR, __func__ << " OnRead Buffer: ");
             std::string debug((const char*)cp, cp_size);
-            LOG(ERROR, debug);
-            LOG(ERROR, __func__ << " Reader Size: " << buf_.size());
-            LOG(ERROR, __func__ << " Reader Offset: " << offset_);
-            LOG(ERROR, __func__ << " Reader Buffer: " << buf_);
+            SANDESH_LOG(ERROR, debug);
+            SANDESH_LOG(ERROR, __func__ << " Reader Size: " << buf_.size());
+            SANDESH_LOG(ERROR, __func__ << " Reader Offset: " << offset_);
+            SANDESH_LOG(ERROR, __func__ << " Reader Buffer: " << buf_);
             buf_.clear();
             offset_ = 0;
             // Enqueue a close on the state machine
@@ -547,7 +546,7 @@ void SandeshReader::OnRead(Buffer buffer) {
                 ssession->receive_msg_cb()(xml, ssession);
             } else {
                 // Receive message callback not set, session being deleted
-                LOG(ERROR, __func__ << 
+                SANDESH_LOG(ERROR, __func__ <<
                     ": Session being deleted: Dropping Message: " << xml);
                 ssession->increment_recv_msg_fail();
                 break;
@@ -587,7 +586,7 @@ Sandesh * SandeshSession::DecodeCtrlSandesh(const string& msg,
     // Create and process the sandesh
     Sandesh *sandesh = SandeshBaseFactory::CreateInstance(sandesh_name);
     if (sandesh == NULL) {
-        LOG(ERROR, __func__ << ": Unknown sandesh ctrl message: " << sandesh_name);
+        SANDESH_LOG(ERROR, __func__ << ": Unknown sandesh ctrl message: " << sandesh_name);
         return NULL;
     }
     boost::shared_ptr<sandesh_trans::TMemoryBuffer> btrans =
@@ -598,7 +597,7 @@ Sandesh * SandeshSession::DecodeCtrlSandesh(const string& msg,
             boost::shared_ptr<sandesh_prot::TXMLProtocol>(new sandesh_prot::TXMLProtocol(btrans));
     int32_t xfer = sandesh->Read(prot);
     if (xfer < 0) {
-        LOG(ERROR, __func__ << ": Decoding " << sandesh_name << " for ctrl FAILED");
+        SANDESH_LOG(ERROR, __func__ << ": Decoding " << sandesh_name << " for ctrl FAILED");
         sandesh->Release();
         return NULL;
     } else {

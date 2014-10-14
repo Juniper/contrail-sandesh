@@ -11,7 +11,6 @@
 #include <boost/bind.hpp>
 #include <boost/assign.hpp>
 
-#include <base/logging.h>
 #include <sandesh/protocol/TXMLProtocol.h>
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
@@ -85,7 +84,7 @@ bool SandeshServer::Initialize(short port) {
         sleep(1);
     }
     if (!(count < kMaxInitRetries)) {
-        LOG(ERROR, "Process EXITING: TCP Server initialization failed for port " << port);
+        SANDESH_LOG(ERROR, "Process EXITING: TCP Server initialization failed for port " << port);
         exit(1);
     }
 }
@@ -129,7 +128,7 @@ TcpSession *SandeshServer::CreateSession() {
     boost::system::error_code err;
     socket->open(ip::tcp::v4(), err);
     if (err) {
-        LOG(ERROR, __func__ << " Server Open Fail " << err.message());
+        SANDESH_LOG(ERROR, __func__ << " Server Open Fail " << err.message());
     }
 
 #ifdef __APPLE__
@@ -138,13 +137,13 @@ TcpSession *SandeshServer::CreateSession() {
     socket->set_option(reuse_addr_t(true), err);
 #endif
     if (err) {
-        LOG(ERROR, __func__ << " SetSockOpt Fail " << err.message());
+        SANDESH_LOG(ERROR, __func__ << " SetSockOpt Fail " << err.message());
         return session;
     }
 
     socket->bind(LocalEndpoint(), err);
     if (err) {
-        LOG(ERROR, __func__ << " Server Bind Failure " <<  err.message());
+        SANDESH_LOG(ERROR, __func__ << " Server Bind Failure " <<  err.message());
     }
 
     return session;
@@ -196,7 +195,7 @@ bool SandeshServer::AcceptSession(TcpSession *session) {
     SandeshConnectionMap::iterator loc = connection_.find(remote);
 
     if (loc == connection_.end()) {
-        LOG(INFO, "Server: " << __func__ << " " << "Create Connection");
+        SANDESH_LOG(INFO, "Server: " << __func__ << " " << "Create Connection");
         //create a connection_
         connection = new SandeshServerConnection(this, remote,
                          ssession->GetSessionInstance(), 
@@ -218,10 +217,10 @@ bool SandeshServer::ReceiveSandeshCtrlMsg(SandeshStateMachine *sm,
     const SandeshCtrlClientToServer *snh =
             dynamic_cast<const SandeshCtrlClientToServer *>(sandesh);
     if (!snh) {
-        LOG(DEBUG, "Received Ctrl Message with wrong type " << sandesh->Name());
+        SANDESH_LOG(DEBUG, "Received Ctrl Message with wrong type " << sandesh->Name());
         return false;
     }
-    LOG(DEBUG, "Received Ctrl Message from " << snh->get_module_name());
+    SANDESH_LOG(DEBUG, "Received Ctrl Message from " << snh->get_module_name());
     std::vector<UVETypeInfo> vu;
     SandeshCtrlServerToClient::Request(vu, true, "ctrl", session->connection());
     return true;
