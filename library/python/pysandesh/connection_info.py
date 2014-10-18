@@ -64,11 +64,22 @@ class ConnectionState(object):
 
     @staticmethod
     def get_process_state_cb(conn_infos):
+        is_cup = True
+        message = ''
         for conn_info in conn_infos:
             if conn_info.status != ConnectionStatusNames[ConnectionStatus.UP]:
-                return (ProcessState.NON_FUNCTIONAL,
-                        conn_info.type + ':' + conn_info.name)
-        return (ProcessState.FUNCTIONAL, '')
+                if message == '':
+                    message = conn_info.type
+                else:
+                    message += ', ' + conn_info.type
+                if conn_info.name is not None and conn_info.name is not '':
+                    message += ':' + conn_info.name
+                is_cup = False
+        if is_cup:
+            return (ProcessState.FUNCTIONAL, '')
+        else:
+            message += ' connection down'
+            return (ProcessState.NON_FUNCTIONAL, message)
     #end get_process_state_cb
 
     @staticmethod     
