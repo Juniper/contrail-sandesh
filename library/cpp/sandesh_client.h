@@ -49,7 +49,7 @@ public:
 
     SandeshSession *CreateSMSession(
             TcpSession::EventObserver eocb,
-            SandeshSession::ReceiveMsgCb rmcb,
+            SandeshReceiveMsgCb rmcb,
             TcpServer::Endpoint ep);
 
     void InitializeSMSession(int connects);

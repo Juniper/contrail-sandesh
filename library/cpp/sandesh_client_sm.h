@@ -43,7 +43,7 @@ public:
                         TcpServer::Endpoint sec = TcpServer::Endpoint()) = 0;
             virtual SandeshSession *CreateSMSession(
                         TcpSession::EventObserver eocb,
-                        SandeshSession::ReceiveMsgCb rmcb,
+                        SandeshReceiveMsgCb rmcb,
                         TcpServer::Endpoint ep) = 0;
             virtual void InitializeSMSession(int connects) = 0;
             virtual void DeleteSMSession(SandeshSession * session) = 0;

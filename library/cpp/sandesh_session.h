@@ -33,7 +33,7 @@ public:
     static const uint32_t kEncodeBufferSize = 2048;
     static const unsigned int kDefaultSendSize = 16384;
 
-    SandeshWriter(TcpSession *session);
+    SandeshWriter(SandeshSession *session);
     ~SandeshWriter();
     void SendMsg(Sandesh *sandesh, bool more);
     void SendBuffer(boost::shared_ptr<TMemoryBuffer> sbuffer,
@@ -42,7 +42,6 @@ public:
     }
     void WriteReady(const boost::system::error_code &ec);
     bool SendReady() {
-        tbb::mutex::scoped_lock lock(mutex_);
         return ready_to_send_;
     }
 
@@ -60,7 +59,7 @@ protected:
 private:
     friend class SandeshSendMsgUnitTest;
 
-    TcpSession *session_;
+    SandeshSession *session_;
 
     void SendInternal(boost::shared_ptr<TMemoryBuffer>);
     void ConnectTimerExpired(const boost::system::error_code &error);
@@ -79,10 +78,8 @@ private:
     void reset_send_buf() {
         send_buf_offset_ = 0;
     }
-    SandeshSession *session();
 
-    bool ready_to_send_;
-    tbb::mutex mutex_;
+    tbb::atomic<bool> ready_to_send_;
     // send_buf_ is used to store unsent data
     uint8_t *send_buf_;
     size_t send_buf_offset_;
@@ -94,13 +91,17 @@ private:
     DISALLOW_COPY_AND_ASSIGN(SandeshWriter);
 };
 
+typedef boost::function<void(const std::string&, SandeshSession *)>
+    SandeshReceiveMsgCb;
+
 class SandeshReader {
 public:
     typedef boost::asio::const_buffer Buffer;
 
-    SandeshReader(TcpSession *session);
+    SandeshReader(SandeshSession *session);
     virtual ~SandeshReader();
     virtual void OnRead(Buffer buffer);
+    void SetReceiveMsgCb(SandeshReceiveMsgCb cb);
     static int ExtractMsgHeader(const std::string& msg, SandeshHeader& header,
             std::string& msg_type, uint32_t& header_offset);
 
@@ -119,12 +120,13 @@ private:
     int MatchString(const std::string& match, size_t &m_offset);
     bool ExtractMsgLength(size_t &msg_length, int *result);
     bool ExtractMsg(Buffer buffer, int *result, bool NewBuf);
-    SandeshSession *session();
 
     std::string buf_;
     size_t offset_;
     size_t msg_length_;
-    TcpSession *session_;
+    SandeshSession *session_;
+    tbb::mutex cb_mutex_;
+    SandeshReceiveMsgCb cb_;
 
     static const int kDefaultRecvSize = SandeshWriter::kDefaultSendSize;
 
@@ -135,7 +137,6 @@ class SandeshConnection;
 
 class SandeshSession : public TcpSession {
 public:
-    typedef boost::function<void(const std::string&, SandeshSession *)> ReceiveMsgCb;
     SandeshSession(TcpServer *client, Socket *socket, int task_instance, 
         int writer_task_id, int reader_task_id);
     virtual ~SandeshSession();
@@ -155,20 +156,15 @@ public:
         return writer_.get();
     }
     void SetConnection(SandeshConnection *connection) {
-        tbb::mutex::scoped_lock lock(mutex_);
+        tbb::mutex::scoped_lock lock(conn_mutex_);
         connection_ = connection;
     }
     SandeshConnection *connection() {
-        tbb::mutex::scoped_lock lock(mutex_);
+        tbb::mutex::scoped_lock lock(conn_mutex_);
         return connection_;
     }
-    void SetReceiveMsgCb(ReceiveMsgCb cb) {
-        tbb::mutex::scoped_lock lock(mutex_);
-        cb_ = cb;
-    }
-    ReceiveMsgCb receive_msg_cb() {
-        tbb::mutex::scoped_lock lock(mutex_);
-        return cb_;
+    void SetReceiveMsgCb(SandeshReceiveMsgCb cb) {
+        reader_->SetReceiveMsgCb(cb);
     }
     virtual int GetSessionInstance() const {
         return instance_;
@@ -235,9 +231,8 @@ private:
     boost::scoped_ptr<Sandesh::SandeshQueue> send_queue_;
     boost::scoped_ptr<Sandesh::SandeshBufferQueue> send_buffer_queue_;
     SandeshConnection *connection_;
-    ReceiveMsgCb cb_;
-    tbb::mutex mutex_;
-    tbb::mutex smutex_;
+    tbb::mutex conn_mutex_;
+    tbb::mutex send_mutex_;
     int keepalive_idle_time_;
     int keepalive_interval_;
     int keepalive_probes_;

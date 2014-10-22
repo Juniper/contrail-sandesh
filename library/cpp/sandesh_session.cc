@@ -37,39 +37,33 @@ const std::string SandeshWriter::sandesh_open_attr_length_ =
         sXML_SANDESH_OPEN_ATTR_LENGTH;
 const std::string SandeshWriter::sandesh_close_ = sXML_SANDESH_CLOSE;
 
-SandeshWriter::SandeshWriter(TcpSession *session)
+//
+// SandeshWriter
+//
+SandeshWriter::SandeshWriter(SandeshSession *session)
     : session_(session),
-    ready_to_send_(true),
     send_buf_(new uint8_t[kDefaultSendSize]),
     send_buf_offset_(0) {
+    ready_to_send_ = true;
 }
 
 SandeshWriter::~SandeshWriter() {
     delete [] send_buf_;
 }
 
-SandeshSession * SandeshWriter::session () {
-    return static_cast<SandeshSession *>(session_);
-}
-
 void SandeshWriter::WriteReady(const boost::system::error_code &ec) {
-    SandeshSession *ssession = session();
-    
     if (ec) {
         SANDESH_LOG(ERROR, "SandeshSession Write error value: " << ec.value()
             << " category: " << ec.category().name()
             << " message: " << ec.message());
-        ssession->increment_write_ready_cb_error();
+        session_->increment_write_ready_cb_error();
         return;
     }
 
-    {
-        tbb::mutex::scoped_lock lock(mutex_);
-        ready_to_send_ = true;
-    }
+    ready_to_send_ = true;
 
     // We may want to start the Runner for the send_queue
-    ssession->send_queue()->MayBeStartRunner();
+    session_->send_queue()->MayBeStartRunner();
 }
 
 void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
@@ -107,7 +101,7 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
             sandesh->Name() << " : " << sandesh->source() << ":" <<
             sandesh->module() << ":" << sandesh->instance_id() <<
             " Sequence Number:" << sandesh->seqnum());
-        session()->increment_send_msg_fail();
+        session_->increment_send_msg_fail();
         Sandesh::UpdateSandeshStats(sandesh->Name(), 0, true, true);
         sandesh->Release();
         return;
@@ -119,7 +113,7 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
             sandesh->Name() << " : " << sandesh->source() << ":" <<
             sandesh->module() << ":" << sandesh->instance_id() <<
             " Sequence Number:" << sandesh->seqnum());
-        session()->increment_send_msg_fail();
+        session_->increment_send_msg_fail();
         Sandesh::UpdateSandeshStats(sandesh->Name(), 0, true, true);
         sandesh->Release();
         return;
@@ -145,7 +139,7 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
 
     // Update sandesh stats
     Sandesh::UpdateSandeshStats(sandesh->Name(), offset, true, false);
-    session()->increment_send_msg();
+    session_->increment_send_msg();
 
     if (send_buf()) {
         if (more) {
@@ -270,13 +264,13 @@ void SandeshWriter::SendMsgAll(boost::shared_ptr<TMemoryBuffer> send_buffer) {
 void SandeshWriter::SendInternal(boost::shared_ptr<TMemoryBuffer> buf) {
     uint8_t  *buffer;
     uint32_t len;
-
-    tbb::mutex::scoped_lock lock(mutex_);
     buf->getBuffer(&buffer, &len);
     ready_to_send_ = session_->Send((const uint8_t *)buffer, len, NULL);
 }
 
-
+//
+// SandeshSession
+//
 SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
         int task_instance, int writer_task_id, int reader_task_id) :
     TcpSession(client, socket),
@@ -346,18 +340,11 @@ boost::system::error_code SandeshSession::SetSocketOptions() {
 }
 
 void SandeshSession::OnRead(Buffer buffer) {
-    // Check if session is being deleted, then drop the packet
-    if (cb_ == NULL) {
-        SANDESH_LOG(ERROR, __func__ << " Session being deleted: Dropping Message");
-        increment_recv_fail();
-        ReleaseBuffer(buffer);
-        return;
-    }
     reader_->OnRead(buffer);
 }
 
 bool SandeshSession::SendMsg(Sandesh *sandesh) {
-    tbb::mutex::scoped_lock lock(smutex_);
+    tbb::mutex::scoped_lock lock(send_mutex_);
     if (!IsEstablished()) {
         if (sandesh->IsLoggingDroppedAllowed()) {
             SANDESH_LOG(ERROR, __func__ << " Not Connected : Dropping Message: " <<
@@ -377,7 +364,7 @@ bool SandeshSession::SendMsg(Sandesh *sandesh) {
 }
 
 bool SandeshSession::SendBuffer(boost::shared_ptr<TMemoryBuffer> sbuffer) {
-    tbb::mutex::scoped_lock lock(smutex_);
+    tbb::mutex::scoped_lock lock(send_mutex_);
     if (!IsEstablished()) {
         increment_send_buffer_fail();
         return true;
@@ -395,7 +382,51 @@ bool SandeshSession::EnqueueBuffer(u_int8_t *buf, u_int32_t buf_len) {
     return send_buffer_queue()->Enqueue(sbuffer);
 }
 
-SandeshReader::SandeshReader(TcpSession *session) :
+Sandesh * SandeshSession::DecodeCtrlSandesh(const string& msg,
+        const SandeshHeader& header,
+        const string& sandesh_name, const uint32_t& header_offset) {
+    namespace sandesh_prot = contrail::sandesh::protocol;
+    namespace sandesh_trans = contrail::sandesh::transport;
+
+    assert(header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT);
+
+    // Create and process the sandesh
+    Sandesh *sandesh = SandeshBaseFactory::CreateInstance(sandesh_name);
+    if (sandesh == NULL) {
+        SANDESH_LOG(ERROR, __func__ << ": Unknown sandesh ctrl message: " << sandesh_name);
+        return NULL;
+    }
+    boost::shared_ptr<sandesh_trans::TMemoryBuffer> btrans =
+            boost::shared_ptr<sandesh_trans::TMemoryBuffer>(
+                    new sandesh_trans::TMemoryBuffer((uint8_t *)msg.c_str() + header_offset,
+                            msg.size() - header_offset));
+    boost::shared_ptr<sandesh_prot::TXMLProtocol> prot =
+            boost::shared_ptr<sandesh_prot::TXMLProtocol>(new sandesh_prot::TXMLProtocol(btrans));
+    int32_t xfer = sandesh->Read(prot);
+    if (xfer < 0) {
+        SANDESH_LOG(ERROR, __func__ << ": Decoding " << sandesh_name << " for ctrl FAILED");
+        sandesh->Release();
+        return NULL;
+    } else {
+        return sandesh;
+    }
+}
+
+void SandeshSession::EnqueueClose() {
+    if (IsClosed()) {
+        return;
+    }
+    tbb::mutex::scoped_lock lock(conn_mutex_);
+    if (connection_) {
+        connection_->state_machine()->OnSessionEvent(this,
+            TcpSession::CLOSE);
+    }
+}
+
+//
+// SandeshReader
+//
+SandeshReader::SandeshReader(SandeshSession *session) :
         buf_(""),
         offset_(0),
         msg_length_(-1),
@@ -507,6 +538,15 @@ bool SandeshReader::ExtractMsg(Buffer buffer, int *result, bool NewBuf) {
 }
 
 void SandeshReader::OnRead(Buffer buffer) {
+    tbb::mutex::scoped_lock lock(cb_mutex_);
+    // Check if session is being deleted, then drop the packet
+    if (cb_.empty()) {
+        SANDESH_LOG(ERROR, __func__ <<
+            " Session being deleted: Dropping Message");
+        session_->increment_recv_fail();
+        session_->ReleaseBuffer(buffer);
+        return;
+    }
     int result = 0;
     bool done = ExtractMsg(buffer, &result, true);
     do {
@@ -525,9 +565,8 @@ void SandeshReader::OnRead(Buffer buffer) {
             buf_.clear();
             offset_ = 0;
             // Enqueue a close on the state machine
-            SandeshSession *ssession = session();
-            ssession->increment_recv_fail();
-            ssession->EnqueueClose();
+            session_->increment_recv_fail();
+            session_->EnqueueClose();
             break;
         }
         if (done == true) {
@@ -540,17 +579,7 @@ void SandeshReader::OnRead(Buffer buffer) {
             std::string xml(st, end);
             offset_ += msg_length();
             reset_msg_length();
-            SandeshSession *ssession = session();
-            if (ssession->receive_msg_cb()) {
-                ssession->increment_recv_msg();
-                ssession->receive_msg_cb()(xml, ssession);
-            } else {
-                // Receive message callback not set, session being deleted
-                SANDESH_LOG(ERROR, __func__ <<
-                    ": Session being deleted: Dropping Message: " << xml);
-                ssession->increment_recv_msg_fail();
-                break;
-            }
+            cb_(xml, session_);
         } else {
             // Read more data.
             break;
@@ -571,47 +600,7 @@ void SandeshReader::OnRead(Buffer buffer) {
     return;
 }
 
-SandeshSession * SandeshReader::session () {
-    return static_cast<SandeshSession *>(session_);
-}
-
-Sandesh * SandeshSession::DecodeCtrlSandesh(const string& msg, 
-        const SandeshHeader& header,
-        const string& sandesh_name, const uint32_t& header_offset) {
-    namespace sandesh_prot = contrail::sandesh::protocol;
-    namespace sandesh_trans = contrail::sandesh::transport;
-
-    assert(header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT);
-
-    // Create and process the sandesh
-    Sandesh *sandesh = SandeshBaseFactory::CreateInstance(sandesh_name);
-    if (sandesh == NULL) {
-        SANDESH_LOG(ERROR, __func__ << ": Unknown sandesh ctrl message: " << sandesh_name);
-        return NULL;
-    }
-    boost::shared_ptr<sandesh_trans::TMemoryBuffer> btrans =
-            boost::shared_ptr<sandesh_trans::TMemoryBuffer>(
-                    new sandesh_trans::TMemoryBuffer((uint8_t *)msg.c_str() + header_offset,
-                            msg.size() - header_offset));
-    boost::shared_ptr<sandesh_prot::TXMLProtocol> prot =
-            boost::shared_ptr<sandesh_prot::TXMLProtocol>(new sandesh_prot::TXMLProtocol(btrans));
-    int32_t xfer = sandesh->Read(prot);
-    if (xfer < 0) {
-        SANDESH_LOG(ERROR, __func__ << ": Decoding " << sandesh_name << " for ctrl FAILED");
-        sandesh->Release();
-        return NULL;
-    } else {
-        return sandesh;
-    }    
-}
-
-void SandeshSession::EnqueueClose() {
-    if (IsClosed()) {
-        return;
-    }
-    tbb::mutex::scoped_lock lock(mutex_);
-    if (connection_) {
-        connection_->state_machine()->OnSessionEvent(this,
-            TcpSession::CLOSE);
-    }
+void SandeshReader::SetReceiveMsgCb(SandeshReceiveMsgCb cb) {
+    tbb::mutex::scoped_lock lock(cb_mutex_);
+    cb_ = cb;
 }

@@ -205,7 +205,7 @@ SandeshCtrlClientToServer::HandleRequest() const { }
 
 SandeshSession *SandeshClient::CreateSMSession(
         TcpSession::EventObserver eocb,
-        SandeshSession::ReceiveMsgCb rmcb,
+        SandeshReceiveMsgCb rmcb,
         TcpServer::Endpoint ep) {
     TcpSession *session = TcpServer::CreateSession();
     Socket *socket = session->socket();
