@@ -335,8 +335,8 @@ log4cplus::LogLevel SandeshLevelTolog4Level(
       case SandeshLevel::SYS_INFO:
           return log4cplus::INFO_LOG_LEVEL;
       case SandeshLevel::SYS_DEBUG:
-      default:
           return log4cplus::DEBUG_LOG_LEVEL;
+      default:
       case SandeshLevel::INVALID:
           return log4cplus::ALL_LOG_LEVEL;
     }
