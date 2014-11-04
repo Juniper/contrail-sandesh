@@ -33,9 +33,10 @@ class SandeshConnection(object):
                                                   primary_collector, 
                                                   secondary_collector)
         self._state_machine.initialize()
-        from sandesh_common.vns.constants import ModuleNames, Module
+        from sandesh_common.vns.constants import \
+            COLLECTOR_DISCOVERY_SERVICE_NAME
         if primary_collector is None and discovery_client is not None:
-            discovery_client.subscribe(ModuleNames[Module.COLLECTOR], 2, 
+            discovery_client.subscribe(COLLECTOR_DISCOVERY_SERVICE_NAME, 2,
                                        self._handle_collector_update)
     #end __init__
 
