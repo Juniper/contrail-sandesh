@@ -42,9 +42,9 @@ const std::string SandeshWriter::sandesh_close_ = sXML_SANDESH_CLOSE;
 //
 SandeshWriter::SandeshWriter(SandeshSession *session)
     : session_(session),
+    ready_to_send_(true),
     send_buf_(new uint8_t[kDefaultSendSize]),
     send_buf_offset_(0) {
-    ready_to_send_ = true;
 }
 
 SandeshWriter::~SandeshWriter() {
@@ -60,7 +60,10 @@ void SandeshWriter::WriteReady(const boost::system::error_code &ec) {
         return;
     }
 
-    ready_to_send_ = true;
+    {
+        tbb::mutex::scoped_lock lock(send_mutex_);
+        ready_to_send_ = true;
+    }
 
     // We may want to start the Runner for the send_queue
     session_->send_queue()->MayBeStartRunner();
@@ -265,6 +268,7 @@ void SandeshWriter::SendInternal(boost::shared_ptr<TMemoryBuffer> buf) {
     uint8_t  *buffer;
     uint32_t len;
     buf->getBuffer(&buffer, &len);
+    tbb::mutex::scoped_lock lock(send_mutex_);
     ready_to_send_ = session_->Send((const uint8_t *)buffer, len, NULL);
 }
 
