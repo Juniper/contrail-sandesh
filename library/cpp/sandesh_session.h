@@ -42,6 +42,7 @@ public:
     }
     void WriteReady(const boost::system::error_code &ec);
     bool SendReady() {
+        tbb::mutex::scoped_lock lock(send_mutex_);
         return ready_to_send_;
     }
 
@@ -79,7 +80,8 @@ private:
         send_buf_offset_ = 0;
     }
 
-    tbb::atomic<bool> ready_to_send_;
+    tbb::mutex send_mutex_;
+    bool ready_to_send_;
     // send_buf_ is used to store unsent data
     uint8_t *send_buf_;
     size_t send_buf_offset_;
