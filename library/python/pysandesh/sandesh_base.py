@@ -52,6 +52,7 @@ class Sandesh(object):
         self._category = ''
         self._send_queue_enabled = True
         self._http_server = None
+        self._connect_to_collector = True
     # end __init__
 
     # Public functions
@@ -59,7 +60,7 @@ class Sandesh(object):
     def init_generator(self, module, source, node_type, instance_id,
                        collectors, client_context, 
                        http_port, sandesh_req_uve_pkg_list=None,
-                       discovery_client=None):
+                       discovery_client=None, connect_to_collector=True):
         self._role = self.SandeshRole.GENERATOR
         self._module = module
         self._source = source
@@ -67,9 +68,12 @@ class Sandesh(object):
         self._instance_id = instance_id
         self._client_context = client_context
         self._collectors = collectors
+        self._connect_to_collector = connect_to_collector
         self._rcv_queue = WorkQueue(self._process_rx_sandesh)
         self._init_logger(source + ':' + module + ':' + node_type + ':' \
             + instance_id)
+        self._logger.info('SANDESH: CONNECT TO COLLECTOR: %s',
+            connect_to_collector)
         self._stats = SandeshStats()
         self._trace = trace.Trace()
         self._sandesh_request_dict = {}
@@ -94,10 +98,11 @@ class Sandesh(object):
                 primary_collector = self._collectors[0]
             if len(self._collectors) > 1:
                 secondary_collector = self._collectors[1]
-        self._client = SandeshClient(
-            self, primary_collector, secondary_collector,
-            discovery_client)
-        self._client.initiate()
+        if self._connect_to_collector:
+            self._client = SandeshClient(
+                self, primary_collector, secondary_collector,
+                discovery_client)
+            self._client.initiate()
     # end init_generator
 
     def logger(self):
@@ -137,6 +142,10 @@ class Sandesh(object):
     def is_send_queue_enabled(self):
         return self._send_queue_enabled
     # end is_send_queue_enabled
+
+    def is_connect_to_collector_enabled(self):
+        return self._connect_to_collector
+    # end is_connect_to_collector_enabled
 
     def set_send_queue(self, enable):
         if self._send_queue_enabled != enable:
@@ -288,7 +297,12 @@ class Sandesh(object):
         if self._client:
             ret = self._client.send_sandesh(tx_sandesh)
         else:
-            self._logger.debug(tx_sandesh.log())
+            if self._connect_to_collector:
+                self._logger.error('SANDESH: No Client: %s', tx_sandesh.log())
+            else:
+                self._logger.log(
+                    SandeshLogger.get_py_logger_level(tx_sandesh.level()),
+                    tx_sandesh.log())
     # end send_sandesh
 
     def send_generator_info(self):
