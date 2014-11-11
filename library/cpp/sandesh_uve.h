@@ -63,6 +63,8 @@ public:
     virtual uint32_t TypeSeq() = 0;
     virtual uint32_t SyncUVE(const uint32_t seqno,
             const std::string &ctx, bool more) const = 0;
+    virtual bool SendUVE(const std::string& name,
+            const std::string& ctx, bool more) const = 0;
 };
 
 
@@ -152,6 +154,18 @@ public:
             }
         }
         return count;
+    }
+
+    bool SendUVE(const std::string& name, const std::string& ctx,
+                 bool more) const {
+        tbb::mutex::scoped_lock lock(uve_mutex_);
+        typename uve_type_map::const_iterator uve_entry = map_.find(name);
+        if (uve_entry != map_.end()) {
+            T::Send(uve_entry->second->data, true, uve_entry->second->seqno,
+                    ctx, more);
+            return true;
+        }
+        return false;
     }
 
 private:

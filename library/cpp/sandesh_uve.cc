@@ -58,8 +58,13 @@ SandeshUVECacheReq::HandleRequest() const {
     uint32_t returned = 0;
 
     const SandeshUVEPerTypeMap * tm = SandeshUVETypeMaps::TypeMap(get_tname());
-    if (tm)
-        returned += tm->SyncUVE(0, context(), true);
+    if (tm) {
+        if (__isset.key) {
+            returned = tm->SendUVE(get_key(), context(), true);
+        } else {
+            returned += tm->SyncUVE(0, context(), true);
+        }
+    }
 
     SandeshUVECacheResp *sur = new SandeshUVECacheResp();
     sur->set_returned(returned);

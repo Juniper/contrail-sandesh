@@ -180,4 +180,26 @@ class SandeshUVEPerTypeMap(object):
         return count
     #end sync_uve
 
+    def send_uve(self, name, ctx, more, sandesh_instance):
+        try:
+            imp_module = importlib.import_module(self._uve_module)
+        except ImportError:
+            logger.error('Failed to import Module "%s"' % (self._uve_module))
+        else:
+            uve_entry = self._uve_map.get(name)
+            if uve_entry:
+                try:
+                    uve_type = getattr(imp_module, self._uve_type)
+                except AttributeError:
+                    logger.error('Failed to create sandesh UVE "%s"' \
+                                 % (self._uve_type))
+                else:
+                    sandesh_uve = uve_type(sandesh_instance)
+                    sandesh_uve.data = uve_entry.data
+                    sandesh_uve.send(True, uve_entry.seqno, ctx, more,
+                                     sandesh_instance)
+                    return True
+        return False
+    #end send_uve
+
 #end class SandeshUVEPerTypeMap

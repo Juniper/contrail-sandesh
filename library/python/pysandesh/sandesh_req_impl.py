@@ -111,8 +111,12 @@ class SandeshReqImpl(object):
         uve_type_map = self._sandesh._uve_type_maps.get_uve_type_map(
             uve_type_name)
         if uve_type_map:
-            count = uve_type_map.sync_uve(
-                0, sandesh_req.context(), True, self._sandesh)
+            if sandesh_req.key is not None:
+                count = uve_type_map.send_uve(sandesh_req.key,
+                            sandesh_req.context(), True, self._sandesh)
+            else:
+                count = uve_type_map.sync_uve(0, sandesh_req.context(),
+                            True, self._sandesh)
         uve_cache_res = SandeshUVECacheResp(count)
         uve_cache_res.response(sandesh_req.context())
     # end sandesh_uve_cache_req_handle_request

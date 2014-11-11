@@ -105,6 +105,7 @@ response sandesh CollectorInfoResponse {
 
 request sandesh SandeshUVECacheReq {
     1: string tname;
+    2: optional string key;
 }
 
 response sandesh SandeshUVECacheResp {
