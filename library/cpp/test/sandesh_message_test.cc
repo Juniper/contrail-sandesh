@@ -229,7 +229,10 @@ TEST_F(SandeshAsyncTest, Async) {
     Sandesh::InitGenerator("SandeshAsyncTest-Client", "localhost", 
                            "Test", "Test", evm_.get(),
                            0);
+    EXPECT_FALSE(Sandesh::IsConnectToCollectorEnabled());
     Sandesh::ConnectToCollector("127.0.0.1", port);
+    EXPECT_TRUE(Sandesh::IsConnectToCollectorEnabled());
+    EXPECT_TRUE(Sandesh::client() != NULL);
     Sandesh::SetLoggingParams(true, "", "UT_DEBUG");
 
     TASK_UTIL_EXPECT_TRUE(Sandesh::client()->state() == SandeshClientSM::ESTABLISHED);

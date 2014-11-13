@@ -201,6 +201,9 @@ public:
     static inline bool IsSendQueueEnabled() { 
         return send_queue_enabled_;
     }
+    static inline bool IsConnectToCollectorEnabled() {
+        return connect_to_collector_;
+    }
     static void SendQueueResponse(std::string context);
     static void SetSendingLevel(size_t count, SandeshLevel::type level);
     static SandeshLevel::type SendingLevel() { return sending_level_; }
@@ -348,6 +351,7 @@ private:
     static SandeshLevel::type logging_ut_level_; // ut_debug logging level
     static std::string logging_category_; // current logging category
     static bool enable_trace_print_; // whether to print traces locally
+    static bool connect_to_collector_; // whether to connect to collector
     static EventManager *event_manager_;
     static bool send_queue_enabled_;
     static SandeshLevel::type sending_level_;

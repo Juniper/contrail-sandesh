@@ -45,6 +45,7 @@ bool Sandesh::enable_flow_log_ = false;
 uint32_t Sandesh::http_port_ = 0;
 bool Sandesh::enable_trace_print_ = false;
 bool Sandesh::send_queue_enabled_ = true;
+bool Sandesh::connect_to_collector_ = false;
 SandeshLevel::type Sandesh::sending_level_ = SandeshLevel::INVALID;
 SandeshClient *Sandesh::client_ = NULL;
 std::auto_ptr<Sandesh::SandeshRxQueue> Sandesh::recv_queue_;
@@ -89,6 +90,9 @@ void Sandesh::InitReceive(int recv_task_inst) {
 }
 
 void Sandesh::InitClient(EventManager *evm, Endpoint server) {
+    connect_to_collector_ = true;
+    SANDESH_LOG(INFO, "SANDESH: CONNECT TO COLLECTOR: " <<
+        connect_to_collector_);
     // Create and initialize the client
     assert(client_ == NULL);
     client_ = new SandeshClient(evm, server);
@@ -182,6 +186,10 @@ static bool make_endpoint(TcpServer::Endpoint& ep,const std::string& epstr) {
 bool Sandesh::InitClient(EventManager *evm, 
                          const std::vector<std::string> &collectors,
                          CollectorSubFn csf) {
+    connect_to_collector_ = true;
+    SANDESH_LOG(INFO, "SANDESH: CONNECT TO COLLECTOR: " <<
+        connect_to_collector_);
+
     Endpoint primary = Endpoint();
     Endpoint secondary = Endpoint();
 
@@ -544,7 +552,11 @@ bool Sandesh::HandleTest() {
 bool Sandesh::SendEnqueue() {
     if (!client_) {
         if (IsLoggingDroppedAllowed()) {
-            SANDESH_LOG(ERROR, "Sandesh: Send: No client: " << ToString());
+            if (IsConnectToCollectorEnabled()) {
+                SANDESH_LOG(ERROR, "SANDESH: No client: " << ToString());
+            } else {
+                Log();
+            }
         }
         Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
@@ -552,7 +564,7 @@ bool Sandesh::SendEnqueue() {
     } 
     if (!client_->SendSandesh(this)) {
         if (IsLoggingDroppedAllowed()) {
-            SANDESH_LOG(ERROR, "Sandesh: Send: FAILED: " << ToString());
+            SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " << ToString());
         }
         Sandesh::UpdateSandeshStats(name_, 0, true, true);
         Release();
@@ -614,7 +626,11 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
         }
         return true;
     }
-    SANDESH_LOG(ERROR, "SandeshUVE: No Client: " << ToString());
+    if (IsConnectToCollectorEnabled()) {
+        SANDESH_LOG(ERROR, "SANDESH: No Client: " << ToString());
+    } else {
+        Log();
+    }
     Sandesh::UpdateSandeshStats(Name(), 0, true, true);
     Release();
     return false;
@@ -648,11 +664,7 @@ bool Sandesh::IsLevelCategoryLoggingAllowed() const {
 
 bool Sandesh::IsLoggingAllowed() const {
     if (type_ == SandeshType::FLOW) {
-        if (enable_flow_log_) {
-            return true;
-        } else {
-            return false;
-        }
+        return enable_flow_log_;
     } else {
         return IsLocalLoggingEnabled() && IsLevelCategoryLoggingAllowed();
     }
@@ -660,11 +672,7 @@ bool Sandesh::IsLoggingAllowed() const {
 
 bool Sandesh::IsLoggingDroppedAllowed() const {
     if (type_ == SandeshType::FLOW) {
-        if (enable_flow_log_) {
-            return true;
-        } else {
-            return false;
-        }
+        return enable_flow_log_;
     } else {
         return true;
     }
