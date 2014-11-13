@@ -35,5 +35,5 @@ gen_msg_pkg+= env.SandeshGenPy('pysandesh_example/vn.sandesh', INSTALL_PATH)
 gen_msg_pkg+= env.SandeshGenPy('pysandesh_example/vm.sandesh', INSTALL_PATH)
 
 sdist_depends = [local_modules_rules, pysandesh_example_modules_rules, gen_msg_pkg]
-sdist_gen = env.Command('dist', 'setup.py', 'python setup.py sdist', chdir=1)
+sdist_gen = env.Command('dist', 'setup.py', 'cd ' + Dir('.').path + ' && python setup.py sdist')
 env.Depends(sdist_gen, sdist_depends)
