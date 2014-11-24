@@ -44,8 +44,10 @@ const std::string SandeshClient::kSessionReaderTask = "io::ReaderTask";
 bool SandeshClient::task_policy_set_ = false;
 const std::vector<Sandesh::QueueWaterMarkInfo> 
     SandeshClient::kSessionWaterMarkInfo = boost::assign::tuple_list_of
+                                               (100000, SandeshLevel::SYS_EMERG, true)
 					       (50000, SandeshLevel::SYS_ERR, true)
                                                (10000, SandeshLevel::SYS_DEBUG, true)
+                                               (75000, SandeshLevel::SYS_ERR, false)
                                                (10000, SandeshLevel::SYS_DEBUG, false)
                                                (2500, SandeshLevel::INVALID, false);
 
