@@ -11,7 +11,7 @@ import datetime
 from libstdcxx.v6.printers import *
 
 def _UTCTimestampUsecToString(utc_usec):
-    return datetime.datetime.fromtimestamp(utc_usec/1000000).strftime('%Y-%m-%d %H:%M:%S')
+    return datetime.datetime.fromtimestamp(utc_usec/1000000.0).strftime('%Y-%m-%d %H:%M:%S.%f')
 #end _UTCTimestampUsecToString
 
 def _get_trace_buffer_map():
