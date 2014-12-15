@@ -1055,9 +1055,10 @@ std::string t_cpp_generator::generate_sandesh_no_static_const_string_function(t_
 		if (signature) {
 		    // Special handling for auto-generated members
 		    if (autogen_darg && (*m_iter)->get_auto_generated()) {
-                result += declare_field(*m_iter, true, false, false, false, true);
+                        result += declare_field(*m_iter, true, false, false, false, true);
 		    } else {
-		        result += declare_field(*m_iter, false, false, false, !t->is_base_type(), true);
+                        bool use_const = !(t->is_base_type() || t->is_enum());
+		        result += declare_field(*m_iter, false, false, use_const,!t->is_base_type(), true);
 		    }
 		} else {
 			result += (*m_iter)->get_name();
@@ -1153,7 +1154,9 @@ std::string t_cpp_generator::generate_sandesh_async_creator(t_sandesh* tsandesh,
                     result += declare_field(*m_iter, true, false, false, !t->is_base_type(), true);
                 }
             } else {
-                result += declare_field(*m_iter, false, false, false, !t->is_base_type(), true);
+                bool use_const = !(t->is_base_type() || t->is_enum());
+                result += declare_field(*m_iter, false, false, use_const,
+                                        !t->is_base_type(), true);
             }
         } else {
             if (skip) {
@@ -1284,7 +1287,9 @@ std::string t_cpp_generator::generate_sandesh_trace_creator(t_sandesh *tsandesh,
         temp += ", ";
         if (signature) {
             result += temp;
-            result += declare_field(*m_iter, false, false, false, !t->is_base_type(), true);
+            bool use_const = !(t->is_base_type() || t->is_enum());
+            result += declare_field(*m_iter, false, false, use_const,
+                                    !t->is_base_type(), true);
         } else {
             result += temp;
             result += prefix + (*m_iter)->get_name() + suffix;
