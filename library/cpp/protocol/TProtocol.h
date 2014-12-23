@@ -20,6 +20,7 @@
 #ifndef _SANDESH_PROTOCOL_TPROTOCOL_H_
 #define _SANDESH_PROTOCOL_TPROTOCOL_H_ 1
 
+#include <map>
 #include <sandesh/transport/TTransport.h>
 
 #include <boost/shared_ptr.hpp>

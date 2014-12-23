@@ -21,6 +21,8 @@
 #ifndef _SANDESH_PROTOCOL_TVIRTUALPROTOCOL_H_
 #define _SANDESH_PROTOCOL_TVIRTUALPROTOCOL_H_ 1
 
+#include <map>
+#include <string>
 #include <sandesh/protocol/TProtocol.h>
 
 namespace contrail { namespace sandesh { namespace protocol {
