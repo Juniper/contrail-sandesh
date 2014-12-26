@@ -24,6 +24,8 @@
 
 #include <boost/shared_ptr.hpp>
 #include <boost/static_assert.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/string_generator.hpp>
 
 namespace contrail { namespace sandesh { namespace protocol {
 
