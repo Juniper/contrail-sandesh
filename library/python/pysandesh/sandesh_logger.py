@@ -41,11 +41,15 @@ class SandeshLogger(object):
         self._logger = logging.getLogger(self._generator)
         self._logging_level = SandeshLevel.SYS_INFO
         self._logger.setLevel(SandeshLogger.get_py_logger_level(self._logging_level))
-        self._logging_file_handler = logging.StreamHandler()
-        log_format = logging.Formatter('%(asctime)s [%(name)s]: %(message)s',
-                                       datefmt='%m/%d/%Y %I:%M:%S %p')
-        self._logging_file_handler.setFormatter(log_format)
-        self._logger.addHandler(self._logging_file_handler)
+        if not len(self._logger.handlers):
+            # add the handler only once
+            self._logging_file_handler = logging.StreamHandler()
+            log_format = logging.Formatter('%(asctime)s [%(name)s]: %(message)s',
+                                           datefmt='%m/%d/%Y %I:%M:%S %p')
+            self._logging_file_handler.setFormatter(log_format)
+            self._logger.addHandler(self._logging_file_handler)
+        else:
+            self._logging_file_handler = None
     #end __init__
 
     @staticmethod
