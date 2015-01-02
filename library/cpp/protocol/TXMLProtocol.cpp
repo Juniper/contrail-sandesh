@@ -619,18 +619,8 @@ int32_t TXMLProtocol::writeDouble(const double dub) {
 }
 
 int32_t TXMLProtocol::writeString(const string& str) {
-  std::ostringstream xmlstr;
-  // Escape XML control characters in the string
-  for (string::const_iterator it = str.begin(); it != str.end(); ++it) {
-    switch(*it) {
-    case '&':  xmlstr << "&amp;";  break;
-    case '\'': xmlstr << "&apos;"; break;          
-    case '<':  xmlstr << "&lt;";   break;         
-    case '>':  xmlstr << "&gt;";   break;
-    default:   xmlstr << *it;
-    }
-  }
-  return writePlain(xmlstr.str());
+  // Escape XML control characters in the string before writing
+  return writePlain(escapeXMLControlChars(str));
 }
 
 int32_t TXMLProtocol::writeBinary(const string& str) {
@@ -1112,10 +1102,7 @@ int32_t TXMLProtocol::readDouble(double& dub) {
 
 int32_t TXMLProtocol::readString(std::string &str) {
   readXMLString(str);
-  boost::replace_all(str, "&amp;", "&");
-  boost::replace_all(str, "&apos;", "\'");
-  boost::replace_all(str, "&lt;", "<");
-  boost::replace_all(str, "&gt;", ">");
+  unescapeXMLControlChars(str);
   return str.size(); 
 }
 

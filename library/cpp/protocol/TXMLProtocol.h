@@ -48,6 +48,28 @@ class TXMLProtocol : public TVirtualProtocol<TXMLProtocol> {
     string_prefix_size_ = string_prefix_size;
   }
 
+  static std::string escapeXMLControlChars(const std::string& str) {
+      std::ostringstream xmlstr;
+      for (std::string::const_iterator it = str.begin();
+           it != str.end(); ++it) {
+          switch(*it) {
+              case '&':  xmlstr << "&amp;";  break;
+              case '\'': xmlstr << "&apos;"; break;
+              case '<':  xmlstr << "&lt;";   break;
+              case '>':  xmlstr << "&gt;";   break;
+              default:   xmlstr << *it;
+          }
+      }
+      return xmlstr.str();
+  }
+
+  static void unescapeXMLControlChars(std::string& str) {
+      boost::replace_all(str, "&amp;", "&");
+      boost::replace_all(str, "&apos;", "\'");
+      boost::replace_all(str, "&lt;", "<");
+      boost::replace_all(str, "&gt;", ">");
+  }
+
   /**
    * Writing functions
    */
