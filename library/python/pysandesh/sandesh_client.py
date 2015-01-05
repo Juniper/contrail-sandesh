@@ -45,9 +45,13 @@ class SandeshClient(object):
             self._connection.session().enqueue_sandesh(sandesh)
         else:
             if (self._connection.session() is None):
-                self._logger.info("No Connection: %s" % sandesh.log())
-            else: 
-                self._logger.info("No ModuleId: %s" % sandesh.log())
+                self._logger.log(
+                    SandeshLogger.get_py_logger_level(sandesh.level()),
+                    "No Connection: %s" % sandesh.log())
+            else:
+                self._logger.log(
+                    SandeshLogger.get_py_logger_level(sandesh.level()),
+                    "No ModuleId: %s" % sandesh.log())
         return 0
     #end send_sandesh
 
