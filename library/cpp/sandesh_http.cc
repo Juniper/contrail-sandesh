@@ -291,7 +291,39 @@ HttpSandeshRequestCallback(HttpServer *hs,
     }
     SandeshRequest *rsnh = dynamic_cast<SandeshRequest *>(sandesh);
     assert(rsnh);
-    rsnh->RequestFromHttp(session->get_context(), request->UrlQuery());
+    std::string str;
+    std::string str_url = request->UrlQuery();
+    // If the name of sandesh has & then replace it with %26
+    std::string::reverse_iterator rit = str_url.rbegin();
+    while (rit != str_url.rend()) {
+        if((*rit) == '=') {
+            while(rit!=str_url.rend() && (*rit) != '&') {
+                 str.push_back((*rit));
+                 rit++;
+            }
+            if (rit!=str_url.rend()){
+               str.push_back((*rit));
+               rit++;
+            }
+        }
+        else {
+            if (rit!=str_url.rend() && (*rit) == '&') {
+                str.append("62%");
+                rit++;
+            }
+            else {
+               if (rit!=str_url.rend()){
+                  str.push_back((*rit));
+                  rit++;
+               }
+            }
+        }
+    }
+    std::reverse(str.begin(),str.end());
+
+    rsnh->RequestFromHttp(session->get_context(), str);
+        SANDESH_LOG(DEBUG, __func__ << " Hussain sandesh:" <<
+            str << std::endl);
     httpreqcb(rsnh);
     delete request;
 }
