@@ -21,7 +21,7 @@ def _get_trace_buffer_map():
     it = trace_buf_map.children()
     try:
         while 1:
-            val = it.next()[1]
+            val = next(it)[1]
             if it.count % 2 == 1:
                 k = val
             else:
@@ -68,7 +68,7 @@ def _get_trace_string(data, typ):
 #end _get_trace_string
 
 def _print_trace_sandesh(tb, min_index, max_index):
-    for i in range(min_index, max_index):
+    for i in range(int(min_index), int(max_index)):
         typ = gdb.lookup_type('SandeshTrace').pointer()
         type_name = tb['c_']['m_buff'][i].cast(typ).dereference()['name_']
         # convert type_name (c++ string) to python string
@@ -78,27 +78,27 @@ def _print_trace_sandesh(tb, min_index, max_index):
         typ = gdb.lookup_type('Sandesh')
         ts = _UTCTimestampUsecToString(int(trace_sandesh.cast(typ)['timestamp_']))
         trace_str = _get_trace_string(trace_sandesh, msg_type.target())
-        print ts + ' ' + msg_type.target().tag + ': ' + trace_str
+        print(ts + ' ' + msg_type.target().tag + ': ' + trace_str)
 #end _print_trace_sandesh
 
 def print_trace_buffer_list():
     """Displays the list of trace buffers created by the daemon."""
     trace_buf_map = _get_trace_buffer_map()
-    for key in trace_buf_map.iterkeys():
-        print key
+    for key in trace_buf_map.keys():
+        print(key)
 #end print_trace_buffer_list
 
 def print_trace_buffer(buf_name):
     """Dumps the content of the specified trace buffer."""
     trace_buf_map = _get_trace_buffer_map()
     trace_buffer = None
-    for k, v in trace_buf_map.iteritems():
+    for k, v in trace_buf_map.items():
         char_p = k.cast(gdb.lookup_type('char').pointer())
         if char_p.string() == buf_name:
             trace_buffer = v
             break
     if trace_buffer is None:
-        print 'Invalid trace buffer "%s"' % (buf_name)
+        print('Invalid trace buffer "%s"' % (buf_name))
     else:
         read_index = trace_buffer['px'].dereference()['read_index_']
         tb = trace_buffer['px'].dereference()['trace_buf_']
