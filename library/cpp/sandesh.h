@@ -79,6 +79,8 @@
 
 #include <time.h>
 
+#include <map>
+
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/enable_shared_from_this.hpp>
@@ -259,6 +261,9 @@ public:
     static SandeshRxQueue* recv_queue() { return recv_queue_.get(); }
     static SandeshContext* client_context() { return client_context_; }
     static void set_client_context(SandeshContext *context) { client_context_ = context; }
+    static SandeshContext *module_context(const std::string &module_name);
+    static void set_module_context(const std::string &module_name,
+                                   SandeshContext *context);
     static void set_response_callback(SandeshCallback response_cb) { response_callback_ = response_cb; }
     static SandeshCallback response_callback() { return response_callback_; }
     static SandeshClient* client() { return client_; }
@@ -321,6 +326,8 @@ protected:
 private:
     friend class SandeshTracePerfTest;
 
+    typedef std::map<std::string, SandeshContext *> ModuleContextMap;
+
     static void InitReceive(int recv_task_inst = -1);
     static void InitClient(EventManager *evm, Endpoint server);
     static bool InitClient(EventManager *evm, 
@@ -347,6 +354,7 @@ private:
     static std::auto_ptr<SandeshRxQueue> recv_queue_;
     static int recv_task_id_;
     static SandeshContext *client_context_;
+    static ModuleContextMap module_context_;
     static bool enable_local_log_;  // whether to just enable local logging
     static bool enable_flow_log_;  // whether to enable flow sandesh message logging
     static SandeshLevel::type logging_level_; // current logging level
