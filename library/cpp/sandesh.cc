@@ -66,6 +66,8 @@ tbb::mutex Sandesh::stats_mutex_;
 log4cplus::Logger Sandesh::logger_ =
     log4cplus::Logger::getInstance(LOG4CPLUS_TEXT("SANDESH"));
 
+Sandesh::ModuleContextMap Sandesh::module_context_;
+
 const char * Sandesh::SandeshRoleToString(SandeshRole::type role) {
     switch (role) {
     case SandeshRole::Generator:
@@ -848,4 +850,17 @@ bool DoDropSandeshMessage(const SandeshHeader &header,
         }
     }
     return false;
+}
+
+SandeshContext *Sandesh::module_context(const std::string &module_name) {
+    ModuleContextMap::const_iterator loc = module_context_.find(module_name);
+    if (loc != module_context_.end()) {
+        return loc->second;
+    }
+    return NULL;
+}
+
+void Sandesh::set_module_context(const std::string &module_name,
+                                 SandeshContext *context) {
+    module_context_.insert(std::make_pair(module_name, context));
 }
