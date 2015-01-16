@@ -8,11 +8,14 @@
 
 import pkgutil
 import importlib
+from gevent import monkey; monkey.patch_all()
+import wsgiref
+from wsgiref.simple_server import make_server
 import bottle
 import cStringIO
 from transport import TTransport
 from protocol import TXMLProtocol
-
+import os
 
 
 class SandeshHttp(object):
@@ -74,8 +77,22 @@ class SandeshHttp(object):
     #end __init__
 
     def start_http_server(self):
-        self._http_app.run(host=SandeshHttp._HTTP_SERVER_IP,
-            port=self._http_port, server='gevent')
+        svr = make_server(SandeshHttp._HTTP_SERVER_IP, self._http_port,
+                          self._http_app)
+        self._http_port = svr.server_port
+        self._logger.error('Starting Introspect on HTTP Port %d' % self._http_port)
+        pipe_name = '/tmp/' + self._module + "." + str(os.getppid()) + '.http_port'
+        try:
+            pipeout = os.open(pipe_name, os.O_WRONLY)
+        except:
+            self._logger.error('Cannot write HTTP Port to %s' % pipe_name)
+        else:
+            self._logger.error('Writing HTTP Port to %s' % pipe_name)
+            os.write(pipeout, '%d\n' % self._http_port)
+            os.close(pipeout)
+            
+        svr.serve_forever()
+       
     #end start_http_server
 
     def get_port(self):

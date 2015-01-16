@@ -140,6 +140,25 @@ void Sandesh::Initialize(SandeshRole::type role,
 
     InitReceive(Task::kTaskInstanceAny);
     http_port_ = SandeshHttp::Init(evm, module, http_port, &SandeshHttpCallback);
+
+    int fd;
+    std::ostringstream myfifoss;
+    myfifoss << "/tmp/" << module_ << "." << getppid() << ".http_port";
+    std::string myfifo = myfifoss.str();
+    std::ostringstream hss;
+    hss << http_port_ << "\n";
+    std::string hstr = hss.str();
+
+    fd = open(myfifo.c_str(), O_WRONLY | O_NONBLOCK);
+    if (fd != -1) {
+        SANDESH_LOG(INFO, "SANDESH: Write HTTP PORT " << hstr <<
+                          "TO : " << myfifo);
+        write(fd, hstr.c_str(), hstr.length());
+        close(fd);
+    } else {
+        SANDESH_LOG(INFO, "SANDESH: NOT Writing HTTP PORT " << hstr <<
+                          "TO : " << myfifo);
+    } 
 }
 
 bool Sandesh::ConnectToCollector(const std::string &collector_ip,
