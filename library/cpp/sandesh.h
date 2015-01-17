@@ -156,6 +156,8 @@ public:
             EventManager *evm,
             unsigned short http_port,
             SandeshContext *client_context = NULL);
+    static void RecordPort(const std::string& name, const std::string& module,
+            unsigned short port);
     // Collector
     static void InitCollector(const std::string &module,
             const std::string &source, 

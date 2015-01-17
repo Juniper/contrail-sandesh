@@ -81,16 +81,7 @@ class SandeshHttp(object):
                           self._http_app)
         self._http_port = svr.server_port
         self._logger.error('Starting Introspect on HTTP Port %d' % self._http_port)
-        pipe_name = '/tmp/' + self._module + "." + str(os.getppid()) + '.http_port'
-        try:
-            pipeout = os.open(pipe_name, os.O_WRONLY)
-        except:
-            self._logger.error('Cannot write HTTP Port to %s' % pipe_name)
-        else:
-            self._logger.error('Writing HTTP Port to %s' % pipe_name)
-            os.write(pipeout, '%d\n' % self._http_port)
-            os.close(pipeout)
-            
+        self._sandesh.record_port("http", self._http_port) 
         svr.serve_forever()
        
     #end start_http_server

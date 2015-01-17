@@ -141,22 +141,27 @@ void Sandesh::Initialize(SandeshRole::type role,
     InitReceive(Task::kTaskInstanceAny);
     http_port_ = SandeshHttp::Init(evm, module, http_port, &SandeshHttpCallback);
 
+    RecordPort("http", module_, http_port_);
+}
+
+void Sandesh::RecordPort(const std::string& name, const std::string& module,
+        unsigned short port) {
     int fd;
     std::ostringstream myfifoss;
-    myfifoss << "/tmp/" << module_ << "." << getppid() << ".http_port";
+    myfifoss << "/tmp/" << module << "." << getppid() << "." << name << "_port";
     std::string myfifo = myfifoss.str();
     std::ostringstream hss;
-    hss << http_port_ << "\n";
+    hss << port << "\n";
     std::string hstr = hss.str();
 
     fd = open(myfifo.c_str(), O_WRONLY | O_NONBLOCK);
     if (fd != -1) {
-        SANDESH_LOG(INFO, "SANDESH: Write HTTP PORT " << hstr <<
+        SANDESH_LOG(INFO, "SANDESH: Write " << name << "_port " << port <<
                           "TO : " << myfifo);
         write(fd, hstr.c_str(), hstr.length());
         close(fd);
     } else {
-        SANDESH_LOG(INFO, "SANDESH: NOT Writing HTTP PORT " << hstr <<
+        SANDESH_LOG(INFO, "SANDESH: NOT Writing " << name << "_port " << port <<
                           "TO : " << myfifo);
     } 
 }
