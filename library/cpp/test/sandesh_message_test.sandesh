@@ -56,3 +56,24 @@ response sandesh SandeshResponseTest {
 
 request sandesh SandeshRequestEmptyTest {
 }
+
+struct SandeshUVEData {
+    1: string name (key="ObjectGeneratorInfo")
+    2: optional bool deleted
+    3: optional i32 x
+}
+
+uve sandesh SandeshUVETest {
+    1: SandeshUVEData data
+}
+
+struct SandeshAlarmData {
+    1: string name (key="ObjectGeneratorInfo")
+    2: optional bool deleted
+    3: optional string description
+    4: optional bool acknowledged
+}
+
+alarm sandesh SandeshAlarmTest {
+    1: SandeshAlarmData data
+}

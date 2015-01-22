@@ -79,6 +79,7 @@ extern t_type* g_type_sandesh_trace;
 extern t_type* g_type_sandesh_trace_object;
 extern t_type* g_type_sandesh_buffer;
 extern t_type* g_type_sandesh_uve;
+extern t_type* g_type_sandesh_alarm;
 extern t_type* g_type_sandesh_object;
 extern t_type* g_type_sandesh_flow;
 extern t_type* g_type_u16;

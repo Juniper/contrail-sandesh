@@ -714,6 +714,16 @@ class SandeshUVE(Sandesh):
 # end class SandeshUVE
 
 
+class SandeshAlarm(SandeshUVE):
+
+    def __init__(self):
+        SandeshUVE.__init__(self)
+        self._type = SandeshType.ALARM
+    # end __init__
+
+# end class SandeshAlarm
+
+
 class SandeshTrace(Sandesh):
 
     def __init__(self, type):

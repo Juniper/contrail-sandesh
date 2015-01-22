@@ -947,6 +947,8 @@ void t_cpp_generator::generate_cpp_sandesh(t_sandesh* tsandesh) {
             ((t_base_type *)tsandesh->get_type())->is_sandesh_trace_object();
     bool is_uve = 
             ((t_base_type *)tsandesh->get_type())->is_sandesh_uve();
+    bool is_alarm =
+            ((t_base_type *)tsandesh->get_type())->is_sandesh_alarm();
 
     generate_sandesh_definition(f_types_, tsandesh);
     generate_sandesh_fingerprint(f_types_impl_, tsandesh, true);
@@ -966,7 +968,7 @@ void t_cpp_generator::generate_cpp_sandesh(t_sandesh* tsandesh) {
         // Generate a skeleton impl file
         generate_sandesh_request(f_request_impl_, tsandesh);
     }
-    if (is_uve) {
+    if (is_uve || is_alarm) {
         generate_sandesh_updater(out,tsandesh);
     }
 }
@@ -1382,6 +1384,8 @@ void t_cpp_generator::generate_sandesh_base_init(
         out << "SandeshResponse";     
     } else if (((t_base_type *)t)->is_sandesh_uve()) {
         out << "SandeshUVE";     
+    } else if (((t_base_type *)t)->is_sandesh_alarm()) {
+        out << "SandeshAlarm";
     } else if (((t_base_type *)t)->is_sandesh_system()) {
         out << "SandeshSystem";
     } else if (((t_base_type *)t)->is_sandesh_buffer()) {
@@ -1492,6 +1496,8 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
         extends = " : public SandeshResponse";
     } else if (((t_base_type *)t)->is_sandesh_uve()) {
         extends = " : public SandeshUVE";
+    } else if (((t_base_type *)t)->is_sandesh_alarm()) {
+        extends = " : public SandeshAlarm";
     } else if (((t_base_type *)t)->is_sandesh_system()) {
         extends = " : public SandeshSystem";
     } else if (((t_base_type *)t)->is_sandesh_buffer()) {
@@ -1505,6 +1511,7 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
     }
 
     bool is_uve = ((t_base_type *)t)->is_sandesh_uve();
+    bool is_alarm = ((t_base_type *)t)->is_sandesh_alarm();
     string creator_func_name = "Send";
     bool is_request = false;
     // Get members
@@ -1697,7 +1704,8 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
         creator_func_name = "Response";
         out << indent() << "void " << creator_func_name <<
             "() { Dispatch(); }" << endl;
-    } else if (((t_base_type *)t)->is_sandesh_uve()) {
+    } else if (((t_base_type *)t)->is_sandesh_uve() ||
+               ((t_base_type *)t)->is_sandesh_alarm()) {
         const vector<t_field*>& fields = tsandesh->get_members();
         vector<t_field*>::const_iterator f_iter = fields.begin();
         assert((*f_iter)->get_name() == "data");
@@ -1746,7 +1754,7 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
       out << indent() << "static int32_t lseqnum() { return lseqnum_;}" << endl;
     }
 
-    if (is_uve) {
+    if (is_uve || is_alarm) {
         const vector<t_field*>& fields = tsandesh->get_members();
         vector<t_field*>::const_iterator f_iter = fields.begin();
         assert((*f_iter)->get_name() == "data");
@@ -3090,9 +3098,6 @@ void t_cpp_generator::generate_sandesh_creator(ofstream& out,
 		                                       t_sandesh* tsandesh) {
     const t_type *t = tsandesh->get_type();
     assert(t->is_base_type());
-    string creator_func_name = "Send";
-    // Sandesh variable name
-    string creator_name = "sandesh";
 
     // Creator function name
     if (((t_base_type *)t)->is_sandesh_request()) {
@@ -3112,8 +3117,8 @@ void t_cpp_generator::generate_sandesh_creator(ofstream& out,
         indent(out) << "SANDESH_REGISTER_DEF_TYPE(" << tsandesh->get_name() <<
                 ");" << endl << endl;
         return;
-    } else if (((t_base_type *)t)->is_sandesh_uve()) {
-
+    } else if (((t_base_type *)t)->is_sandesh_uve() ||
+               ((t_base_type *)t)->is_sandesh_alarm()) {
         generate_sandesh_uve_creator(out, tsandesh);
         return;
     }
@@ -6824,6 +6829,7 @@ string t_cpp_generator::type_to_enum(t_type* type) {
     case t_base_type::TYPE_SANDESH_TRACE_OBJECT:
     case t_base_type::TYPE_SANDESH_BUFFER:
     case t_base_type::TYPE_SANDESH_UVE:
+    case t_base_type::TYPE_SANDESH_ALARM:
     case t_base_type::TYPE_SANDESH_OBJECT:
     case t_base_type::TYPE_SANDESH_FLOW:
       return "::contrail::sandesh::protocol::T_STRING";

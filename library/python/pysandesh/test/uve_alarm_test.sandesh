@@ -1,0 +1,30 @@
+/*
+ * Copyright (c) 2015 Juniper Networks, Inc. All rights reserved.
+ */
+
+/*
+ * uve_alarm_test.sandesh
+ *
+ * Sandesh definitions for uve/alarm test
+ */
+
+struct SandeshUVEData {
+    1: string name (key="OpserverInfo")
+    2: optional bool deleted
+    3: optional i32 xyz
+}
+
+uve sandesh SandeshUVETest {
+    1: SandeshUVEData data
+}
+
+struct SandeshAlarmData {
+    1: string name (key="OpserverInfo")
+    2: optional bool deleted
+    3: optional string description
+    4: optional bool acknowledged
+}
+
+alarm sandesh SandeshAlarmTest {
+    1: SandeshAlarmData data
+}

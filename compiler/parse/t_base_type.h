@@ -45,6 +45,7 @@ class t_base_type : public t_type {
     TYPE_SANDESH_TRACE_OBJECT,
     TYPE_SANDESH_BUFFER,
     TYPE_SANDESH_UVE,
+    TYPE_SANDESH_ALARM,
     TYPE_SANDESH_OBJECT,
     TYPE_SANDESH_FLOW,
 #endif
@@ -121,6 +122,10 @@ class t_base_type : public t_type {
 
   bool is_sandesh_uve() const {
     return base_ == TYPE_SANDESH_UVE;
+  }
+
+  bool is_sandesh_alarm() const {
+    return base_ == TYPE_SANDESH_ALARM;
   }
 
   bool is_sandesh_object() const {
@@ -217,6 +222,7 @@ class t_base_type : public t_type {
       case TYPE_SANDESH_TRACE_OBJECT : return "traceobject"; break;
       case TYPE_SANDESH_BUFFER   : return      "buffer"; break;
       case TYPE_SANDESH_UVE      : return         "uve"; break;
+      case TYPE_SANDESH_ALARM    : return       "alarm"; break;
       case TYPE_SANDESH_OBJECT   : return      "object"; break;
       case TYPE_SANDESH_FLOW     : return        "flow"; break;
 #endif

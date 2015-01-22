@@ -1293,6 +1293,8 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
     base_class = "sandesh_base.SandeshResponse";
   } else if (sandesh_type->is_sandesh_uve()) {
     base_class = "sandesh_base.SandeshUVE";
+  } else if (sandesh_type->is_sandesh_alarm()) {
+    base_class = "sandesh_base.SandeshAlarm";
   } else if (sandesh_type->is_sandesh_trace() ||
              sandesh_type->is_sandesh_trace_object()) {
     base_class = "sandesh_base.SandeshTrace";
@@ -1453,7 +1455,8 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
     generate_py_sandesh_request(out, tsandesh);
   } else if (sandesh_type->is_sandesh_response()) {
     generate_py_sandesh_response(out, tsandesh);
-  } else if (sandesh_type->is_sandesh_uve()) {
+  } else if (sandesh_type->is_sandesh_uve() ||
+             sandesh_type->is_sandesh_alarm()) {
     generate_py_sandesh_uve(out, tsandesh);
   } else if (sandesh_type->is_sandesh_trace() ||
              sandesh_type->is_sandesh_trace_object()) {
@@ -3965,6 +3968,8 @@ string t_py_generator::type_to_enum(t_type* type) {
     case t_base_type::TYPE_SANDESH_BUFFER:
       return "TTytpe.STRING";
     case t_base_type::TYPE_SANDESH_UVE:
+      return "TTytpe.STRING";
+    case t_base_type::TYPE_SANDESH_ALARM:
       return "TTytpe.STRING";
     case t_base_type::TYPE_SANDESH_OBJECT:
       return "TTytpe.STRING";

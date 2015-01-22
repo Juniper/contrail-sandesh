@@ -171,6 +171,7 @@ const int struct_is_union = 1;
  %token tok_buffer
  %token tok_uve
  %token tok_trace_object
+ %token tok_alarm
 
 /**
  * Thrift language keywords
@@ -904,7 +905,12 @@ SandeshType:
   tok_flow
     {
       $$ = g_type_sandesh_flow;
-    }       
+    }
+|
+  tok_alarm
+    {
+      $$ = g_type_sandesh_alarm;
+    }
 
 Service:
   tok_service tok_identifier Extends '{' FlagArgs FunctionList UnflagArgs '}'

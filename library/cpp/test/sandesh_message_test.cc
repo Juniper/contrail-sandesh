@@ -11,6 +11,7 @@
 #include "testing/gunit.h"
 
 #include <boost/bind.hpp>
+#include <boost/assign/list_of.hpp>
 
 #include "base/logging.h"
 #include "base/test/task_test_util.h"
@@ -26,6 +27,7 @@
 #include <sandesh/sandesh.h>
 #include <sandesh/sandesh_session.h>
 #include <sandesh/sandesh_http.h>
+#include <sandesh/sandesh_uve.h>
 #include <sandesh/sandesh_ctrl_types.h>
 #include <sandesh/sandesh_uve_types.h>
 #include <sandesh/sandesh_message_builder.h>
@@ -279,6 +281,280 @@ TEST_F(SandeshAsyncTest, Async) {
         it = type_stats.find("ObjectLogInnerAnnTest");
         EXPECT_EQ(1, it->second->stats.messages_sent);
     }
+}
+
+class SandeshUVEAlarmTest : public ::testing::Test {
+protected:
+    SandeshUVEAlarmTest() {
+    }
+
+    virtual void SetUp() {
+        msg_num_ = 0;
+        evm_.reset(new EventManager());
+        server_ = new SandeshServerTest(evm_.get(),
+            boost::bind(&SandeshUVEAlarmTest::ReceiveSandeshMsg, this, _1, _2));
+        thread_.reset(new ServerThread(evm_.get()));
+    }
+
+    virtual void TearDown() {
+        task_util::WaitForIdle();
+        Sandesh::Uninit();
+        task_util::WaitForIdle();
+        TASK_UTIL_EXPECT_FALSE(server_->HasSessions());
+        task_util::WaitForIdle();
+        server_->Shutdown();
+        task_util::WaitForIdle();
+        TcpServerManager::DeleteServer(server_);
+        task_util::WaitForIdle();
+        evm_->Shutdown();
+        if (thread_.get() != NULL) {
+            thread_->Join();
+        }
+        task_util::WaitForIdle();
+    }
+
+    bool ReceiveSandeshMsg(SandeshSession* session,
+                           const SandeshMessage* msg) {
+        std::vector<std::string> message_types =
+            boost::assign::list_of("SandeshUVETest")("SandeshAlarmTest");
+        const SandeshHeader &header(msg->GetHeader());
+        const SandeshXMLMessage *xmsg =
+            dynamic_cast<const SandeshXMLMessage *>(msg);
+        EXPECT_TRUE(xmsg != NULL);
+        std::string message(xmsg->ExtractMessage());
+
+        // Ignore UVEs sent by the sandesh library
+        if (std::find(message_types.begin(), message_types.end(),
+                      msg->GetMessageType()) == message_types.end()) {
+            return true;
+        }
+
+        EXPECT_STREQ("SandeshUVEAlarmTest-Client", header.get_Module().c_str());
+        EXPECT_STREQ("localhost", header.get_Source().c_str());
+        EXPECT_EQ(g_sandesh_constants.SANDESH_KEY_HINT, header.get_Hints());
+
+        switch(msg_num_++) {
+            case 0:
+            {
+                EXPECT_EQ(1, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name></SandeshUVEData></data></SandeshUVETest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 1:
+            {
+                EXPECT_EQ(2, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name><x type=\"i32\" identifier=\"3\">55</x></SandeshUVEData></data></SandeshUVETest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 2:
+            {
+                EXPECT_EQ(3, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name><x type=\"i32\" identifier=\"3\">1</x></SandeshUVEData></data></SandeshUVETest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 3:
+            {
+                EXPECT_EQ(4, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name><deleted type=\"bool\" identifier=\"2\">true</deleted></SandeshUVEData></data></SandeshUVETest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 4:
+            {
+                EXPECT_EQ(5, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name></SandeshUVEData></data></SandeshUVETest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 5:
+            {
+                EXPECT_EQ(1, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::ALARM, header.get_Type());
+                EXPECT_EQ(SandeshAlarmTest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshAlarmTest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshAlarmData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">alarm1</name><description type=\"string\" identifier=\"3\">alarm1 generated</description></SandeshAlarmData></data></SandeshAlarmTest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 6:
+            {
+                EXPECT_EQ(2, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::ALARM, header.get_Type());
+                EXPECT_EQ(SandeshAlarmTest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshAlarmTest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshAlarmData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">alarm1</name><acknowledged type=\"bool\" identifier=\"4\">true</acknowledged></SandeshAlarmData></data></SandeshAlarmTest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 7:
+            {
+                EXPECT_EQ(3, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::ALARM, header.get_Type());
+                EXPECT_EQ(SandeshAlarmTest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshAlarmTest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshAlarmData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">alarm2</name><description type=\"string\" identifier=\"3\">alarm2 generated</description></SandeshAlarmData></data></SandeshAlarmTest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 8:
+            {
+                EXPECT_EQ(4, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::ALARM, header.get_Type());
+                EXPECT_EQ(SandeshAlarmTest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshAlarmTest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshAlarmData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">alarm2</name><deleted type=\"bool\" identifier=\"2\">true</deleted></SandeshAlarmData></data></SandeshAlarmTest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 9:
+            {
+                EXPECT_EQ(5, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::ALARM, header.get_Type());
+                EXPECT_EQ(SandeshAlarmTest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshAlarmTest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshAlarmData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">alarm2</name></SandeshAlarmData></data></SandeshAlarmTest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 10:
+            {
+                EXPECT_EQ(2, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::ALARM, header.get_Type());
+                EXPECT_EQ(SandeshAlarmTest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshAlarmTest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshAlarmData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">alarm1</name><description type=\"string\" identifier=\"3\">alarm1 generated</description><acknowledged type=\"bool\" identifier=\"4\">true</acknowledged></SandeshAlarmData></data></SandeshAlarmTest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 11:
+            {
+                EXPECT_EQ(5, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::ALARM, header.get_Type());
+                EXPECT_EQ(SandeshAlarmTest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshAlarmTest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshAlarmData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">alarm2</name></SandeshAlarmData></data></SandeshAlarmTest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 12:
+            {
+                EXPECT_EQ(2, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name><x type=\"i32\" identifier=\"3\">55</x></SandeshUVEData></data></SandeshUVETest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 13:
+            {
+                EXPECT_EQ(5, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name></SandeshUVEData></data></SandeshUVETest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            default:
+                EXPECT_FALSE(true);
+        }
+        return true;
+    }
+
+    uint32_t msg_num_;
+    std::auto_ptr<ServerThread> thread_;
+    std::auto_ptr<EventManager> evm_;
+    SandeshServerTest *server_;
+};
+
+TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
+    server_->Initialize(0);
+    thread_->Start();
+    int port = server_->GetPort();
+    ASSERT_LT(0, port);
+
+    Sandesh::InitGenerator("SandeshUVEAlarmTest-Client", "localhost", "Test",
+                           "0", evm_.get(), 0, NULL);
+    Sandesh::ConnectToCollector("127.0.0.1", port);
+    TASK_UTIL_EXPECT_TRUE(Sandesh::client()->state() == SandeshClientSM::ESTABLISHED);
+
+    // add uve
+    // case 0
+    SandeshUVEData uve_data1;
+    uve_data1.set_name("uve1");
+    SandeshUVETest::Send(uve_data1);
+
+    // update uve
+    // case 1
+    SandeshUVEData uve_data2;
+    uve_data2.set_name("uve1");
+    uve_data2.set_x(55);
+    SandeshUVETest::Send(uve_data2);
+
+    // case 2
+    SandeshUVEData uve_data3;
+    uve_data3.set_name("uve2");
+    uve_data3.set_x(1);
+    SandeshUVETest::Send(uve_data3);
+
+    // delete uve
+    // case 3
+    SandeshUVEData uve_data4;
+    uve_data4.set_name("uve2");
+    uve_data4.set_deleted(true);
+    SandeshUVETest::Send(uve_data4);
+
+    // add deleted uve
+    // case 4
+    SandeshUVEData uve_data5;
+    uve_data5.set_name("uve2");
+    SandeshUVETest::Send(uve_data5);
+
+    // add alarm
+    // case 5
+    SandeshAlarmData alarm_data1;
+    alarm_data1.set_name("alarm1");
+    alarm_data1.set_description("alarm1 generated");
+    SandeshAlarmTest::Send(alarm_data1);
+
+    // update alarm
+    // case 6
+    SandeshAlarmData alarm_data2;
+    alarm_data2.set_name("alarm1");
+    alarm_data2.set_acknowledged(true);
+    SandeshAlarmTest::Send(alarm_data2);
+
+    // add another alarm
+    // case 7
+    SandeshAlarmData alarm_data3;
+    alarm_data3.set_name("alarm2");
+    alarm_data3.set_description("alarm2 generated");
+    SandeshAlarmTest::Send(alarm_data3);
+
+    // delete alarm
+    // case 8
+    SandeshAlarmData alarm_data4;
+    alarm_data4.set_name("alarm2");
+    alarm_data4.set_deleted(true);
+    SandeshAlarmTest::Send(alarm_data4);
+
+    // add deleted alarm
+    // case 9
+    SandeshAlarmData alarm_data5;
+    alarm_data5.set_name("alarm2");
+    SandeshAlarmTest::Send(alarm_data5);
+
+    // verify SyncAllMaps() sends all UVEs/Alarms from the cache
+    // case 10, 11, 12 and 13
+    std::map<std::string, uint32_t> uve_map;
+    SandeshUVETypeMaps::SyncAllMaps(uve_map);
+
+    TASK_UTIL_EXPECT_TRUE(msg_num_ == 14);
 }
 
 class SandeshBaseFactoryTest : public ::testing::Test {

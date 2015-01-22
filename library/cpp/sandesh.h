@@ -466,13 +466,20 @@ class SandeshUVE : public Sandesh {
 public:
     const bool get_more() const { return more_; }
 protected:
-    SandeshUVE(const std::string& name, uint32_t seqno) :
-        Sandesh(SandeshType::UVE, name, seqno), more_(false) {}
+    SandeshUVE(const std::string& name, uint32_t seqno,
+               SandeshType::type t = SandeshType::UVE) :
+        Sandesh(t, name, seqno), more_(false) {}
     bool Dispatch(SandeshConnection * sconn = NULL);
     void set_more(const bool val) { more_=val; }
   
  private:
     bool more_;
+};
+
+class SandeshAlarm : public SandeshUVE {
+protected:
+    SandeshAlarm(const std::string& name, uint32_t seqno) :
+        SandeshUVE(name, seqno, SandeshType::ALARM) {}
 };
 
 template<>

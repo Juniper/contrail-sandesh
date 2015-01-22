@@ -24,6 +24,7 @@ test_modules = [
                 'sandesh_msg_test.py',
                 'sandesh_session_test.py',
                 'sandesh_trace_test.py',
+                'sandesh_uve_alarm_test.py',
                 'conn_info_test.py'
                ]
 
@@ -35,6 +36,7 @@ env.Depends(test_modules_rules, test_depend_modules_rules)
 
 gen_test_pkg = env.SandeshGenPy('encode_decode_test.sandesh')
 gen_test_pkg += env.SandeshGenPy('msg_test.sandesh')
+gen_test_pkg += env.SandeshGenPy('uve_alarm_test.sandesh')
 gen_test_pkg += env.SandeshGenPy('#controller/src/base/test/connection_info_test.sandesh')
 gen_test_pkg += env.SandeshGenPy('#controller/src/base/sandesh/process_info.sandesh', 'gen_py/connection_info_test/', False)
 env.Depends(test_modules_rules, gen_test_pkg)
@@ -42,7 +44,8 @@ env.Depends(test_modules_rules, gen_test_pkg)
 venv = env.setup_venv('pysandesh_test', 'pysandesh_test')
 env['env_venv'] = venv
 pip_pkgs = ['greenlet==0.4.1', 'gevent==0.13.8', 'eventlet==0.9.17',
-        'testtools==0.9.21', 'geventhttpclient==1.0a', 'bottle==0.11.6']
+        'testtools==0.9.21', 'geventhttpclient==1.0a', 'bottle==0.11.6',
+        'mock==1.0.1']
 
 sandesh_pkgs = [
                  env['TOP']+'/sandesh/common',
