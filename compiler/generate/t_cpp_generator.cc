@@ -1656,7 +1656,7 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
                 ");" << endl;
         out << indent() << "virtual void HandleRequest() const;" << endl;
         indent(out) << "virtual bool RequestFromHttp(" << 
-            "const std::string& ctx, const std::string& snh_query);" << endl;
+            "const std::string& ctx, std::vector<std::string> &values_list);" << endl;
 
         // Generate creator
         out << indent() << "static void Request" <<
@@ -2675,8 +2675,9 @@ void t_cpp_generator::generate_sandesh_http_reader(ofstream& out,
 		                                      t_sandesh* tsandesh) {
     indent(out) << "#include <boost/tokenizer.hpp>" << endl;
     indent(out) << "#include <base/util.h>" << endl << endl;
+    indent(out) << "#include <vector>" << endl << endl;
     indent(out) << "bool " << tsandesh->get_name() << "::RequestFromHttp" <<
-            "(const std::string& ctx, const std::string& snh_query) {" << endl;
+            "(const std::string& ctx, std::vector<std::string> &values_list) {" << endl;
 
 	indent_up();
 
@@ -2688,48 +2689,32 @@ void t_cpp_generator::generate_sandesh_http_reader(ofstream& out,
 	// Declare stack tmp variables
 	out << endl << 
             indent() << "using std::string;"  << endl <<
-            indent() << "boost::char_separator<char> sep(\"&\");"  << endl <<
-            indent() << "boost::char_separator<char> varsep(\"=\");" << endl <<
             endl <<
-            indent() << "CURL * cr = curl_easy_init();" <<
-            indent() << "boost::tokenizer<boost::char_separator<char> >" << 
-            "tokens(snh_query, sep);" << endl <<
-            indent() << "boost::tokenizer<boost::char_separator<char> >" <<
-            "::iterator it1 = tokens.begin();" << endl << endl;
-
+            indent() << "CURL * cr = curl_easy_init();" << endl;
+            if(fields.begin() != fields.end()) {
+               indent(out) << "std::vector<string>::iterator it = values_list.begin();" << endl;
+            }
 
 	// Required variables aren't in __isset, so we need tmp vars to check them.
 	for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
-	    indent(out) << "if (it1 != tokens.end())" << endl;
+	    indent(out) << "if (it != values_list.end())" << endl;
 	    scope_up(out);
-	    indent(out) << "string tok = (*it1++).c_str();" << endl ;
-
-	    indent(out) << "boost::tokenizer<boost::char_separator<char> >" <<
-	            " var(tok, varsep);" << endl;
-	    indent(out) << "boost::tokenizer<boost::char_separator<char> >" <<
-	            "::iterator it2 = var.begin();" << endl << endl;
 
 	    t_type *ftype = (*f_iter)->get_type();
 	    if (ftype->is_base_type()) {
 	        t_base_type *btype = static_cast<t_base_type *>(ftype);
-	        indent(out) << "if (it2 != var.end()&& ++it2 != var.end()) " << endl;
-	        scope_up(out);
 	        if ((*f_iter)->get_req() == t_field::T_OPTIONAL) {
 	            indent(out) << "__isset." << (*f_iter)->get_name() << " = true;" << endl;
 	        }
 	        if (btype->is_string() || btype->is_xml()) {
-	            indent(out) << "char * unescaped = curl_easy_unescape(cr, (*it2).c_str(), 0, NULL);" << endl;
+	            indent(out) << "char * unescaped = curl_easy_unescape(cr, (*it++).c_str(), 0, NULL);" << endl;
 	            indent(out) << "std::string tmpstr(unescaped);" << endl;
 	            indent(out) << (*f_iter)->get_name() << " = boost::lexical_cast<std::string>((tmpstr));" << endl;
 	            indent(out) << "curl_free(unescaped);" << endl;
 	        } else {
 	            assert(btype->is_integer());
-	            indent(out) << "stringToInteger((*it2), " << (*f_iter)->get_name() << ");" << endl;
+	            indent(out) << "stringToInteger(*it++, " << (*f_iter)->get_name() << ");" << endl;
 	        }
-	        scope_down(out);
-	    } else {
-	        // Ignore this field
-	        indent(out) << "++it2;" << endl;
 	    }
 	    scope_down(out);
 	}

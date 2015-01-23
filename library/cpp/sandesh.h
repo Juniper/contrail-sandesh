@@ -385,7 +385,7 @@ class SandeshRequest : public Sandesh,
 public:
     virtual void HandleRequest() const = 0;
     virtual bool RequestFromHttp(const std::string& ctx, 
-        const std::string& snh_query) = 0; 
+        std::vector<std::string> &values_list) = 0;
     void Release();
     boost::shared_ptr<const SandeshRequest> SharedPtr() const { return shared_from_this(); }
     bool Enqueue(SandeshRxQueue* queue);
