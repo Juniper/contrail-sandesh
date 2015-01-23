@@ -54,7 +54,7 @@ def _get_trace_string(data, typ):
                     try:
                         s += (f.name + ': [ ')
                         while 1:
-                            val = vit.next()[1]
+                            val = next(vit)[1]
                             if val.type.code == gdb.TYPE_CODE_STRUCT and not _STD_STRING.match(str(val.type.unqualified())):
                                 s += _get_trace_string(val, val.type)
                             else:
