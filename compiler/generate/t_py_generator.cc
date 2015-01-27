@@ -1768,12 +1768,12 @@ void t_py_generator::generate_py_sandesh_http_attr(ofstream& out,
     t_base_type::t_base bftype = ((t_base_type *)ftype)->get_base();
 
     indent(out) << 
-      "if bottle.request.query." << namer << ":" << endl;
+      "if '" << namer << "' in parameter_dict:" << endl;
     indent_up();
     if (bftype == t_base_type::TYPE_STRING) {
       indent(out) <<
         "sandesh_req." << namel << " = str(" << 
-        "bottle.request.query." << namer << ")" << endl;
+        "parameter_dict['" << namer << "'])" << endl;
     } else {
       assert(bftype == t_base_type::TYPE_BOOL ||
              bftype == t_base_type::TYPE_BYTE ||
@@ -1790,7 +1790,7 @@ void t_py_generator::generate_py_sandesh_http_attr(ofstream& out,
       indent_up();
       indent(out) <<
         "sandesh_req." << namel << " = int(" << 
-        "bottle.request.query." << namer << ")" << endl;
+        "parameter_dict['" << namer << "'])" << endl;
       indent_down();
       indent(out) <<
         "except ValueError:" << endl;
@@ -1823,6 +1823,19 @@ void t_py_generator::generate_py_sandesh_http_request_handler(ofstream& out,
   indent_up();
   indent(out) << "return SandeshHttp.http_error('Sandesh Request \"" << tsandesh->get_name() << 
       "\" not implemented')" << endl;
+  indent_down();
+  indent(out) << "tok_url_equal = bottle.request.query_string.rsplit('=')" << endl;
+  indent(out) << "parameter_dict = {}" << endl;
+  indent(out) << "if tok_url_equal:" << endl;
+  indent_up();
+  indent(out) << "identifier = tok_url_equal[0]" << endl;
+  indent(out) << "for i in range(1, len(tok_url_equal)-1):" << endl;
+  indent_up();
+  indent(out) << "list = tok_url_equal[i].rsplit('&',1)" << endl;
+  indent(out) << "parameter_dict[identifier] = list[0]" << endl;
+  indent(out) << "identifier = list[1]" << endl;
+  indent_down();
+  indent(out) << "parameter_dict[identifier] = tok_url_equal[len(tok_url_equal)-1]" << endl;
   indent_down();
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
     t_type *ftype = (*f_iter)->get_type();

@@ -291,7 +291,38 @@ HttpSandeshRequestCallback(HttpServer *hs,
     }
     SandeshRequest *rsnh = dynamic_cast<SandeshRequest *>(sandesh);
     assert(rsnh);
-    rsnh->RequestFromHttp(session->get_context(), request->UrlQuery());
+    std::string url(request->UrlQuery());
+    boost::char_separator<char> varsep("=");
+    boost::tokenizer<boost::char_separator<char> >tokens(url, varsep);
+    boost::tokenizer<boost::char_separator<char> >::iterator it1 = tokens.begin();
+    vector<string> values_list;
+
+    boost::tokenizer<boost::char_separator<char> >::iterator it2 = it1;
+    if (it1 != tokens.end() && ++it1 != tokens.end()){
+        it2 = it1;
+        it2++;
+    }
+
+    while (it2 != tokens.end()) {
+        std::string value((*it1));
+        std::string::reverse_iterator rit = value.rbegin();
+        int i = 0;
+        while (rit != value.rend() && (*rit) != '&'){
+            ++rit;
+            ++i;
+        }
+        if (rit != value.rend() && (*rit) == '&')
+            values_list.push_back(value.substr(0,(value.length() - i - 1)));
+        else
+            values_list.push_back(value.substr(0,(value.length() - i)));
+        it1++;
+        it2++;
+    }
+    if (it2 != it1 && url[url.length()-1] != '=')
+        values_list.push_back(*it1);
+    else
+        values_list.push_back("");
+    rsnh->RequestFromHttp(session->get_context(), values_list);
     httpreqcb(rsnh);
     delete request;
 }
