@@ -11,7 +11,8 @@ env = SandeshEnv.Clone();
 
 test_depend_modules = [
                        '__init__.py',
-                       'test_utils.py'
+                       'test_utils.py',
+                       'sandesh_req_impl.py'
                       ]
 
 test_depend_modules_rules = []
@@ -24,6 +25,7 @@ test_modules = [
                 'sandesh_msg_test.py',
                 'sandesh_session_test.py',
                 'sandesh_trace_test.py',
+                'sandesh_http_test.py',
                 'sandesh_uve_alarm_test.py',
                 'conn_info_test.py'
                ]
@@ -36,6 +38,7 @@ env.Depends(test_modules_rules, test_depend_modules_rules)
 
 gen_test_pkg = env.SandeshGenPy('encode_decode_test.sandesh')
 gen_test_pkg += env.SandeshGenPy('msg_test.sandesh')
+gen_test_pkg += env.SandeshGenPy('sandesh_http_test.sandesh')
 gen_test_pkg += env.SandeshGenPy('uve_alarm_test.sandesh')
 gen_test_pkg += env.SandeshGenPy('#controller/src/base/test/connection_info_test.sandesh')
 gen_test_pkg += env.SandeshGenPy('#controller/src/base/sandesh/process_info.sandesh', 'gen_py/connection_info_test/', False)

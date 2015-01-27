@@ -63,6 +63,12 @@ function transformTraceMsg() {
     }
 }
 
+function sendSandeshRequest(valuex) {
+    var uri = (decodeURIComponent(document.URL)).split('?')[0];
+    var val = encodeURIComponent(valuex);
+    window.location.href = uri+'?x='+val;
+}
+
 /* Table initialisation */
 $(document).ready(function() {
 	var $table = $('#struct-or-list-table');

@@ -22,9 +22,13 @@ response sandesh VNSwitchRouteResp {
 response sandesh SandeshHttpTestResp {
         1: i32                          testId;
         2: i32                          param;
+        3: string                       teststring1;
+        4: string                       teststring2;
 }
 
 request sandesh SandeshHttpTestRequest {
         1: i32                          testId;
         2: i32                          param;
+        3: string                       teststring1;
+        4: string                       teststring2;
 }

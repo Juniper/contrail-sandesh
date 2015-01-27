@@ -458,7 +458,7 @@
                 <xsl:variable name="valuex" select=".."/>
                 <td style="color:blue">
                     <pre>
-                        <a href="Snh_{$linkx}?x={$valuex}">
+                        <a href="#" onclick="sendSandeshRequest('{$valuex}');">
                             <xsl:value-of select=".."/>
                         </a>
                     </pre>    
