@@ -46,6 +46,8 @@ using namespace std;
 
 int currentTestId;
 int currentParam;
+string currentTestString1;
+string currentTestString2;
 
 void
 SandeshHttpTestRequest::HandleRequest() const{
@@ -57,6 +59,7 @@ SandeshHttpTestRequest::HandleRequest() const{
         shtp->set_testId(testId);
         shtp->set_param(param);
         shtp->set_context(context());
+
         shtp->Response();
         break;
     }
@@ -110,6 +113,32 @@ SandeshHttpTestRequest::HandleRequest() const{
         shtp->set_context(context());
         shtp->Response();
         break;      
+    }
+    case (5): {
+        ASSERT_EQ(teststring1, currentTestString1);
+        ASSERT_EQ(teststring2, currentTestString2);
+        SandeshHttpTestResp *shtp = new SandeshHttpTestResp();
+        shtp->set_testId(testId);
+        shtp->set_param(param);
+        shtp->set_teststring1(teststring1);
+        shtp->set_teststring2(teststring2);
+        shtp->set_context(context());
+        shtp->Response();
+        free(shtp);
+        break;
+    }
+    case (6): {
+        ASSERT_EQ(teststring1, currentTestString1);
+        ASSERT_EQ(teststring2, currentTestString2);
+        SandeshHttpTestResp *shtp = new SandeshHttpTestResp();
+        shtp->set_testId(testId);
+        shtp->set_param(param);
+        shtp->set_teststring1(teststring1);
+        shtp->set_teststring2(teststring2);
+        shtp->set_context(context());
+        shtp->Response();
+        free(shtp);
+        break;
     }
     }
     ASSERT_EQ(param, currentParam);
@@ -371,6 +400,46 @@ TEST_F(SandeshHttpTest, XSLT) {
       free(chunk.memory);
     if (style.memory)
       free(style.memory);
+}
+
+TEST_F(SandeshHttpTest, ValidateURL1) {
+    chunk.memory = reinterpret_cast<char *>(malloc(1));
+    chunk.size = 0;
+
+    currentTestId = 5; currentParam = 55;
+    currentTestString1 = "&one<&>two&";
+    currentTestString2 = "%1&2%>";
+    CURL * cr = curl_easy_init();
+    char *string1 = curl_easy_escape(cr, "&one<&>two&", 0);
+    char *string2 = curl_easy_escape(cr, "%1&2%>", 0);
+    const string url = host_url_.str() + \
+      "Snh_SandeshHttpTestRequest?testId=5&param=55&teststring1=" + \
+       string1 + "&teststring2=" + string2;
+    curl_free(string1);
+    curl_free(string2);
+    curl_easy_cleanup(cr);
+    ASSERT_EQ(CURLE_OK, curl_fetch(url.c_str(), &chunk)) ;
+    if (chunk.memory)
+      free(chunk.memory);
+}
+
+TEST_F(SandeshHttpTest, ValidateURL2) {
+    chunk.memory = reinterpret_cast<char *>(malloc(1));
+    chunk.size = 0;
+
+    currentTestId = 6; currentParam = 66;
+    currentTestString1 = "";
+    currentTestString2 = "one&two";
+    CURL * cr = curl_easy_init();
+    char *string1 = curl_easy_escape(cr, "one&two", 0);
+    const string url = host_url_.str() + \
+      "Snh_SandeshHttpTestRequest?testId=6&param=66&teststring1=&" + \
+       "teststring2=" + string1;
+    curl_free(string1);
+    curl_easy_cleanup(cr);
+    ASSERT_EQ(CURLE_OK, curl_fetch(url.c_str(), &chunk)) ;
+    if (chunk.memory)
+      free(chunk.memory);
 }
 }
 
