@@ -104,7 +104,7 @@ void SandeshClient::Initiate() {
         sm_->SetCandidates(primary_,secondary_);
     if (csf_!=0){
         SANDESH_LOG(INFO, "Subscribe to Discovery Service for Collector" );
-        csf_(g_vns_constants.COLLECTOR_DISCOVERY_SERVICE_NAME, 2,
+        csf_("contrail-discovery", 2,
             boost::bind(&SandeshClient::CollectorHandler, this, _1));
     }
 }
