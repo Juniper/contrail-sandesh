@@ -6,7 +6,7 @@ from setuptools import setup
 
 setup(
     name='pysandeshexample',
-    version='0.1dev',
+    version='0.1.dev0',
     packages=[
               'pysandesh_example',
               'pysandesh_example.gen_py',
