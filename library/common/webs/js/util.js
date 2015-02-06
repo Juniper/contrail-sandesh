@@ -63,10 +63,10 @@ function transformTraceMsg() {
     }
 }
 
-function sendSandeshRequest(valuex) {
-    var uri = (decodeURIComponent(document.URL)).split('?')[0];
+/* Encode the special characters in the sandesh request value field */
+function sendSandeshRequest(linkx, valuex) {
     var val = encodeURIComponent(valuex);
-    window.location.href = uri+'?x='+val;
+    window.location.href = 'Snh_'+linkx+'?x='+val;
 }
 
 /* Table initialisation */
