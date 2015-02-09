@@ -87,10 +87,12 @@ class Sandesh(object):
         sandesh_req_uve_pkg_list.append('pysandesh.gen_py')
         for pkg_name in sandesh_req_uve_pkg_list:
             self._create_sandesh_request_and_uve_lists(pkg_name)
+        self._gev_httpd = None
         if http_port != -1:
             self._http_server = SandeshHttp(
                 self, module, http_port, sandesh_req_uve_pkg_list)
-            gevent.spawn(self._http_server.start_http_server)
+            self._gev_httpd = gevent.spawn(
+                    self._http_server.start_http_server)
         primary_collector = None
         secondary_collector = None
         if self._collectors is not None:
@@ -104,6 +106,13 @@ class Sandesh(object):
                 discovery_client)
             self._client.initiate()
     # end init_generator
+
+    def kill_httpd(self):
+        if self._gev_httpd:
+            try:
+                self._gev_httpd.kill()
+            except Exception as e:
+                self._logger.debug(str(e))
 
     def record_port(self, name, port):
         pipe_name = '/tmp/%s.%d.%s_port' % (self._module, os.getppid(), name)
