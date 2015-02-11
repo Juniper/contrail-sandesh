@@ -402,7 +402,7 @@ SandeshHttp::Init(EventManager *evm, const string module,
             boost::bind(&HttpSandeshRequestCallback, hServ_, _1, _2));
     }
 
-    hServ_->Initialize(port);
+    assert(hServ_->Initialize(port));
     SANDESH_LOG(DEBUG, "Sandesh Http Server Port " << hServ_->GetPort());
 
     return hServ_->GetPort();

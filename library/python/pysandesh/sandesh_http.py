@@ -77,11 +77,15 @@ class SandeshHttp(object):
     #end __init__
 
     def start_http_server(self):
-        svr = make_server(SandeshHttp._HTTP_SERVER_IP, self._http_port,
-                          self._http_app)
-        self._http_port = svr.server_port
-        self._logger.error('Starting Introspect on HTTP Port %d' % self._http_port)
-        self._sandesh.record_port("http", self._http_port) 
+        try:
+            svr = make_server(SandeshHttp._HTTP_SERVER_IP, self._http_port,
+                              self._http_app)
+            self._http_port = svr.server_port
+            self._logger.error('Starting Introspect on HTTP Port %d' % self._http_port)
+            self._sandesh.record_port("http", self._http_port)
+        except:
+            self._logger.error('Unable to open HTTP Port %d' % self._http_port)
+            assert(False)
         svr.serve_forever()
        
     #end start_http_server
