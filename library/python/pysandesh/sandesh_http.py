@@ -16,6 +16,8 @@ import cStringIO
 from transport import TTransport
 from protocol import TXMLProtocol
 import os
+import socket
+import sys
 
 
 class SandeshHttp(object):
@@ -77,11 +79,15 @@ class SandeshHttp(object):
     #end __init__
 
     def start_http_server(self):
-        svr = make_server(SandeshHttp._HTTP_SERVER_IP, self._http_port,
-                          self._http_app)
+        try:
+            svr = make_server(SandeshHttp._HTTP_SERVER_IP, self._http_port,
+                              self._http_app)
+        except socket.error as e:
+            self._logger.error('Unable to open HTTP Port %d, %s' % (self._http_port, e))
+            sys.exit()
         self._http_port = svr.server_port
         self._logger.error('Starting Introspect on HTTP Port %d' % self._http_port)
-        self._sandesh.record_port("http", self._http_port) 
+        self._sandesh.record_port("http", self._http_port)
         svr.serve_forever()
        
     #end start_http_server
