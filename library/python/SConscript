@@ -113,6 +113,8 @@ sandesh_hdr_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh.sandes
 sandesh_ctrl_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_ctrl.sandesh', 'pysandesh/') 
 # Auto-generated Sandesh UVE package 
 sandesh_uve_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_uve.sandesh', 'pysandesh/')
+# Auto-generated Sandesh Alarm package
+sandesh_alarm_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_alarm.sandesh', 'pysandesh/')
 # Auto-generated Sandesh Trace package
 sandesh_trace_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_trace.sandesh', 'pysandesh/')
 # Generate the io files and install in sandesh_uve
@@ -125,7 +127,7 @@ sdist_depends = [local_modules_rules, web_srv_rules,
                  pysandesh_modules_rules, transport_modules_rules, 
                  protocol_modules_rules, sandesh_hdr_pkg,
                  sandesh_ctrl_pkg, sandesh_uve_pkg,
-                 sandesh_trace_pkg,
+                 sandesh_alarm_pkg, sandesh_trace_pkg,
                  fysom_sources_rules,
                  io_pkg, process_info_pkg]
 
