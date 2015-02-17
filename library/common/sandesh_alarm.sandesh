@@ -1,0 +1,28 @@
+/*
+ * Copyright (c) 2015 Juniper Networks, Inc. All rights reserved.
+ */
+
+/*
+ *  sandesh_alarm.sandesh
+ *
+ */
+
+request sandesh SandeshAlarmCacheRequest {
+    1: string table
+    2: optional string name
+}
+
+response sandesh SandeshAlarmCacheResponse {
+    1: u32 count
+}
+
+request sandesh SandeshAlarmTypesRequest {
+}
+
+struct SandeshAlarmTypeInfo {
+    1: string table (link="SandeshAlarmCacheRequest")
+}
+
+response sandesh SandeshAlarmTypesResponse {
+    1: list<SandeshAlarmTypeInfo> type_info
+}

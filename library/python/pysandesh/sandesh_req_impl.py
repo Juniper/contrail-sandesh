@@ -16,7 +16,10 @@ from pysandesh.gen_py.sandesh_uve.ttypes import SandeshMessageStats, \
     SandeshMessageTypeStats, SandeshGeneratorStats, SandeshMessageStatsReq, \
     SandeshMessageStatsResp, SandeshSendQueueSet, SandeshSendQueueStatus, \
     SandeshSendQueueResponse
-from pysandesh.gen_py.sandesh.ttypes import SandeshLevel
+from pysandesh.gen_py.sandesh_alarm.ttypes import SandeshAlarmCacheRequest, \
+    SandeshAlarmCacheResponse, SandeshAlarmTypesRequest, \
+    SandeshAlarmTypeInfo, SandeshAlarmTypesResponse
+from pysandesh.gen_py.sandesh.ttypes import SandeshLevel, SandeshType
 from pysandesh.gen_py.sandesh_trace.ttypes import SandeshTraceBufInfo, \
     SandeshTraceRequest, SandeshTraceBufferListRequest, \
     SandeshTraceBufferListResponse, SandeshTraceTextResponse, \
@@ -56,6 +59,10 @@ class SandeshReqImpl(object):
             self.sandesh_send_queue_set_handle_request
         SandeshSendQueueStatus.handle_request = \
             self.sandesh_send_queue_status_handle_request
+        SandeshAlarmCacheRequest.handle_request = \
+            self.sandesh_alarm_cache_req_handle_request
+        SandeshAlarmTypesRequest.handle_request = \
+            self.sandesh_alarm_types_req_handle_request
     # end __init__
 
     # Public functions
@@ -110,12 +117,12 @@ class SandeshReqImpl(object):
             sandesh_req.tname)
         uve_type_map = self._sandesh._uve_type_maps.get_uve_type_map(
             uve_type_name)
-        if uve_type_map:
+        if uve_type_map and uve_type_map.sandesh_type() is SandeshType.UVE:
             if sandesh_req.key is not None:
-                count = uve_type_map.send_uve(sandesh_req.key,
+                count = uve_type_map.send_uve(None, sandesh_req.key,
                             sandesh_req.context(), True, self._sandesh)
             else:
-                count = uve_type_map.sync_uve(0, sandesh_req.context(),
+                count = uve_type_map.sync_uve(None, 0, sandesh_req.context(),
                             True, self._sandesh)
         uve_cache_res = SandeshUVECacheResp(count)
         uve_cache_res.response(sandesh_req.context())
@@ -125,12 +132,42 @@ class SandeshReqImpl(object):
         uve_global_map = self._sandesh._uve_type_maps.get_uve_global_map()
         uve_type_info_list = []
         for uve_type_key, uve_type_map in uve_global_map.iteritems():
-            uve_type_info = SandeshUVETypeInfo(
-                uve_type_map.uve_data_type(), uve_type_map.uve_type_seqnum())
-            uve_type_info_list.append(uve_type_info)
+            if uve_type_map.sandesh_type() is SandeshType.UVE:
+                uve_type_info = SandeshUVETypeInfo(
+                    uve_type_map.uve_data_type(),
+                    uve_type_map.uve_type_seqnum())
+                uve_type_info_list.append(uve_type_info)
         uve_types_res = SandeshUVETypesResp(uve_type_info_list)
         uve_types_res.response(sandesh_req.context())
     # end sandesh_uve_types_req_handle_request
+
+    def sandesh_alarm_cache_req_handle_request(self, sandesh_req):
+        count = 0
+        uve_global_map = self._sandesh._uve_type_maps.get_uve_global_map()
+        if sandesh_req.table is not None:
+            for type_key, type_map in uve_global_map.iteritems():
+                if type_map.sandesh_type() is not SandeshType.ALARM:
+                    continue
+                if sandesh_req.name is not None:
+                    count += type_map.send_uve(sandesh_req.table,
+                                sandesh_req.name, sandesh_req.context(),
+                                True, self._sandesh)
+                else:
+                    count += type_map.sync_uve(sandesh_req.table, 0,
+                                sandesh_req.context(), True, self._sandesh)
+        alarm_cache_res = SandeshAlarmCacheResponse(count)
+        alarm_cache_res.response(sandesh_req.context())
+    # end sandesh_alarm_cache_req_handle_request
+
+    def sandesh_alarm_types_req_handle_request(self, sandesh_req):
+        alarm_type_list = self._sandesh._uve_type_maps.get_object_types(
+                            SandeshType.ALARM)
+        alarm_type_info_list = []
+        for alarm_type in alarm_type_list:
+            alarm_type_info_list.append(SandeshAlarmTypeInfo(alarm_type))
+        alarm_types_res = SandeshAlarmTypesResponse(alarm_type_info_list)
+        alarm_types_res.response(sandesh_req.context())
+    # end sandesh_alarm_types_req_handle_request
 
     def sandesh_stats_handle_request(self, sandesh_req):
         sandesh_stats = self._sandesh.stats()
