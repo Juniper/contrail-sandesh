@@ -69,15 +69,28 @@ class SandeshUVEAlarmTest(unittest.TestCase):
         expected_data1 = [{'seqnum': i+1, 'data': uve_data[i]} \
                           for i in range(len(uve_data))]
 
+        # send UVE with different key
+        uve_test_data = SandeshUVEData(name='uve1')
+        uve_test = SandeshUVETest(data=uve_test_data, table='CollectorInfo',
+                                  sandesh=self.sandesh)
+        uve_test.send(sandesh=self.sandesh)
+
+        expected_data2 = [{'seqnum': 6, 'data': uve_test_data}]
+
         # verify uve sync
         self.sandesh._uve_type_maps.sync_all_uve_types({}, self.sandesh)
 
-        expected_data2 = [
-            {'seqnum': 5, 'data': SandeshUVEData(name='uve2')},
-            {'seqnum': 2, 'data': SandeshUVEData(name='uve1', xyz=345)}
+        uve_data1 = SandeshUVEData(name='uve1')
+        uve_data1._table = 'CollectorInfo'
+        uve_data2 = SandeshUVEData(name='uve2')
+        uve_data3 = SandeshUVEData(name='uve1', xyz=345)
+        expected_data3 = [
+            {'seqnum': 6, 'data': uve_data1},
+            {'seqnum': 5, 'data': uve_data2},
+            {'seqnum': 2, 'data': uve_data3}
         ]
 
-        expected_data = expected_data1 + expected_data2
+        expected_data = expected_data1 + expected_data2 + expected_data3
 
         # verify the result
         args_list = self.sandesh._client.send_uve_sandesh.call_args_list
@@ -116,18 +129,34 @@ class SandeshUVEAlarmTest(unittest.TestCase):
         expected_data1 = [{'seqnum': i+1, 'data': alarm_data[i]} \
                           for i in range(len(alarm_data))]
 
+        # send Alarm with different key
+        alarm_test_data = SandeshAlarmData(name='alarm3',
+                            description='alarm3 generated')
+        alarm_test = SandeshAlarmTest(data=alarm_test_data, table='VRouterInfo',
+                                      sandesh=self.sandesh)
+        alarm_test.send(sandesh=self.sandesh)
+
+        expected_data2 = [{'seqnum': 7, 'data': alarm_test_data}]
+
         # verify alarms sync
         self.sandesh._uve_type_maps.sync_all_uve_types({}, self.sandesh)
 
-        expected_data2 = [
-            {'seqnum': 6, 'data': SandeshAlarmData(name='alarm3',
-                description='alarm3 deleted', deleted=True)},
-            {'seqnum': 5, 'data': SandeshAlarmData(name='alarm2')},
-            {'seqnum': 2, 'data': SandeshAlarmData(name='alarm1',
-                description='alarm1 generated', acknowledged=True)}
+        alarm_data1 = SandeshAlarmData(name='alarm3',
+                        description='alarm3 deleted', deleted=True)
+        alarm_data2 = SandeshAlarmData(name='alarm2')
+        alarm_data3 = SandeshAlarmData(name='alarm1',
+                        description='alarm1 generated', acknowledged=True)
+        alarm_data4 = SandeshAlarmData(name='alarm3',
+                        description='alarm3 generated')
+        alarm_data4._table = 'VRouterInfo'
+        expected_data3 = [
+            {'seqnum': 6, 'data': alarm_data1},
+            {'seqnum': 5, 'data': alarm_data2},
+            {'seqnum': 2, 'data': alarm_data3},
+            {'seqnum': 7, 'data': alarm_data4},
         ]
 
-        expected_data = expected_data1 + expected_data2
+        expected_data = expected_data1 + expected_data2 + expected_data3
 
         # verify the result
         args_list = self.sandesh._client.send_uve_sandesh.call_args_list

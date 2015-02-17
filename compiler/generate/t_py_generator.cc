@@ -163,6 +163,8 @@ class t_py_generator : public t_generator {
   void generate_py_sandesh_uve(std::ofstream& out, t_sandesh* tsandesh);
   void generate_py_sandesh_uve_list(std::ofstream& out);
   void generate_py_sandesh_uve_data_list(std::ofstream& out);
+  void generate_py_sandesh_alarm_list(std::ofstream& out);
+  void generate_py_sandesh_alarm_data_list(std::ofstream& out);
   void generate_py_sandesh_trace(std::ofstream& out, t_sandesh* tsandesh);
 #endif
 
@@ -342,6 +344,16 @@ class t_py_generator : public t_generator {
    * Sandesh UVE Data List
    */
   std::vector<std::string> sandesh_uve_data_list_;
+
+  /**
+   * Sandesh Alarm List
+   */
+  std::vector<std::string> sandesh_alarm_list_;
+
+  /**
+   * Sandesh Alarm Data List
+   */
+  std::vector<std::string> sandesh_alarm_data_list_;
 #endif
 
   /**
@@ -554,6 +566,8 @@ void t_py_generator::close_generator() {
   generate_py_sandesh_request_list(f_types_);
   generate_py_sandesh_uve_list(f_types_);
   generate_py_sandesh_uve_data_list(f_types_);
+  generate_py_sandesh_alarm_list(f_types_);
+  generate_py_sandesh_alarm_data_list(f_types_);
 #endif
   // Close types file
   f_types_.close();
@@ -925,6 +939,19 @@ void t_py_generator::generate_py_struct_definition(ofstream& out,
 #endif
     }
 
+#ifdef SANDESH
+    for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+      if ((*m_iter)->get_name() == "name") {
+        std::map<std::string, std::string>::iterator it;
+        it = (*m_iter)->annotations_.find("key");
+        if (it != (*m_iter)->annotations_.end()) {
+          indent(out) << "self._table = '" << it->second << "'" << endl;
+        }
+        break;
+      }
+    }
+#endif
+
     indent_down();
 
     out << endl;
@@ -1192,8 +1219,13 @@ void t_py_generator::generate_py_struct_writer(ofstream& out,
     if (!((*f_iter)->annotations_.empty())) {
       std::map<std::string, std::string>::iterator it;
       for (it = (*f_iter)->annotations_.begin(); it != (*f_iter)->annotations_.end(); it++) {
-        indent(out) << "annotations['" << (*it).first << "'] = '" << 
-          (*it).second << "'" << endl;
+        if (((*f_iter)->get_name() == "name") && (it->first == "key")) {
+          indent(out) << "if self._table is None or self._table is '': return -1" << endl;
+          indent(out) << "annotations['key'] = " << "self._table" << endl;
+        } else {
+          indent(out) << "annotations['" << (*it).first << "'] = '" <<
+            (*it).second << "'" << endl;
+        }
       }
     }
     indent(out) <<
@@ -1395,6 +1427,10 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
       out << ", category='" << "__default__" <<
         "', level=SandeshLevel.SYS_INFO";
     }
+    if (sandesh_type->is_sandesh_uve() ||
+        sandesh_type->is_sandesh_alarm()) {
+      out << ", table=None";
+    }
     out << ", sandesh=sandesh_base.sandesh_global):" << endl;
 
     indent_up();
@@ -1441,6 +1477,13 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
         sandesh_type->is_sandesh_flow()) {
       indent(out) << "self._category = category" << endl;
       indent(out) << "self._level = level" << endl;
+    }
+    if (sandesh_type->is_sandesh_uve() ||
+        sandesh_type->is_sandesh_alarm()) {
+      indent(out) << "if table is not None:" << endl;
+      indent_up();
+      indent(out) << "self.data._table = table" << endl;
+      indent_down();
     }
     indent_down();
 
@@ -2261,10 +2304,18 @@ void t_py_generator::generate_py_sandesh_uve(std::ofstream& out,
   indent_down();
   out << endl;
 
-  // Update sandesh UVE list
-  sandesh_uve_list_.push_back(tsandesh->get_name());
-  // Update sandesh UVE data list
-  sandesh_uve_data_list_.push_back(ts->get_name());
+  const t_base_type *sandesh_type = (t_base_type *)tsandesh->get_type();
+  if (sandesh_type->is_sandesh_uve()) {
+    // Update sandesh UVE list
+    sandesh_uve_list_.push_back(tsandesh->get_name());
+    // Update sandesh UVE data list
+    sandesh_uve_data_list_.push_back(ts->get_name());
+  } else if (sandesh_type->is_sandesh_alarm()) {
+    // Update sandesh Alarm list
+    sandesh_alarm_list_.push_back(tsandesh->get_name());
+    // Update sandesh Alarm data list
+    sandesh_alarm_data_list_.push_back(ts->get_name());
+  }
 }
 
 void t_py_generator::generate_py_sandesh_uve_list(ofstream& out) {
@@ -2282,6 +2333,28 @@ void t_py_generator::generate_py_sandesh_uve_data_list(ofstream& out) {
   out << "_SANDESH_UVE_DATA_LIST = [" << endl;
   std::vector<std::string>::const_iterator it;
   for (it = sandesh_uve_data_list_.begin(); it != sandesh_uve_data_list_.end(); ++it) {
+    indent(out) << "'" << *it << "'," << endl;
+  }
+  out << "]" << endl;
+}
+
+void t_py_generator::generate_py_sandesh_alarm_list(ofstream& out) {
+  out << endl << endl;
+  out << "_SANDESH_ALARM_LIST = [" << endl;
+  std::vector<std::string>::const_iterator it;
+  for (it = sandesh_alarm_list_.begin(); it != sandesh_alarm_list_.end();
+       ++it) {
+    indent(out) << "'" << *it << "'," << endl;
+  }
+  out << "]" << endl;
+}
+
+void t_py_generator::generate_py_sandesh_alarm_data_list(ofstream& out) {
+  out << endl << endl;
+  out << "_SANDESH_ALARM_DATA_LIST = [" << endl;
+  std::vector<std::string>::const_iterator it;
+  for (it = sandesh_alarm_data_list_.begin();
+       it != sandesh_alarm_data_list_.end(); ++it) {
     indent(out) << "'" << *it << "'," << endl;
   }
   out << "]" << endl;

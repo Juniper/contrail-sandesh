@@ -13,6 +13,7 @@ setup(
                 'pysandesh.transport',
                 'pysandesh.gen_py',
                 'pysandesh.gen_py.sandesh',
+                'pysandesh.gen_py.sandesh_alarm',
                 'pysandesh.gen_py.sandesh_ctrl',
                 'pysandesh.gen_py.sandesh_uve',
                 'pysandesh.gen_py.sandesh_uve.io',

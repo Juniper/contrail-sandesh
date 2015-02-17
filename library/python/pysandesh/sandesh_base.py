@@ -77,7 +77,7 @@ class Sandesh(object):
         self._stats = SandeshStats()
         self._trace = trace.Trace()
         self._sandesh_request_dict = {}
-        self._uve_type_maps = SandeshUVETypeMaps()
+        self._uve_type_maps = SandeshUVETypeMaps(self._logger)
         if sandesh_req_uve_pkg_list is None:
             sandesh_req_uve_pkg_list = []
         # Initialize the request handling
@@ -498,6 +498,9 @@ class Sandesh(object):
                         self._logger.debug(
                             'Add Sandesh UVEs in module "%s"' % (mod))
                         self._add_sandesh_uve(mod)
+                        self._logger.debug(
+                            'Add Sandesh Alarms in module "%s"' %(mod))
+                        self._add_sandesh_alarm(mod)
     # end _create_sandesh_request_and_uve_lists
 
     def _add_sandesh_request(self, mod):
@@ -559,8 +562,56 @@ class Sandesh(object):
             sandesh_uve_info_list = zip(sandesh_uve_list, sandesh_uve_data_list)
             # Register sandesh UVEs
             for uve_type_name, uve_data_type_name in sandesh_uve_info_list:
-                SandeshUVEPerTypeMap(self, uve_type_name, uve_data_type_name, mod)
+                SandeshUVEPerTypeMap(self, SandeshType.UVE,
+                                     uve_type_name, uve_data_type_name, mod)
     # end _add_sandesh_uve
+
+    def _get_sandesh_alarm_list(self, imp_module):
+        try:
+            sandesh_alarm_list = getattr(imp_module, '_SANDESH_ALARM_LIST')
+        except AttributeError:
+            self._logger.error(
+                '"%s" module does not have sandesh Alarm list' %
+                (imp_module.__name__))
+            return None
+        else:
+            return sandesh_alarm_list
+    # end _get_sandesh_alarm_list
+
+    def _get_sandesh_alarm_data_list(self, imp_module):
+        try:
+            sandesh_alarm_data_list = getattr(imp_module, '_SANDESH_ALARM_DATA_LIST')
+        except AttributeError:
+            self._logger.error(
+                '"%s" module does not have sandesh Alarm data list' %
+                (imp_module.__name__))
+            return None
+        else:
+            return sandesh_alarm_data_list
+    # end _get_sandesh_alarm_data_list
+
+    def _add_sandesh_alarm(self, mod):
+        try:
+            imp_module = importlib.import_module(mod)
+        except ImportError:
+            self._logger.error('Failed to import Module "%s"' % (mod))
+        else:
+            sandesh_alarm_list = self._get_sandesh_alarm_list(imp_module)
+            sandesh_alarm_data_list = self._get_sandesh_alarm_data_list(imp_module)
+            if sandesh_alarm_list is None or sandesh_alarm_data_list is None:
+                return
+            if len(sandesh_alarm_list) != len(sandesh_alarm_data_list):
+                self._logger.error(
+                    '"%s" module sandesh Alarm and Alarm data list do not match' %
+                     (mod))
+                return
+            sandesh_alarm_info_list = zip(sandesh_alarm_list,
+                                          sandesh_alarm_data_list)
+            # Register sandesh Alarms
+            for alarm_type_name, alarm_data_type_name in sandesh_alarm_info_list:
+                SandeshUVEPerTypeMap(self, SandeshType.ALARM, alarm_type_name,
+                                     alarm_data_type_name, mod)
+    # end _add_sandesh_alarm
 
     def _init_logger(self, generator):
         if not generator:
@@ -708,7 +759,10 @@ class SandeshUVE(Sandesh):
             if uve_type_map is None:
                 return -1
             self._seqnum = self.next_seqnum()
-            uve_type_map.update_uve(self)
+            if not uve_type_map.update_uve(self):
+                sandesh._logger.error('Failed to update sandesh in cache. ' \
+                    + self.log())
+                return -1
         self._context = context
         self._more = more
         if self._context.find('http://') == 0:
