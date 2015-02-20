@@ -58,7 +58,7 @@ class Sandesh(object):
     # Public functions
 
     def init_generator(self, module, source, node_type, instance_id,
-                       collectors, client_context, 
+                       collectors, client_context,
                        http_port, sandesh_req_uve_pkg_list=None,
                        discovery_client=None, connect_to_collector=True):
         self._role = self.SandeshRole.GENERATOR
@@ -127,7 +127,7 @@ class Sandesh(object):
             self._logger.error('Writing %s_port %d to %s' % (name, port, pipe_name))
             os.write(pipeout, '%d\n' % port)
             os.close(pipeout)
-        
+
     def logger(self):
         return self._logger
     # end logger
@@ -140,10 +140,13 @@ class Sandesh(object):
                            level=SandeshLevel.SYS_INFO,
                            file=SandeshLogger._DEFAULT_LOG_FILE,
                            enable_syslog=False,
-                           syslog_facility=_DEFAULT_SYSLOG_FACILITY):
+                           syslog_facility=_DEFAULT_SYSLOG_FACILITY,
+                           max_file_bytes=None, file_backup_count=None,
+                           log_formatter=None):
         self._sandesh_logger.set_logging_params(
             enable_local_log, category, level, file,
-            enable_syslog, syslog_facility)
+            enable_syslog, syslog_facility, max_file_bytes=max_file_bytes,
+            file_backup_count=file_backup_count, log_formatter=log_formatter)
     # end set_logging_params
 
     def set_local_logging(self, enable_local_log):
@@ -353,9 +356,9 @@ class Sandesh(object):
             if client_info.secondary is None:
                 client_info.secondary = ''
             module_state = ModuleClientState(name=self._source + ':' +
-                                             self._node_type + ':' + 
+                                             self._node_type + ':' +
                                              self._module + ':' +
-                                             self._instance_id, 
+                                             self._instance_id,
                                              client_info=client_info)
             generator_info = SandeshModuleClientTrace(
                 data=module_state, sandesh=self)
