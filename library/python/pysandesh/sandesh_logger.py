@@ -62,14 +62,17 @@ class SandeshLogger(object):
     #end logger
 
     def set_logging_params(self, enable_local_log=False, category='', level=SandeshLevel.SYS_INFO,
-                           file=_DEFAULT_LOG_FILE, enable_syslog=False, syslog_facility='LOG_LOCAL0'):
+                           file=_DEFAULT_LOG_FILE, enable_syslog=False, syslog_facility='LOG_LOCAL0',
+                           max_file_bytes=None, file_backup_count=None, log_formatter=None):
         self.set_local_logging(enable_local_log)
         self.set_logging_category(category)
         self.set_logging_level(level)
-        self.set_logging_file(file)
+        self.set_logging_file(file, max_file_bytes=max_file_bytes,
+                              file_backup_count=file_backup_count,
+                              log_formatter=log_formatter)
         self.set_logging_syslog(enable_syslog, syslog_facility)
     #end set_logging_params
-    
+
     def set_local_logging(self, enable_local_log):
         if self._enable_local_log != enable_local_log:
             self._logger.info('SANDESH: Logging: %s -> %s', self._enable_local_log, enable_local_log)
@@ -90,20 +93,21 @@ class SandeshLogger(object):
             level = SandeshLevel.SYS_INFO
 
         if self._logging_level != level:
-            self._logger.info('SANDESH: Logging: LEVEL: [%s] -> [%s]', 
+            self._logger.info('SANDESH: Logging: LEVEL: [%s] -> [%s]',
                               SandeshLevel._VALUES_TO_NAMES[self._logging_level],
                               SandeshLevel._VALUES_TO_NAMES[level])
             self._logging_level = level
             self._logger.setLevel(logger_level)
     #end set_logging_level
-    
+
     def set_logging_category(self, category):
         if self._logging_category != category:
             self._logger.info('SANDESH: Logging: CATEGORY: %s -> %s', self._logging_category, category)
             self._logging_category = category
     #end set_logging_category
-    
-    def set_logging_file(self, file):
+
+    def set_logging_file(self, file, max_file_bytes=None, file_backup_count=None,
+                         log_formatter=None):
         if self._logging_file != file:
             self._logger.info('SANDESH: Logging: FILE: [%s] -> [%s]',
                               self._logging_file, file)
@@ -111,15 +115,33 @@ class SandeshLogger(object):
             if file == self._DEFAULT_LOG_FILE:
                 self._logging_file_handler = logging.StreamHandler()
             else:
-                self._logging_file_handler = logging.handlers.RotatingFileHandler(filename=file,
-                                                                                  maxBytes=5000000,
-                                                                                  backupCount=10)
-            log_format = logging.Formatter('%(asctime)s [%(name)s]: %(message)s',
-                                           datefmt='%m/%d/%Y %I:%M:%S %p')
+                if not max_file_bytes:
+                    max_file_bytes = 5000000
+                else:
+                    max_file_bytes = int(max_file_bytes)
+
+                if not file_backup_count:
+                    file_backup_count = 10
+                else:
+                    file_backup_count = int(file_backup_count)
+
+                self._logging_file_handler = logging.handlers.RotatingFileHandler(
+                    filename=file, maxBytes=max_file_bytes,
+                    backupCount=file_backup_count)
+            if log_formatter:
+                fmt = log_formatter.get('fmt',
+                                        '%(asctime)s [%(name)s]: %(message)s')
+                datefmt = log_formatter.get('datefmt', '%m/%d/%Y %I:%M:%S %p')
+            else:
+                fmt = '%(asctime)s [%(name)s]: %(message)s'
+                datefmt = '%m/%d/%Y %I:%M:%S %p'
+
+            log_format = logging.Formatter(fmt=fmt, datefmt=datefmt)
+
             self._logging_file_handler.setFormatter(log_format)
             self._logger.addHandler(self._logging_file_handler)
-            self._logging_file = file   
-    #end set_logging_file        
+            self._logging_file = file
+    #end set_logging_file
 
     def set_logging_syslog(self, enable_syslog, syslog_facility):
         if self._enable_syslog == enable_syslog and \
@@ -148,15 +170,15 @@ class SandeshLogger(object):
     def is_local_logging_enabled(self):
         return self._enable_local_log
     #end is_local_logging_enabled
-    
+
     def logging_level(self):
         return self._logging_level
     #end logging_level
-    
+
     def logging_category(self):
         return self._logging_category
     #end logging_category
-    
+
     def logging_file(self):
         return self._logging_file
     #end logging_file
