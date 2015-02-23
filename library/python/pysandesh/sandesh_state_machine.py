@@ -173,6 +173,10 @@ class SandeshStateMachine(object):
                                        'src'  : State._IDLE,
                                        'dst'  : State._CONNECT
                                       },
+                                      {'name' : Event._EV_START,
+                                       'src'  : State._IDLE,
+                                       'dst'  : State._CONNECT
+                                      },
 
                                       # _DISCONNECT 
                                       {'name' : Event._EV_COLLECTOR_CHANGE,
