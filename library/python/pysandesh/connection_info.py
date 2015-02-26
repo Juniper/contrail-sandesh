@@ -79,11 +79,19 @@ class ConnectionState(object):
     @staticmethod     
     def update(conn_type, name, status, server_addrs, message):
         conn_key = (conn_type, name)
+        if status == ConnectionStatus.UP:
+            message = ""
         conn_info = ConnectionInfo(type = ConnectionTypeNames[conn_type],
                                    name = name,
                                    status = ConnectionStatusNames[status],
                                    description = message,
                                    server_addrs = server_addrs)
+        if ConnectionState._connection_map.has_key(conn_key):
+            if status == ConnectionStatus.UP:
+                if ConnectionState._connection_map[conn_key].status == \
+                        ConnectionStatusNames[ConnectionStatus.UP]:
+                    if server_addrs == ConnectionState._connection_map[conn_key].server_addrs:
+                        return
         ConnectionState._connection_map[conn_key] = conn_info
         ConnectionState._send_uve()
     #end update
