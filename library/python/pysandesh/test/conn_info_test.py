@@ -71,13 +71,13 @@ class ConnInfoTest(unittest.TestCase):
             uve_type_cls = NodeStatusTestUVE,
             uve_data_type_cls = NodeStatusTest)
         vcinfos = []
-        self._update_conn_info("Test1", ConnectionStatus.UP, "Test1 UP",
+        self._update_conn_info("Test1", ConnectionStatus.UP, None,
             vcinfos)
-        self._update_conn_state("Test1", ConnectionStatus.UP, "Test1 UP",
+        self._update_conn_state("Test1", ConnectionStatus.UP, None,
             vcinfos)
-        self._update_conn_info("Test2", ConnectionStatus.UP, "Test2 UP",
+        self._update_conn_info("Test2", ConnectionStatus.UP, None,
             vcinfos)
-        self._update_conn_state("Test2", ConnectionStatus.UP, "Test2 UP",
+        self._update_conn_state("Test2", ConnectionStatus.UP, None,
             vcinfos)
         vcinfos = self._delete_conn_info("Test2", vcinfos)
         self._delete_conn_state("Test2", vcinfos)
@@ -85,7 +85,7 @@ class ConnInfoTest(unittest.TestCase):
 
     def test_callback(self):
         vcinfos = []
-        self._update_conn_info("Test1", ConnectionStatus.UP, "Test1 UP",
+        self._update_conn_info("Test1", ConnectionStatus.UP, None,
             vcinfos);
         (pstate, message) = ConnectionState.get_process_state_cb(vcinfos)
         self.assertEqual(ProcessState.FUNCTIONAL, pstate)
