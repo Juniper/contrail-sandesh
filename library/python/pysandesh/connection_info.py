@@ -84,6 +84,11 @@ class ConnectionState(object):
                                    status = ConnectionStatusNames[status],
                                    description = message,
                                    server_addrs = server_addrs)
+        if ConnectionState._connection_map.has_key(conn_key):
+            if status == ConnectionState._connection_map[conn_key].status and \
+                    server_addrs == ConnectionState._connection_map[conn_key].server_addrs and \
+                    message == ConnectionState._connection_map[conn_key].description:
+		return
         ConnectionState._connection_map[conn_key] = conn_info
         ConnectionState._send_uve()
     #end update
