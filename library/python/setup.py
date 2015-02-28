@@ -23,6 +23,7 @@ setup(
     package_data={
                   'pysandesh':['webs/*.xsl','webs/js/*.js','webs/css/*.css','webs/css/images/*.png'],
                   'pysandesh.gen_py.sandesh_uve':['*.html', '*.css', '*.xml'],
+                  'pysandesh.gen_py.sandesh_alarm':['*.html', '*.css', '*.xml'],
                   'pysandesh.gen_py.sandesh_uve.io':['*.html', '*.css', '*.xml'],
                   'pysandesh.gen_py.sandesh_ctrl' : ['*.html', '*.css', '*.xml'],
                   'pysandesh.gen_py.sandesh_trace':['*.html', '*.css', '*.xml'],
