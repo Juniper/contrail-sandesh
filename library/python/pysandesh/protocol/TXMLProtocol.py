@@ -231,7 +231,7 @@ class TXMLProtocol(TProtocolBase):
 
   def writeI64(self, i64):
     try:
-      self.writeBuffer(str(ctypes.c_long(i64).value))
+      self.writeBuffer(str(ctypes.c_longlong(i64).value))
     except TypeError:
       self._logger.error('TXML Protocol: Invalid i64 value %s' % str(i64))
       return -1
