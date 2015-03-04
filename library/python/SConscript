@@ -11,7 +11,7 @@ env = SandeshEnv.Clone();
 PYSANDESH_PATH = 'pysandesh/'
 PYSANDESH_INSTALL_PATH = 'pysandesh/'
 
-local_modules = [ 
+local_modules = [
                  'setup.py',
                  'MANIFEST.in'
                 ]
@@ -58,6 +58,7 @@ pysandesh_modules = [
                      'util.py',
                      'trace.py',
                      'sandesh_base.py',
+                     'sandesh_base_logger.py',
                      'sandesh_client.py',
                      'sandesh_connection.py',
                      'sandesh_http.py',
@@ -107,11 +108,11 @@ for module in protocol_modules:
         env.Install(PYSANDESH_INSTALL_PATH + 'protocol/',
                     File(PYSANDESH_PATH + 'protocol/' + module).srcnode()))
 
-# Auto-generated SandeshHeader package 
+# Auto-generated SandeshHeader package
 sandesh_hdr_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh.sandesh', 'pysandesh/')
 # Auto-generated Sandesh Ctrl package
-sandesh_ctrl_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_ctrl.sandesh', 'pysandesh/') 
-# Auto-generated Sandesh UVE package 
+sandesh_ctrl_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_ctrl.sandesh', 'pysandesh/')
+# Auto-generated Sandesh UVE package
 sandesh_uve_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_uve.sandesh', 'pysandesh/')
 # Auto-generated Sandesh Trace package
 sandesh_trace_pkg = env.SandeshGenPy('#tools/sandesh/library/common/sandesh_trace.sandesh', 'pysandesh/')
@@ -122,7 +123,7 @@ env.Depends(io_pkg, sandesh_uve_pkg)
 process_info_pkg = env.SandeshGenPy('#controller/src/base/sandesh/process_info.sandesh', 'pysandesh/')
 
 sdist_depends = [local_modules_rules, web_srv_rules,
-                 pysandesh_modules_rules, transport_modules_rules, 
+                 pysandesh_modules_rules, transport_modules_rules,
                  protocol_modules_rules, sandesh_hdr_pkg,
                  sandesh_ctrl_pkg, sandesh_uve_pkg,
                  sandesh_trace_pkg,

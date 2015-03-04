@@ -5,27 +5,29 @@
 #
 # Sandesh
 #
-
-import os
-import gevent
-import pkgutil
 import importlib
+import os
+import pkgutil
+
+import gevent
+import sandesh_logger as sand_logger
 import trace
-from work_queue import WorkQueue
-from sandesh_logger import SandeshLogger
-from sandesh_client import SandeshClient
-from sandesh_http import SandeshHttp
-from sandesh_uve import SandeshUVETypeMaps, SandeshUVEPerTypeMap
-from sandesh_stats import SandeshStats
-from sandesh_trace import SandeshTraceRequestRunner
-from util import *
+import util
+
 from gen_py.sandesh.ttypes import SandeshType, SandeshLevel
 from gen_py.sandesh.constants import *
+from sandesh_client import SandeshClient
+from sandesh_http import SandeshHttp
+from sandesh_stats import SandeshStats
+from sandesh_trace import SandeshTraceRequestRunner
+from sandesh_uve import SandeshUVETypeMaps, SandeshUVEPerTypeMap
+from work_queue import WorkQueue
 
 
 class Sandesh(object):
-    _DEFAULT_LOG_FILE = SandeshLogger._DEFAULT_LOG_FILE
-    _DEFAULT_SYSLOG_FACILITY = SandeshLogger._DEFAULT_SYSLOG_FACILITY
+    _DEFAULT_LOG_FILE = sand_logger.SandeshLogger._DEFAULT_LOG_FILE
+    _DEFAULT_SYSLOG_FACILITY = (
+        sand_logger.SandeshLogger._DEFAULT_SYSLOG_FACILITY)
 
     class SandeshRole:
         INVALID = 0
@@ -58,9 +60,10 @@ class Sandesh(object):
     # Public functions
 
     def init_generator(self, module, source, node_type, instance_id,
-                       collectors, client_context, 
+                       collectors, client_context,
                        http_port, sandesh_req_uve_pkg_list=None,
-                       discovery_client=None, connect_to_collector=True):
+                       discovery_client=None, connect_to_collector=True,
+                       logger_class=None, logger_config_file=None):
         self._role = self.SandeshRole.GENERATOR
         self._module = module
         self._source = source
@@ -70,10 +73,10 @@ class Sandesh(object):
         self._collectors = collectors
         self._connect_to_collector = connect_to_collector
         self._rcv_queue = WorkQueue(self._process_rx_sandesh)
-        self._init_logger(source + ':' + module + ':' + node_type + ':' \
-            + instance_id)
+        self._init_logger(module, logger_class=logger_class,
+                          logger_config_file=logger_config_file)
         self._logger.info('SANDESH: CONNECT TO COLLECTOR: %s',
-            connect_to_collector)
+                          connect_to_collector)
         self._stats = SandeshStats()
         self._trace = trace.Trace()
         self._sandesh_request_dict = {}
@@ -91,6 +94,7 @@ class Sandesh(object):
             self._http_server = SandeshHttp(
                 self, module, http_port, sandesh_req_uve_pkg_list)
             gevent.spawn(self._http_server.start_http_server)
+
         primary_collector = None
         secondary_collector = None
         if self._collectors is not None:
@@ -115,12 +119,13 @@ class Sandesh(object):
 
     def set_logging_params(self, enable_local_log=False, category='',
                            level=SandeshLevel.SYS_INFO,
-                           file=SandeshLogger._DEFAULT_LOG_FILE,
+                           file=sand_logger.SandeshLogger._DEFAULT_LOG_FILE,
                            enable_syslog=False,
                            syslog_facility=_DEFAULT_SYSLOG_FACILITY):
         self._sandesh_logger.set_logging_params(
-            enable_local_log, category, level, file,
-            enable_syslog, syslog_facility)
+            enable_local_log=enable_local_log, category=category,
+            level=level, file=file, enable_syslog=enable_syslog,
+            syslog_facility=syslog_facility)
     # end set_logging_params
 
     def set_local_logging(self, enable_local_log):
@@ -192,11 +197,11 @@ class Sandesh(object):
 
     def node_type(self):
         return self._node_type
-    #end node_type
+    # end node_type
 
     def instance_id(self):
         return self._instance_id
-    #end instance_id
+    # end instance_id
 
     def scope(self):
         return self._scope
@@ -256,11 +261,11 @@ class Sandesh(object):
 
     def is_syslog_logging_enabled(self):
         return self._sandesh_logger.is_syslog_logging_enabled()
-    #end is_syslog_logging_enabled
+    # end is_syslog_logging_enabled
 
     def logging_syslog_facility(self):
         return self._sandesh_logger.logging_syslog_facility()
-    #end logging_syslog_facility
+    # end logging_syslog_facility
 
     def is_unit_test(self):
         return self._role == self.SandeshRole.INVALID
@@ -295,14 +300,14 @@ class Sandesh(object):
 
     def send_sandesh(self, tx_sandesh):
         if self._client:
-            ret = self._client.send_sandesh(tx_sandesh)
+            self._client.send_sandesh(tx_sandesh)
         else:
             if self._connect_to_collector:
                 self._logger.error('SANDESH: No Client: %s', tx_sandesh.log())
             else:
                 self._logger.log(
-                    SandeshLogger.get_py_logger_level(tx_sandesh.level()),
-                    tx_sandesh.log())
+                    sand_logger.SandeshLogger.get_py_logger_level(
+                        tx_sandesh.level()), tx_sandesh.log())
     # end send_sandesh
 
     def send_generator_info(self):
@@ -311,8 +316,8 @@ class Sandesh(object):
         client_info = SandeshClientInfo()
         try:
             client_start_time = self._start_time
-        except:
-            self._start_time = UTCTimestampUsec()
+        except Exception:
+            self._start_time = util.UTCTimestampUsec()
         finally:
             client_info.start_time = self._start_time
             client_info.pid = os.getpid()
@@ -320,19 +325,19 @@ class Sandesh(object):
                 client_info.http_port = self._http_server.get_port()
             client_info.collector_name = self._client.connection().collector()
             client_info.status = self._client.connection().state()
-            client_info.successful_connections = \
-                self._client.connection().statemachine().connect_count()
+            client_info.successful_connections = (
+                self._client.connection().statemachine().connect_count())
             client_info.primary = self._client.connection().primary_collector()
             if client_info.primary is None:
                 client_info.primary = ''
-            client_info.secondary = \
-                self._client.connection().secondary_collector()
+            client_info.secondary = (
+                self._client.connection().secondary_collector())
             if client_info.secondary is None:
                 client_info.secondary = ''
             module_state = ModuleClientState(name=self._source + ':' +
-                                             self._node_type + ':' + 
+                                             self._node_type + ':' +
                                              self._module + ':' +
-                                             self._instance_id, 
+                                             self._instance_id,
                                              client_info=client_info)
             generator_info = SandeshModuleClientTrace(
                 data=module_state, sandesh=self)
@@ -422,20 +427,17 @@ class Sandesh(object):
     # is no trace message added between two consequent calls to this API, then
     # no trace message is sent to the Collector.
     def send_sandesh_trace_buffer(self, trace_buf, count=0):
-        trace_req_runner = SandeshTraceRequestRunner(sandesh=self,
-                                                     request_buffer_name=
-                                                     trace_buf,
-                                                     request_context='',
-                                                     read_context='Collector',
-                                                     request_count=count)
+        trace_req_runner = SandeshTraceRequestRunner(
+            sandesh=self, request_buffer_name=trace_buf, request_context='',
+            read_context='Collector', request_count=count)
         trace_req_runner.Run()
     # end send_sandesh_trace_buffer
 
     # Private functions
 
     def _is_level_ut(self):
-        return self._level >= SandeshLevel.UT_START and \
-            self._level <= SandeshLevel.UT_END
+        return (self._level >= SandeshLevel.UT_START and
+                self._level <= SandeshLevel.UT_END)
     # end _is_level_ut
 
     def _create_task(self):
@@ -463,9 +465,9 @@ class Sandesh(object):
                 self._logger.error(
                     'Failed to get package [%s] path' % (package))
                 return
-            for importer, mod, ispkg in \
+            for importer, mod, ispkg in (
                 pkgutil.walk_packages(path=pkg_path,
-                                      prefix=imp_pkg.__name__ + '.'):
+                                      prefix=imp_pkg.__name__ + '.')):
                 if not ispkg:
                     module = mod.rsplit('.', 1)[-1]
                     if 'ttypes' == module:
@@ -508,7 +510,8 @@ class Sandesh(object):
 
     def _get_sandesh_uve_data_list(self, imp_module):
         try:
-            sandesh_uve_data_list = getattr(imp_module, '_SANDESH_UVE_DATA_LIST')
+            sandesh_uve_data_list = getattr(imp_module,
+                                            '_SANDESH_UVE_DATA_LIST')
         except AttributeError:
             self._logger.error(
                 '"%s" module does not have sandesh UVE data list' %
@@ -530,19 +533,30 @@ class Sandesh(object):
                 return
             if len(sandesh_uve_list) != len(sandesh_uve_data_list):
                 self._logger.error(
-                    '"%s" module sandesh UVE and UVE data list do not match' %
-                     (mod))
+                    '"%s" module sandesh UVE and UVE data list do not match'
+                    % (mod))
                 return
-            sandesh_uve_info_list = zip(sandesh_uve_list, sandesh_uve_data_list)
+            sandesh_uve_info_list = zip(sandesh_uve_list,
+                                        sandesh_uve_data_list)
             # Register sandesh UVEs
             for uve_type_name, uve_data_type_name in sandesh_uve_info_list:
                 SandeshUVEPerTypeMap(self, uve_type_name, uve_data_type_name, mod)
     # end _add_sandesh_uve
 
-    def _init_logger(self, generator):
-        if not generator:
-            generator = 'sandesh'
-        self._sandesh_logger = SandeshLogger(generator)
+    def _init_logger(self, module, logger_class=None,
+                     logger_config_file=None):
+        if not module:
+            module = 'sandesh'
+
+        if logger_class:
+            self._sandesh_logger = (sand_logger.create_logger(
+                module, logger_class,
+                logger_config_file=logger_config_file))
+        else:
+            generator = '%s:%s:%s:%s' % (self._source, module, self._node_type,
+                                         self._instance_id)
+            self._sandesh_logger = sand_logger.SandeshLogger(
+                generator, logger_config_file=logger_config_file)
         self._logger = self._sandesh_logger.logger()
     # end _init_logger
 
@@ -561,8 +575,8 @@ class SandeshAsync(Sandesh):
         try:
             self.validate()
         except e:
-            sandesh._logger.error('sandesh "%s" validation failed [%s]' %
-                                 (self.__class__.__name__, e))
+            sandesh._logger.error('sandesh "%s" validation failed [%s]'
+                                  % (self.__class__.__name__, e))
             return -1
         self._seqnum = self.next_seqnum()
         if self.handle_test(sandesh):
@@ -615,8 +629,8 @@ class SandeshRequest(Sandesh):
         try:
             self.validate()
         except e:
-            sandesh._logger.error('sandesh "%s" validation failed [%s]' %
-                                 (self.__class__.__name__, e))
+            sandesh._logger.error('sandesh "%s" validation failed [%s]'
+                                  % (self.__class__.__name__, e))
             return -1
         if context == 'ctrl':
             self._hints |= SANDESH_CONTROL_HINT
@@ -643,8 +657,8 @@ class SandeshResponse(Sandesh):
         try:
             self.validate()
         except e:
-            sandesh._logger.error('sandesh "%s" validation failed [%s]' %
-                                 (self.__class__.__name__, e))
+            sandesh._logger.error('sandesh "%s" validation failed [%s]'
+                                  % (self.__class__.__name__, e))
             return -1
         self._context = context
         self._more = more
@@ -674,8 +688,8 @@ class SandeshUVE(Sandesh):
         try:
             self.validate()
         except e:
-            sandesh._logger.error('sandesh "%s" validation failed [%s]' %
-                                 (self.__class__.__name__, e))
+            sandesh._logger.error('sandesh "%s" validation failed [%s]'
+                                  % (self.__class__.__name__, e))
             return -1
         if isseq is True:
             self._seqnum = seqno
@@ -716,8 +730,8 @@ class SandeshTrace(Sandesh):
         try:
             self.validate()
         except e:
-            sandesh._logger.error('sandesh "%s" validation failed [%s]' %
-                                 (self.__class__.__name__, e))
+            sandesh._logger.error('sandesh "%s" validation failed [%s]'
+                                  % (self.__class__.__name__, e))
             return -1
         self._context = context
         self._more = more
