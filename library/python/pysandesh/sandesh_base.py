@@ -10,7 +10,10 @@ import os
 import gevent
 import pkgutil
 import importlib
+import sandesh_base_logger
+import sandesh_logger
 import trace
+
 from work_queue import WorkQueue
 from sandesh_logger import SandeshLogger
 from sandesh_client import SandeshClient
@@ -60,7 +63,8 @@ class Sandesh(object):
     def init_generator(self, module, source, node_type, instance_id,
                        collectors, client_context, 
                        http_port, sandesh_req_uve_pkg_list=None,
-                       discovery_client=None, connect_to_collector=True):
+                       discovery_client=None, connect_to_collector=True,
+                       logger_class=None, logger_config_file=None):
         self._role = self.SandeshRole.GENERATOR
         self._module = module
         self._source = source
@@ -70,8 +74,8 @@ class Sandesh(object):
         self._collectors = collectors
         self._connect_to_collector = connect_to_collector
         self._rcv_queue = WorkQueue(self._process_rx_sandesh)
-        self._init_logger(source + ':' + module + ':' + node_type + ':' \
-            + instance_id)
+        self._init_logger(module, logger_class=logger_class,
+                          logger_config_file=logger_config_file)
         self._logger.info('SANDESH: CONNECT TO COLLECTOR: %s',
             connect_to_collector)
         self._stats = SandeshStats()
@@ -324,8 +328,8 @@ class Sandesh(object):
                 self._logger.error('SANDESH: No Client: %s', tx_sandesh.log())
             else:
                 self._logger.log(
-                    SandeshLogger.get_py_logger_level(tx_sandesh.level()),
-                    tx_sandesh.log())
+                    sandesh_logger.SandeshBaseLogger.get_py_logger_level(
+                        tx_sandesh.level()), tx_sandesh.log())
     # end send_sandesh
 
     def send_generator_info(self):
@@ -613,10 +617,19 @@ class Sandesh(object):
                                      alarm_data_type_name, mod)
     # end _add_sandesh_alarm
 
-    def _init_logger(self, generator):
+    def _init_logger(self, generator, logger_class=None,
+                     logger_config_file=None):
         if not generator:
             generator = 'sandesh'
-        self._sandesh_logger = SandeshLogger(generator)
+        try:
+            self._sandesh_logger = (
+                sandesh_base_logger.SandeshBaseLogger.create_logger(generator,
+                    logger_class=logger_class,
+                    logger_config_file=logger_config_file))
+        except:
+            # fallback to default SandeshLogger
+            self._sandesh_logger = sandesh_logger.SandeshLogger(
+                generator, logger_config_file=logger_config_file) 
         self._logger = self._sandesh_logger.logger()
     # end _init_logger
 
