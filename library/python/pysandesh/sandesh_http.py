@@ -8,6 +8,15 @@
 
 import pkgutil
 import importlib
+import sys
+#
+# Prevent:
+# Exception KeyError: KeyError(40918224,) in <module 'threading' from '/usr/lib64/python2.7/threading.pyc'> ignored
+# as per
+# http://stackoverflow.com/questions/8774958/keyerror-in-module-threading-after-a-successful-py-test-run
+#
+if 'threading' in sys.modules:
+    del sys.modules['threading']
 from gevent import monkey; monkey.patch_all()
 import wsgiref
 from wsgiref.simple_server import make_server
@@ -17,7 +26,6 @@ from transport import TTransport
 from protocol import TXMLProtocol
 import os
 import socket
-import sys
 
 
 class SandeshHttp(object):
