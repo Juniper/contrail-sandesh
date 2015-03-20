@@ -58,6 +58,7 @@ pysandesh_modules = [
                      'util.py',
                      'trace.py',
                      'sandesh_base.py',
+                     'sandesh_base_logger.py'
                      'sandesh_client.py',
                      'sandesh_connection.py',
                      'sandesh_http.py',

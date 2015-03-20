@@ -6,26 +6,29 @@
 # Sandesh
 #
 
-import os
-import gevent
-import pkgutil
 import importlib
+import os
+import pkgutil
+
+import gevent
+import sandesh_logger as sand_logger
 import trace
-from work_queue import WorkQueue
-from sandesh_logger import SandeshLogger
-from sandesh_client import SandeshClient
-from sandesh_http import SandeshHttp
-from sandesh_uve import SandeshUVETypeMaps, SandeshUVEPerTypeMap
-from sandesh_stats import SandeshStats
-from sandesh_trace import SandeshTraceRequestRunner
-from util import *
+import util
+
 from gen_py.sandesh.ttypes import SandeshType, SandeshLevel
 from gen_py.sandesh.constants import *
+from sandesh_client import SandeshClient
+from sandesh_http import SandeshHttp
+from sandesh_stats import SandeshStats
+from sandesh_trace import SandeshTraceRequestRunner
+from sandesh_uve import SandeshUVETypeMaps, SandeshUVEPerTypeMap
+from work_queue import WorkQueue
 
 
 class Sandesh(object):
-    _DEFAULT_LOG_FILE = SandeshLogger._DEFAULT_LOG_FILE
-    _DEFAULT_SYSLOG_FACILITY = SandeshLogger._DEFAULT_SYSLOG_FACILITY
+    _DEFAULT_LOG_FILE = sand_logger.SandeshLogger._DEFAULT_LOG_FILE
+    _DEFAULT_SYSLOG_FACILITY = (
+        sand_logger.SandeshLogger._DEFAULT_SYSLOG_FACILITY)
 
     class SandeshRole:
         INVALID = 0
@@ -59,7 +62,8 @@ class Sandesh(object):
     def init_generator(self, module, source, node_type, instance_id,
                        collectors, client_context, 
                        http_port, sandesh_req_uve_pkg_list=None,
-                       discovery_client=None):
+                       discovery_client=None, logger_class=None,
+                       logger_config_file=None):
         self._role = self.SandeshRole.GENERATOR
         self._module = module
         self._source = source
@@ -68,8 +72,8 @@ class Sandesh(object):
         self._client_context = client_context
         self._collectors = collectors
         self._rcv_queue = WorkQueue(self._process_rx_sandesh)
-        self._init_logger(source + ':' + module + ':' + node_type + ':' \
-            + instance_id)
+        self._init_logger(module, logger_class=logger_class,
+                          logger_config_file=logger_config_file)
         self._stats = SandeshStats()
         self._trace = trace.Trace()
         self._sandesh_request_dict = {}
@@ -110,12 +114,13 @@ class Sandesh(object):
 
     def set_logging_params(self, enable_local_log=False, category='',
                            level=SandeshLevel.SYS_INFO,
-                           file=SandeshLogger._DEFAULT_LOG_FILE,
+                           file=sand_logger.SandeshLogger._DEFAULT_LOG_FILE,
                            enable_syslog=False,
                            syslog_facility=_DEFAULT_SYSLOG_FACILITY):
         self._sandesh_logger.set_logging_params(
-            enable_local_log, category, level, file,
-            enable_syslog, syslog_facility)
+            enable_local_log=enable_local_log, category=category,
+            level=level, file=file, enable_syslog=enable_syslog,
+            syslog_facility=syslog_facility)
     # end set_logging_params
 
     def set_local_logging(self, enable_local_log):
@@ -288,7 +293,10 @@ class Sandesh(object):
         if self._client:
             ret = self._client.send_sandesh(tx_sandesh)
         else:
-            self._logger.debug(tx_sandesh.log())
+            self._logger.log(
+                sand_logger.SandeshLogger.get_py_logger_level(
+                    tx_sandesh.level()), tx_sandesh.log())
+            # self._logger.debug(tx_sandesh.log())
     # end send_sandesh
 
     def send_generator_info(self):
@@ -298,7 +306,7 @@ class Sandesh(object):
         try:
             client_start_time = self._start_time
         except:
-            self._start_time = UTCTimestampUsec()
+            self._start_time = util.UTCTimestampUsec()
         finally:
             client_info.start_time = self._start_time
             client_info.pid = os.getpid()
@@ -525,10 +533,20 @@ class Sandesh(object):
                 SandeshUVEPerTypeMap(self, uve_type_name, uve_data_type_name, mod)
     # end _add_sandesh_uve
 
-    def _init_logger(self, generator):
-        if not generator:
-            generator = 'sandesh'
-        self._sandesh_logger = SandeshLogger(generator)
+    def _init_logger(self, module, logger_class=None,
+                     logger_config_file=None):
+        if not module:
+            module = 'sandesh'
+
+        if logger_class:
+            self._sandesh_logger = (sand_logger.create_logger(
+                module, logger_class,
+                logger_config_file=logger_config_file))
+        else:
+            generator = '%s:%s:%s:%s' % (self._source, module, self._node_type,
+                                         self._instance_id)
+            self._sandesh_logger = sand_logger.SandeshLogger(
+                generator, logger_config_file=logger_config_file)
         self._logger = self._sandesh_logger.logger()
     # end _init_logger
 
