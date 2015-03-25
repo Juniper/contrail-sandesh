@@ -91,7 +91,10 @@ template<typename T, typename U>
 class SandeshUVEPerTypeMapImpl : public SandeshUVEPerTypeMap {
 public:
     struct UVEMapEntry {
-        UVEMapEntry(const U & d, uint32_t s): data(d), seqno(s) {}
+        UVEMapEntry(T *tsnh) {
+            tsnh->UpdateUVE(data);
+            seqno = tsnh->seqnum();
+        }
         U data;
         uint32_t seqno;
     };
@@ -114,12 +117,12 @@ public:
             if (!tsnh->get_data().get_deleted())
                 if (false)
                     SANDESH_LOG(DEBUG, __func__ << " Adding to " << uve_name_ <<" cache: " << s);
-                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(tsnh->get_data(), tsnh->seqnum()));
+                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(tsnh));
                 map_.insert(s, ume);
         } else {
             if (mapentry->second->data.get_deleted()) {
                 map_.erase(mapentry);
-                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(tsnh->get_data(), tsnh->seqnum()));
+                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(tsnh));
                 map_.insert(s, ume);
             } else {
                 tsnh->UpdateUVE(mapentry->second->data);
