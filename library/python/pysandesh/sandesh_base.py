@@ -753,6 +753,7 @@ class SandeshUVE(Sandesh):
             return -1
         if isseq is True:
             self._seqnum = seqno
+            self._hints |= SANDESH_SYNC_HINT
         else:
             uve_type_map = sandesh._uve_type_maps.get_uve_type_map(
                 self.__class__.__name__)

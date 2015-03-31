@@ -41,7 +41,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
         self.assertEqual('Test', sandesh._node_type)
         self.assertEqual('sandesh_uve_alarm_test', sandesh._module)
         self.assertEqual('0', sandesh._instance_id)
-        self.assertEqual(SANDESH_KEY_HINT, sandesh._hints)
+        self.assertEqual(SANDESH_KEY_HINT, (SANDESH_KEY_HINT & sandesh._hints))
         self.assertEqual(sandesh_type, sandesh._type)
         self.assertEqual(seqnum, sandesh._seqnum)
         self.assertEqual(data, sandesh.data)
