@@ -2777,13 +2777,11 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
 
   for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
 
-    if ((*s_iter)->annotations_.find("tags") == (*s_iter)->annotations_.end()) {
-      indent(out) << "if (data.__isset." << (*s_iter)->get_name() << ")" << endl;
-      indent_up();
-      indent(out) << "tdata.set_" << (*s_iter)->get_name() << "(data.get_" <<
-        (*s_iter)->get_name() << "());" << endl << endl;
-      indent_down();
-    }
+    indent(out) << "if (data.__isset." << (*s_iter)->get_name() << ")" << endl;
+    indent_up();
+    indent(out) << "tdata.set_" << (*s_iter)->get_name() << "(data.get_" <<
+      (*s_iter)->get_name() << "());" << endl << endl;
+    indent_down();
   }
 
   indent_down();
@@ -3082,6 +3080,8 @@ void t_cpp_generator::generate_sandesh_uve_creator(
     indent(out) << "snh->set_context(ctx); snh->set_more(more);" << endl;
     indent(out) << "if (!seq) uvemap" << tsandesh->get_name() <<
       ".UpdateUVE(snh);" << endl;
+    indent(out) << "else snh->set_hints(snh->hints() | " <<
+      "g_sandesh_constants.SANDESH_SYNC_HINT);" << endl;
     indent(out) << "snh->Dispatch();" << endl;
 
     indent_down();
