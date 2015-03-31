@@ -331,7 +331,7 @@ protected:
 
         EXPECT_STREQ("SandeshUVEAlarmTest-Client", header.get_Module().c_str());
         EXPECT_STREQ("localhost", header.get_Source().c_str());
-        EXPECT_EQ(g_sandesh_constants.SANDESH_KEY_HINT, header.get_Hints());
+        EXPECT_NE(0, header.get_Hints() & g_sandesh_constants.SANDESH_KEY_HINT);
 
         switch(msg_num_++) {
             case 0:
