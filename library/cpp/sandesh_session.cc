@@ -307,7 +307,7 @@ bool SandeshSession::SessionSendReady() {
 
 void SandeshSession::SetSendQueueWaterMark(
     Sandesh::QueueWaterMarkInfo &swmi) {
-    Sandesh::SandeshQueue::WaterMarkInfo wm(boost::get<0>(swmi),
+    WaterMarkInfo wm(boost::get<0>(swmi),
         boost::bind(&Sandesh::SetSendingLevel, _1, boost::get<1>(swmi)));
     if (boost::get<2>(swmi)) {
         send_queue_->SetHighWaterMark(wm);
