@@ -161,6 +161,10 @@ private:
         EvValidate validate;
     };
 
+    friend class WorkQueue<EventContainer>;
+    friend bool GetEvSandeshMessageRecvSize(EventContainer *ec,
+        size_t *msg_size);
+
     void TimerErrorHandler(std::string name, std::string error);
     bool IdleHoldTimerExpired();
 
@@ -199,5 +203,13 @@ private:
             
     DISALLOW_COPY_AND_ASSIGN(SandeshStateMachine);
 };
+
+template<>
+size_t SandeshStateMachine::EventQueue::AtomicIncrementQueueCount(
+    SandeshStateMachine::EventContainer *entry);
+
+template<>
+size_t SandeshStateMachine::EventQueue::AtomicDecrementQueueCount(
+    SandeshStateMachine::EventContainer *entry);
 
 #endif // __SANDESH_STATE_MACHINE_H__
