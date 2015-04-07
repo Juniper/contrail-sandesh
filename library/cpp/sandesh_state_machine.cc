@@ -382,7 +382,8 @@ SandeshStateMachine::SandeshStateMachine(const char *prefix, SandeshConnection *
     : prefix_(prefix),
       work_queue_(connection->GetTaskId(),
                   connection->GetTaskInstance(),
-                  boost::bind(&SandeshStateMachine::DequeueEvent, this, _1)),
+                  boost::bind(&SandeshStateMachine::DequeueEvent, this, _1),
+                  kQueueSize),
       connection_(connection),
       session_(),
       idle_hold_timer_(TimerManager::CreateTimer(
@@ -787,7 +788,7 @@ void SandeshStateMachine::SetQueueWaterMarkInfo(
     Sandesh::QueueWaterMarkInfo &wm) {
     bool high(boost::get<2>(wm));
     size_t queue_count(boost::get<0>(wm));
-    EventQueue::WaterMarkInfo wmi(queue_count, 
+    WaterMarkInfo wmi(queue_count,
         boost::bind(&SandeshStateMachine::SetSandeshMessageDropLevel, 
             this, _1, boost::get<1>(wm)));
     if (high) {
@@ -800,4 +801,38 @@ void SandeshStateMachine::SetQueueWaterMarkInfo(
 void SandeshStateMachine::ResetQueueWaterMarkInfo() {
     work_queue_.ResetHighWaterMark();
     work_queue_.ResetLowWaterMark();
+}
+
+bool GetEvSandeshMessageRecvSize(
+    SandeshStateMachine::EventContainer *ec, size_t *msg_size) {
+    const ssm::EvSandeshMessageRecv *snh_rcv(
+            dynamic_cast<const ssm::EvSandeshMessageRecv *>(ec->event.get()));
+    if (snh_rcv == NULL) {
+        return false;
+    }
+    const SandeshMessage *msg(snh_rcv->msg.get());
+    *msg_size = msg->GetSize();
+    return true;
+}
+
+template<>
+size_t SandeshStateMachine::EventQueue::AtomicIncrementQueueCount(
+    SandeshStateMachine::EventContainer *ec) {
+    size_t msg_size;
+    if (GetEvSandeshMessageRecvSize(ec, &msg_size)) {
+        return count_.fetch_and_add(msg_size) + msg_size;
+    } else {
+        return count_.fetch_and_increment() + 1;
+    }
+}
+
+template<>
+size_t SandeshStateMachine::EventQueue::AtomicDecrementQueueCount(
+    SandeshStateMachine::EventContainer *ec) {
+    size_t msg_size;
+    if (GetEvSandeshMessageRecvSize(ec, &msg_size)) {
+        return count_.fetch_and_add((size_t)(0-msg_size)) - msg_size;
+    } else {
+        return count_.fetch_and_decrement() - 1;
+    }
 }
