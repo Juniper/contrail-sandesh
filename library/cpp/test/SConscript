@@ -17,6 +17,7 @@ env.Append(CPPPATH = [Dir('.').abspath,
                       '../',
                       '../../common/test/',
                       env['TOP'] + '/io',
+                      '/usr/include/libxml2',
                       ])
     
 # Generate the source files
@@ -52,7 +53,6 @@ SandeshLibs = ['gunit',
                'boost_system',
                'boost_date_time',
                'log4cplus',
-               'tbb_debug',
                'pthread',
                'curl',
                'xml2',
@@ -60,6 +60,11 @@ SandeshLibs = ['gunit',
                'task_test',
                'pugixml',
                ]
+
+if env.UseSystemTBB():
+    SandeshLibs.append('tbb')
+else:
+    SandeshLibs.append('tbb_debug')
 
 env.Append(LIBPATH = SandeshLibPath)
 
