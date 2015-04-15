@@ -41,7 +41,6 @@ SandeshLibs = ['gunit',
                'boost_regex',
                'boost_date_time',
                'log4cplus',
-               'tbb_debug',
                'pthread',
                'curl',
                'xml2',
@@ -49,6 +48,11 @@ SandeshLibs = ['gunit',
                'task_test',
                'pugixml',
                ]
+
+if env.UseSystemTBB():
+    SandeshLibs.append('tbb')
+else:
+    SandeshLibs.append('tbb_debug')
 
 env.Append(LIBPATH = SandeshLibPath)
 
