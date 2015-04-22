@@ -65,6 +65,7 @@ public:
 
     void Initialize();
     void SetAdminState(bool down);
+    void SetDeferDequeue(bool defer);
 
     // State transitions
     template <class Ev> void OnIdle(const Ev &event);
@@ -178,7 +179,8 @@ private:
     void UpdateEventEnqueueFail(const sc::event_base &event);
     void UpdateEventStats(const sc::event_base &event, bool enqueue, bool fail);
     void SetSandeshMessageDropLevel(size_t queue_count,
-        SandeshLevel::type level);
+        SandeshLevel::type level, boost::function<void (void)> cb);
+    void SetDeferSessionReader(bool defer_reader);
 
     const char *prefix_;
     typedef WorkQueue<EventContainer> EventQueue;
