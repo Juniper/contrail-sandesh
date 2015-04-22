@@ -138,7 +138,7 @@ public:
         };
     };
 
-    typedef boost::tuple<size_t, SandeshLevel::type, bool> QueueWaterMarkInfo;
+    typedef boost::tuple<size_t, SandeshLevel::type, bool, bool> QueueWaterMarkInfo;
     typedef boost::function<void (std::string serviceName, uint8_t numbOfInstances,
             DiscoveryServiceClient::ServiceHandler)> CollectorSubFn;
     // Initialization APIs
