@@ -53,7 +53,8 @@ public:
                 TaskScheduler::GetInstance()->GetTaskId("sandesh::Test::StateMachine"),
                 TaskScheduler::GetInstance()->GetTaskId("io::ReaderTask")),
           state_(state),
-          direction_(direction) {
+          direction_(direction),
+          defer_reader_(false) {
     }
 
     ~SandeshSessionMock() {
@@ -69,12 +70,20 @@ public:
         SandeshSession::Close();
     }
 
+    virtual void SetDeferReader(bool defer_reader) {
+        defer_reader_ = defer_reader;
+    }
+
+    virtual bool IsReaderDeferred() const {
+        return defer_reader_;
+    }
     State state() { return state_; }
     Direction direction() { return direction_; }
 
 private:
     State state_;
     Direction direction_;
+    bool defer_reader_;
 };
 
 class SandeshServerMock : public SandeshServer {
@@ -125,7 +134,8 @@ private:
     SandeshSessionMock *old_session_;
 };
 
-const std::string FakeMessageSandeshBegin("<FakeSandesh type=\"sandesh\">");
+const std::string FakeMessageSandeshBegin("<FakeSandesh type=\"sandesh\"><str1 type=\"string\" identifier=\"1\">");
+const std::string FakeMessageSandeshEnd("</str1></FakeSandesh>");
 
 static void CreateFakeMessage(uint8_t *data, size_t length) {
     size_t offset = 0;
@@ -163,8 +173,11 @@ static void CreateFakeMessage(uint8_t *data, size_t length) {
     memcpy(data + offset, FakeMessageSandeshBegin.c_str(),
             FakeMessageSandeshBegin.size());
     offset += FakeMessageSandeshBegin.size();
-    memset(data + offset, '0', length - offset);
-    offset += length - offset;
+    memset(data + offset, '0', length - offset - FakeMessageSandeshEnd.size());
+    offset += length - offset - FakeMessageSandeshEnd.size();
+    memcpy(data + offset, FakeMessageSandeshEnd.c_str(),
+           FakeMessageSandeshEnd.size());
+    offset += FakeMessageSandeshEnd.size();
     EXPECT_EQ(offset, length);
 }
 
@@ -179,6 +192,7 @@ protected:
         task_util::WaitForIdle();
         sm_ = connection_->state_machine();
         sm_->set_idle_hold_time(1);
+        sm_->SetGeneratorKey("Test");
     }
 
     ~SandeshServerStateMachineTest() {
@@ -318,6 +332,9 @@ protected:
         string xml((const char *)msg, sizeof(msg));
         sm_->OnSandeshMessage(session, xml);
     }
+    SandeshLevel::type MessageDropLevel() const {
+        return sm_->message_drop_level_;
+    }
 
     bool IdleHoldTimerRunning() { return sm_->idle_hold_timer_->running(); }
 
@@ -385,6 +402,60 @@ TEST_F(SandeshServerStateMachineTest, Matrix) {
     }
 }
 
+TEST_F(SandeshServerStateMachineTest, WaterMark) {
+    // Set watermarks
+    std::vector<Sandesh::QueueWaterMarkInfo> wm_info =
+        boost::assign::tuple_list_of
+            (1*1024, SandeshLevel::SYS_EMERG, true, true)
+            (512, SandeshLevel::INVALID, false, true);
+    for (int i = 0; i < wm_info.size(); i++) {
+        sm_->SetQueueWaterMarkInfo(wm_info[i]);
+    }
+    // Verify initial message drop level and the session reader defer status
+    EXPECT_EQ(SandeshLevel::INVALID, MessageDropLevel());
+    EXPECT_TRUE(sm_->session() == NULL);
+    // Move to ssm::SERVER_INIT
+    GetToState(ssm::SERVER_INIT);
+    // Stop the task scheduler
+    TaskScheduler::GetInstance()->Stop();
+    // Enqueue 1 message 1024 byte
+    EvSandeshMessageRecv();
+    // Verify the message drop level and the session reader defer status
+    EXPECT_EQ(SandeshLevel::SYS_EMERG, MessageDropLevel());
+    EXPECT_TRUE(sm_->session()->IsReaderDeferred());
+    // Start the task scheduler
+    TaskScheduler::GetInstance()->Start();
+    task_util::WaitForIdle();
+    // Verify the message drop level and the session reader defer status
+    EXPECT_EQ(SandeshLevel::INVALID, MessageDropLevel());
+    EXPECT_FALSE(sm_->session()->IsReaderDeferred());
+}
+
+TEST_F(SandeshServerStateMachineTest, DeferDequeue) {
+    // Move to ssm::SERVER_INIT
+    GetToState(ssm::SERVER_INIT);
+    // Verify the state machine queue is empty
+    uint64_t sm_queue_count;
+    ASSERT_TRUE(sm_->GetQueueCount(sm_queue_count));
+    EXPECT_EQ(0, sm_queue_count);
+    // Defer the dequeue
+    sm_->SetDeferDequeue(true);
+    // Enqueue 1 message
+    EvSandeshMessageRecv();
+    // Verify that state machine queue now has 1 entry
+    ASSERT_TRUE(sm_->GetQueueCount(sm_queue_count));
+    EXPECT_EQ(1024, sm_queue_count);
+    // Verify the state machine state
+    EXPECT_EQ(ssm::SERVER_INIT, sm_->get_state());
+    // Undefer the dequeue
+    sm_->SetDeferDequeue(false);
+    task_util::WaitForIdle();
+    // Verify the state machine queue is empty
+    ASSERT_TRUE(sm_->GetQueueCount(sm_queue_count));
+    EXPECT_EQ(0, sm_queue_count);
+    // Verify the state machine state
+    EXPECT_EQ(ssm::SERVER_INIT, sm_->get_state());
+}
 
 class SandeshServerStateMachineIdleTest : public SandeshServerStateMachineTest {
     virtual void SetUp() {

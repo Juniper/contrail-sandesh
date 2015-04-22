@@ -774,13 +774,23 @@ void SandeshStateMachine::Enqueue(const Ev &event) {
 }
 
 void SandeshStateMachine::SetSandeshMessageDropLevel(size_t queue_count,
-    SandeshLevel::type level) {
+    SandeshLevel::type level, boost::function<void (void)> cb) {
     if (message_drop_level_ != level) {
         SM_LOG(INFO, "SANDESH MESSAGE DROP LEVEL: [" <<
             Sandesh::LevelToString(message_drop_level_) << "] -> [" <<
             Sandesh::LevelToString(level) << "], SM QUEUE COUNT: " <<
             queue_count);
         message_drop_level_ = level;
+        if (!cb.empty()) {
+            cb();
+        }
+    }
+}
+
+void SandeshStateMachine::SetDeferSessionReader(bool defer_reader) {
+    if (session_ != NULL) {
+        SM_LOG(INFO, "SANDESH Session Reader Defer : " << defer_reader);
+        session_->SetDeferReader(defer_reader);
     }
 }
 
@@ -788,12 +798,25 @@ void SandeshStateMachine::SetQueueWaterMarkInfo(
     Sandesh::QueueWaterMarkInfo &wm) {
     bool high(boost::get<2>(wm));
     size_t queue_count(boost::get<0>(wm));
-    WaterMarkInfo wmi(queue_count,
-        boost::bind(&SandeshStateMachine::SetSandeshMessageDropLevel, 
-            this, _1, boost::get<1>(wm)));
+    bool defer_undefer(boost::get<3>(wm));
+    boost::function<void (void)> cb;
     if (high) {
+        if (defer_undefer) {
+            cb = boost::bind(&SandeshStateMachine::SetDeferSessionReader,
+                    this, true);
+        }
+        WaterMarkInfo wmi(queue_count,
+            boost::bind(&SandeshStateMachine::SetSandeshMessageDropLevel,
+            this, _1, boost::get<1>(wm), cb));
         work_queue_.SetHighWaterMark(wmi);
     } else {
+        if (defer_undefer) {
+            cb = boost::bind(&SandeshStateMachine::SetDeferSessionReader,
+                    this, false);
+        }
+        WaterMarkInfo wmi(queue_count,
+            boost::bind(&SandeshStateMachine::SetSandeshMessageDropLevel,
+            this, _1, boost::get<1>(wm), cb));
         work_queue_.SetLowWaterMark(wmi);
     }
 }
@@ -835,4 +858,9 @@ size_t SandeshStateMachine::EventQueue::AtomicDecrementQueueCount(
     } else {
         return count_.fetch_and_decrement() - 1;
     }
+}
+
+void SandeshStateMachine::SetDeferDequeue(bool defer_dequeue) {
+    SM_LOG(INFO, "SANDESH Set Defer Dequeue: " << defer_dequeue);
+    work_queue_.set_disable(defer_dequeue);
 }
