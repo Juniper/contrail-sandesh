@@ -10,6 +10,8 @@ import os
 import pkgutil
 
 import gevent
+import json
+import base64
 import sandesh_logger as sand_logger
 import trace
 import util
@@ -63,12 +65,14 @@ class Sandesh(object):
                        collectors, client_context,
                        http_port, sandesh_req_uve_pkg_list=None,
                        discovery_client=None, connect_to_collector=True,
-                       logger_class=None, logger_config_file=None):
+                       logger_class=None, logger_config_file=None,
+                       host_ip='127.0.0.1', alarm_ack_callback=None):
         self._role = self.SandeshRole.GENERATOR
         self._module = module
         self._source = source
         self._node_type = node_type
         self._instance_id = instance_id
+        self._host_ip = host_ip
         self._client_context = client_context
         self._collectors = collectors
         self._connect_to_collector = connect_to_collector
@@ -80,6 +84,7 @@ class Sandesh(object):
         self._stats = SandeshStats()
         self._trace = trace.Trace()
         self._sandesh_request_dict = {}
+        self._alarm_ack_callback = alarm_ack_callback
         self._uve_type_maps = SandeshUVETypeMaps(self._logger)
         if sandesh_req_uve_pkg_list is None:
             sandesh_req_uve_pkg_list = []
@@ -226,6 +231,10 @@ class Sandesh(object):
         return self._instance_id
     # end instance_id
 
+    def host_ip(self):
+        return self._host_ip
+    # end host_ip
+
     def scope(self):
         return self._scope
     # end scope
@@ -269,6 +278,10 @@ class Sandesh(object):
     def validate(self):
         return
     # end validate
+
+    def alarm_ack_callback(self):
+        return self._alarm_ack_callback
+    # end alarm_ack_callback
 
     def is_local_logging_enabled(self):
         return self._sandesh_logger.is_local_logging_enabled()
@@ -804,6 +817,24 @@ class SandeshAlarm(SandeshUVE):
         SandeshUVE.__init__(self)
         self._type = SandeshType.ALARM
     # end __init__
+
+    def send(self, isseq=False, seqno=0, context='',
+             more=False, sandesh=sandesh_global):
+        try:
+            if not isseq and self.data.alarms:
+                for alarm in self.data.alarms:
+                    token = {'host_ip': sandesh.host_ip(),
+                             'http_port': sandesh._http_server.get_port(),
+                             'timestamp': alarm.timestamp}
+                    alarm.token = base64.b64encode(json.dumps(token))
+        except Exception as e:
+            sandesh._logger.error('Failed to encode token for sandesh alarm: %s'
+                                  % (str(e)))
+            return -1
+        else:
+            return super(SandeshAlarm, self).send(isseq, seqno, context,
+                                                  more, sandesh)
+    # end send
 
 # end class SandeshAlarm
 
