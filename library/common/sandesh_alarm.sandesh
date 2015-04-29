@@ -26,3 +26,30 @@ struct SandeshAlarmTypeInfo {
 response sandesh SandeshAlarmTypesResponse {
     1: list<SandeshAlarmTypeInfo> type_info
 }
+
+request sandesh SandeshAlarmAckRequest {
+    1: string table
+    2: string name
+    3: string type
+    4: u64 timestamp
+}
+
+enum SandeshAlarmAckResponseCode {
+    SUCCESS,
+    CALLBACK_NOT_REGISTERED,
+    ALARM_NOT_PRESENT,
+    INVALID_ALARM_REQUEST,
+    UNKNOWN_ERROR
+}
+
+const map<SandeshAlarmAckResponseCode, string> SandeshAlarmAckResponseError = {
+    SandeshAlarmAckResponseCode.CALLBACK_NOT_REGISTERED : "Could not process Alarm Ack request",
+    SandeshAlarmAckResponseCode.ALARM_NOT_PRESENT : "Alarm not present",
+    SandeshAlarmAckResponseCode.INVALID_ALARM_REQUEST : "Invalid Alarm Ack request",
+    SandeshAlarmAckResponseCode.UNKNOWN_ERROR : "Alarm Ack processing failed due to unknown error"
+}
+
+response sandesh SandeshAlarmAckResponse {
+    1: bool status
+    2: optional string error_msg
+}
