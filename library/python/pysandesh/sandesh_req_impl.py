@@ -18,7 +18,10 @@ from pysandesh.gen_py.sandesh_uve.ttypes import SandeshMessageStats, \
     SandeshSendQueueResponse
 from pysandesh.gen_py.sandesh_alarm.ttypes import SandeshAlarmCacheRequest, \
     SandeshAlarmCacheResponse, SandeshAlarmTypesRequest, \
-    SandeshAlarmTypeInfo, SandeshAlarmTypesResponse
+    SandeshAlarmTypeInfo, SandeshAlarmTypesResponse, SandeshAlarmAckRequest, \
+    SandeshAlarmAckResponse, SandeshAlarmAckResponseCode
+from pysandesh.gen_py.sandesh_alarm.constants \
+    import SandeshAlarmAckResponseError
 from pysandesh.gen_py.sandesh.ttypes import SandeshLevel, SandeshType
 from pysandesh.gen_py.sandesh_trace.ttypes import SandeshTraceBufInfo, \
     SandeshTraceRequest, SandeshTraceBufferListRequest, \
@@ -63,6 +66,8 @@ class SandeshReqImpl(object):
             self.sandesh_alarm_cache_req_handle_request
         SandeshAlarmTypesRequest.handle_request = \
             self.sandesh_alarm_types_req_handle_request
+        SandeshAlarmAckRequest.handle_request = \
+            self.sandesh_alarm_ack_request_handler
     # end __init__
 
     # Public functions
@@ -168,6 +173,26 @@ class SandeshReqImpl(object):
         alarm_types_res = SandeshAlarmTypesResponse(alarm_type_info_list)
         alarm_types_res.response(sandesh_req.context())
     # end sandesh_alarm_types_req_handle_request
+
+    def sandesh_alarm_ack_request_handler(self, sandesh_req):
+        response_code = SandeshAlarmAckResponseCode.CALLBACK_NOT_REGISTERED
+        alarm_callback = self._sandesh.alarm_ack_callback()
+        if alarm_callback:
+            response_code = alarm_callback(sandesh_req)
+        status = True
+        err_msg = None
+        if response_code != SandeshAlarmAckResponseCode.SUCCESS:
+            status = False
+            try:
+                err_msg = SandeshAlarmAckResponseError[response_code]
+            except KeyError:
+                self._sandesh.logger().error('Invalid AlarmAck response code:'
+                                             ' %s' % str(response_code))
+                response_code = SandeshAlarmAckResponseCode.UNKNOWN_ERROR
+                err_msg = SandeshAlarmAckResponseError[response_code]
+        ack_response = SandeshAlarmAckResponse(status, err_msg)
+        ack_response.response(sandesh_req.context())
+    # end sandesh_alarm_ack_request_handler
 
     def sandesh_stats_handle_request(self, sandesh_req):
         sandesh_stats = self._sandesh.stats()

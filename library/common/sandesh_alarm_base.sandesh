@@ -1,0 +1,32 @@
+/*
+ * Copyright (c) 2015 Juniper Networks, Inc. All rights reserved.
+ */
+
+/*
+ *  sandesh_alarm_base.sandesh
+ *
+ */
+
+struct AlarmElement {
+    1: string rule
+    2: string value
+}
+
+struct UVEAlarmInfo {
+    1: string type
+    2: list<AlarmElement> description
+    3: bool ack
+    4: u64 timestamp
+    5: byte severity
+    6: string token
+}
+
+struct UVEAlarms {
+    1: string name (key="none")
+    2: list<UVEAlarmInfo> alarms
+    3: optional bool deleted
+}
+
+alarm sandesh AlarmTrace {
+    1: UVEAlarms data
+}

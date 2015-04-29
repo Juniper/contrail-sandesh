@@ -15,8 +15,11 @@ import socket
 
 sys.path.insert(1, sys.path[0]+'/../../../python')
 
+import test_utils
 from pysandesh.sandesh_base import *
 from pysandesh.sandesh_client import SandeshClient
+from pysandesh.util import UTCTimestampUsec
+from pysandesh.gen_py.sandesh_alarm.ttypes import *
 from gen_py.uve_alarm_test.ttypes import *
 
 class SandeshUVEAlarmTest(unittest.TestCase):
@@ -25,7 +28,8 @@ class SandeshUVEAlarmTest(unittest.TestCase):
         self.maxDiff = None
         self.sandesh = Sandesh()
         self.sandesh.init_generator('sandesh_uve_alarm_test',
-            socket.gethostname(), 'Test', '0', None, '', -1,
+            socket.gethostname(), 'Test', '0', None, '',
+            test_utils.get_free_port(),
             connect_to_collector=False)
         # mock the sandesh client object
         self.sandesh._client = mock.MagicMock(spec=SandeshClient)
@@ -103,60 +107,67 @@ class SandeshUVEAlarmTest(unittest.TestCase):
                 data=expected_data[i]['data'])
     # end test_sandesh_uve
 
+    def _create_uve_alarm_info(self):
+        uve_alarm_info = UVEAlarmInfo()
+        uve_alarm_info.type = 'ProcessStatus'
+        uve_alarm_info.description = [AlarmElement('rule1', 'value1')]
+        uve_alarm_info.ack = False
+        uve_alarm_info.timestamp = UTCTimestampUsec()
+        uve_alarm_info.severity = 1
+        return uve_alarm_info
+    # end _create_uve_alarm_info
+
+    def _update_uve_alarm_info(self):
+        uve_alarm_info = self._create_uve_alarm_info()
+        uve_alarm_info.ack = True
+        return uve_alarm_info
+    # end _update_uve_alarm_info
+
     def test_sandesh_alarm(self):
         alarm_data = [
             # add alarm
-            SandeshAlarmData(name='alarm1', description='alarm1 generated'),
+            (UVEAlarms(name='alarm1', alarms=[self._create_uve_alarm_info()]),
+             'ObjectCollectorInfo'),
             # update alarm
-            SandeshAlarmData(name='alarm1', acknowledged=True),
+            (UVEAlarms(name='alarm1', alarms=[self._update_uve_alarm_info()]),
+             'ObjectCollectorInfo'),
             # add another alarm
-            SandeshAlarmData(name='alarm2', description='alarm2 generated'),
+            (UVEAlarms(name='alarm2', alarms=[self._create_uve_alarm_info()]),
+             'ObjectVRouterInfo'),
             # delete alarm
-            SandeshAlarmData(name='alarm2', deleted=True),
+            (UVEAlarms(name='alarm2', deleted=True), 'ObjectVRouterInfo'),
             # add deleted alarm
-            SandeshAlarmData(name='alarm2'),
+            (UVEAlarms(name='alarm2', alarms=[self._create_uve_alarm_info()]),
+             'ObjectVRouterInfo'),
             # add alarm with deleted flag set
-            SandeshAlarmData(name='alarm3', description='alarm3 deleted',
-                             deleted=True)
+            (UVEAlarms(name='alarm3', alarms=[self._create_uve_alarm_info()],
+                      deleted=True), 'ObjectCollectorInfo'),
+            # add alarm with same key and different table
+            (UVEAlarms(name='alarm3', alarms=[self._create_uve_alarm_info()]),
+             'ObjectVRouterInfo')
         ]
 
         # send the alarms
         for i in range(len(alarm_data)):
-            alarm_test = SandeshAlarmTest(data=alarm_data[i],
-                                          sandesh=self.sandesh)
+            alarm_test = AlarmTrace(data=alarm_data[i][0],
+                                    table=alarm_data[i][1],
+                                    sandesh=self.sandesh)
             alarm_test.send(sandesh=self.sandesh)
 
-        expected_data1 = [{'seqnum': i+1, 'data': alarm_data[i]} \
+        expected_data1 = [{'seqnum': i+1, 'data': alarm_data[i][0]} \
                           for i in range(len(alarm_data))]
-
-        # send Alarm with different key
-        alarm_test_data = SandeshAlarmData(name='alarm3',
-                            description='alarm3 generated')
-        alarm_test = SandeshAlarmTest(data=alarm_test_data, table='VRouterInfo',
-                                      sandesh=self.sandesh)
-        alarm_test.send(sandesh=self.sandesh)
-
-        expected_data2 = [{'seqnum': 7, 'data': alarm_test_data}]
 
         # verify alarms sync
         self.sandesh._uve_type_maps.sync_all_uve_types({}, self.sandesh)
 
-        alarm_data1 = SandeshAlarmData(name='alarm3',
-                        description='alarm3 deleted', deleted=True)
-        alarm_data2 = SandeshAlarmData(name='alarm2')
-        alarm_data3 = SandeshAlarmData(name='alarm1',
-                        description='alarm1 generated', acknowledged=True)
-        alarm_data4 = SandeshAlarmData(name='alarm3',
-                        description='alarm3 generated')
-        alarm_data4._table = 'VRouterInfo'
-        expected_data3 = [
-            {'seqnum': 6, 'data': alarm_data1},
-            {'seqnum': 5, 'data': alarm_data2},
-            {'seqnum': 2, 'data': alarm_data3},
-            {'seqnum': 7, 'data': alarm_data4},
+        expected_data2 = [
+            {'seqnum': 7, 'data': alarm_data[6][0]},
+            {'seqnum': 5, 'data': alarm_data[4][0]},
+            {'seqnum': 6, 'data': alarm_data[5][0]},
+            {'seqnum': 2, 'data': alarm_data[1][0]}
         ]
 
-        expected_data = expected_data1 + expected_data2 + expected_data3
+        expected_data = expected_data1 + expected_data2
 
         # verify the result
         args_list = self.sandesh._client.send_uve_sandesh.call_args_list
