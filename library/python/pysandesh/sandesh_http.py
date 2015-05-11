@@ -96,6 +96,7 @@ class SandeshHttp(object):
         self._http_port = svr.server_port
         self._logger.error('Starting Introspect on HTTP Port %d' % self._http_port)
         self._sandesh.record_port("http", self._http_port)
+        svr.allow_reuse_address = True
         svr.serve_forever()
        
     #end start_http_server
