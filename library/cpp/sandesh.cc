@@ -59,6 +59,7 @@ Sandesh::SandeshCallback Sandesh::response_callback_ = 0;
 SandeshLevel::type Sandesh::logging_level_ = SandeshLevel::INVALID;
 SandeshLevel::type Sandesh::logging_ut_level_ =
     getenv("SANDSH_UT_DEBUG") ? SandeshLevel::SYS_DEBUG : SandeshLevel::UT_DEBUG;
+Sandesh::LoggingLevelCallback Sandesh::logging_level_callback_ = NULL;
 std::string Sandesh::logging_category_;
 EventManager* Sandesh::event_manager_ = NULL;
 SandeshStatistics Sandesh::stats_;
@@ -393,6 +394,9 @@ void Sandesh::SetLoggingLevel(SandeshLevel::type level) {
                 " ]");
         logging_level_ = level;
         logger_.setLogLevel(log4_new_level);
+        if (logging_level_callback_) {
+            logging_level_callback_(log4_new_level);
+        }
     }
 }
 

@@ -129,6 +129,7 @@ public:
             SandeshBufferQueue;
     typedef boost::asio::ip::tcp::endpoint Endpoint;
     typedef boost::function<void (Sandesh *)> SandeshCallback;
+    typedef boost::function<void (log4cplus::LogLevel)> LoggingLevelCallback;
     struct SandeshRole {
         enum type {
             Invalid,
@@ -189,6 +190,9 @@ public:
             SandeshLevel::type level, bool enable_trace_print = false,
             bool enable_flow_log = false);
     static void SetLoggingLevel(std::string level);
+    static void SetLoggingLevelCallback(LoggingLevelCallback cb) {
+        logging_level_callback_ = cb;
+    }
     static void SetLoggingLevel(SandeshLevel::type level);
     static SandeshLevel::type LoggingLevel() { return logging_level_; }
     static SandeshLevel::type LoggingUtLevel() { return logging_ut_level_; }
@@ -361,6 +365,7 @@ private:
     static bool enable_flow_log_;  // whether to enable flow sandesh message logging
     static SandeshLevel::type logging_level_; // current logging level
     static SandeshLevel::type logging_ut_level_; // ut_debug logging level
+    static LoggingLevelCallback logging_level_callback_;
     static std::string logging_category_; // current logging category
     static bool enable_trace_print_; // whether to print traces locally
     static bool connect_to_collector_; // whether to connect to collector
