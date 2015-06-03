@@ -5,6 +5,7 @@
 #ifndef _SANDESH_PROTOCOL_TXMLPROTOCOL_H_
 #define _SANDESH_PROTOCOL_TXMLPROTOCOL_H_ 1
 
+#include <string.h>
 #include "TVirtualProtocol.h"
 
 #include <boost/shared_ptr.hpp>
@@ -48,19 +49,28 @@ class TXMLProtocol : public TVirtualProtocol<TXMLProtocol> {
     string_prefix_size_ = string_prefix_size;
   }
 
-  static std::string escapeXMLControlChars(const std::string& str) {
-      std::ostringstream xmlstr;
-      for (std::string::const_iterator it = str.begin();
-           it != str.end(); ++it) {
-          switch(*it) {
-              case '&':  xmlstr << "&amp;";  break;
-              case '\'': xmlstr << "&apos;"; break;
-              case '<':  xmlstr << "&lt;";   break;
-              case '>':  xmlstr << "&gt;";   break;
-              default:   xmlstr << *it;
-          }
+  static std::string escapeXMLControlCharsInternal(const std::string& str) {
+    std::string xmlstr;
+    xmlstr.reserve(str.length());
+    for (std::string::const_iterator it = str.begin();
+         it != str.end(); ++it) {
+      switch(*it) {
+       case '&':  xmlstr += "&amp;";  break;
+       case '\'': xmlstr += "&apos;"; break;
+       case '<':  xmlstr += "&lt;";   break;
+       case '>':  xmlstr += "&gt;";   break;
+       default:   xmlstr += *it;
       }
-      return xmlstr.str();
+    }
+    return xmlstr;
+  }
+
+  static std::string escapeXMLControlChars(const std::string& str) {
+    if (strpbrk(str.c_str(), "&'<>") != NULL) {
+      return escapeXMLControlCharsInternal(str);
+    } else {
+      return str;
+    }
   }
 
   static void unescapeXMLControlChars(std::string& str) {

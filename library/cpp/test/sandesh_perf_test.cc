@@ -16,6 +16,9 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/find_iterator.hpp>
 #include <boost/range/iterator_range.hpp>
+#include <boost/regex.hpp>
+#include <boost/spirit/include/classic.hpp>
+#include <boost/spirit/home/classic/tree/tree_to_xml.hpp>
 
 #include <base/logging.h>
 #include <base/util.h>
@@ -163,17 +166,159 @@ TEST_F(SandeshPerfTestEnqueue, DISABLED_PStructPoolEnqueue) {
     pstructpool_queue_->Shutdown();   
 }
 
+static const char* expression = "(<)|(>)|(&)|(')";
+static const char* format = "(?1&lt;)(?2&gt;)(?3&amp;)(?4&apos;)";
+
 // string append outperforms both snprintf and string addition
 class SandeshPerfTestString : public ::testing::Test {
 protected:
     SandeshPerfTestString() :
         xml_("str1 type=\"string\" identifier=\"1\""),
-        cmp_("nomatch") {
+        xml1_("str1 &'<>type=\"string\" identifier=\"1\""),
+        xml1_escaped_("str1 &amp;&apos;&lt;&gt;type=\"string\" identifier=\"1\""),
+        cmp_("nomatch"),
+        expr_(expression) {
     }
 
     std::string xml_;
+    std::string xml1_;
+    std::string xml1_escaped_;
     std::string cmp_;
+    boost::regex expr_;
 };
+
+std::string escapeXMLCharsSS(const std::string &str) {
+    std::ostringstream xmlstr;
+    for (std::string::const_iterator it = str.begin();
+           it != str.end(); ++it) {
+        switch(*it) {
+          case '&':  xmlstr << "&amp;";  break;
+          case '\'': xmlstr << "&apos;"; break;
+          case '<':  xmlstr << "&lt;";   break;
+          case '>':  xmlstr << "&gt;";   break;
+          default:   xmlstr << *it;
+        }
+    }
+    return xmlstr.str();
+}
+
+std::string escapeXMLCharsString(const std::string &str) {
+    std::string ostr;
+    ostr.reserve(str.length() + 14);
+    for (std::string::const_iterator it = str.begin();
+         it != str.end(); ++it) {
+        switch(*it) {
+          case '&':  ostr += "&amp;";  break;
+          case '\'': ostr += "&apos;"; break;
+          case '<':  ostr += "&lt;";   break;
+          case '>':  ostr += "&gt;";   break;
+          default:   ostr += *it;
+       }
+    }
+    return ostr;
+}
+
+std::string escapeXMLCharsBoostReplace(const std::string &str) {
+    std::string ostr(str);
+    boost::replace_all(ostr, "&", "&amp;");
+    boost::replace_all(ostr, "\'", "&apos;");
+    boost::replace_all(ostr, "<", "&lt;");
+    boost::replace_all(ostr, ">", "&gt;");
+    return ostr;
+}
+
+std::string escapeXMLCharsBoostSpirit(const std::string &str) {
+    return boost::spirit::classic::xml::encode(str.c_str());
+}
+
+std::string escapeXMLCharsBoostRegex(const std::string &str, boost::regex &expr) {
+    return boost::regex_replace(str, expr, format,
+            boost::match_default | boost::format_all);
+}
+
+std::string escapeXMLCharsFindFirstOf(const std::string &str) {
+    if (str.find_first_of("&'<>") != std::string::npos) {
+        return escapeXMLCharsString(str);
+    } else {
+        return str;
+    }
+}
+
+std::string escapeXMLCharsStrpbrk(const std::string &str) {
+    if (strpbrk(str.c_str(), "&'<>") != NULL) {
+        return escapeXMLCharsString(str);
+    } else {
+        return str;
+    }
+}
+
+std::string escapeXMLCharsNoop(const std::string &str) {
+    return str;
+}
+
+TEST_F(SandeshPerfTestString, Basic) {
+    std::string estr(escapeXMLCharsSS(xml1_));
+    EXPECT_EQ(xml1_escaped_, estr);
+    std::string estr1(escapeXMLCharsString(xml1_));
+    EXPECT_EQ(xml1_escaped_, estr1);
+    std::string estr2(escapeXMLCharsBoostRegex(xml1_, expr_));
+    EXPECT_EQ(xml1_escaped_, estr2);
+    // Does not escape '
+    //std::string estr3(escapeXMLCharsBoostSpirit(xml1_));
+    //EXPECT_EQ(xml1_escaped_, estr3);
+    std::string estr4(escapeXMLCharsBoostReplace(xml1_));
+    EXPECT_EQ(xml1_escaped_, estr4);
+}
+
+// Test with string containing XML control chars
+TEST_F(SandeshPerfTestString, DISABLED_EscapeXMLStringStream) {
+    for (int i = 0; i < 10000000; i++) {
+        std::string estr(escapeXMLCharsSS(xml1_));
+    }
+}
+
+TEST_F(SandeshPerfTestString, DISABLED_EscapeXMLString) {
+    for (int i = 0; i < 10000000; i++) {
+        std::string estr(escapeXMLCharsString(xml1_));
+    }
+}
+
+TEST_F(SandeshPerfTestString, DISABLED_EscapeXMLBoostRegex) {
+    for (int i = 0; i < 10000000; i++) {
+        std::string estr(escapeXMLCharsBoostRegex(xml1_, expr_));
+    }
+}
+
+TEST_F(SandeshPerfTestString, DISABLED_EscapeXMLBoostSpirit) {
+    for (int i = 0; i < 10000000; i++) {
+        std::string estr(escapeXMLCharsBoostSpirit(xml1_));
+    }
+}
+
+TEST_F(SandeshPerfTestString, DISABLED_EscapeXMLBoostReplace) {
+    for (int i = 0; i < 10000000; i++) {
+        std::string estr(escapeXMLCharsBoostReplace(xml1_));
+    }
+}
+
+// Test with string not containing XML control chars
+TEST_F(SandeshPerfTestString, DISABLED_NoEscapeXMLFindFirstOf) {
+    for (int i = 0; i < 10000000; i++) {
+        std::string estr(escapeXMLCharsFindFirstOf(xml_));
+    }
+}
+
+TEST_F(SandeshPerfTestString, DISABLED_NoEscapeXMLStrpbrk) {
+    for (int i = 0; i < 10000000; i++) {
+        std::string estr(escapeXMLCharsStrpbrk(xml_));
+    }
+}
+
+TEST_F(SandeshPerfTestString, DISABLED_NoEscapeXMLNoop) {
+    for (int i = 0; i < 10000000; i++) {
+        std::string estr(escapeXMLCharsNoop(xml_));
+    }
+}
 
 TEST_F(SandeshPerfTestString, DISABLED_StringAppend) {
     for (int i = 0; i < 1000000; i++) {
