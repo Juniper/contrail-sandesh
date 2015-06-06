@@ -80,6 +80,9 @@ public:
     // This function is used to send UVE sandesh's to the server
     virtual bool SendSandeshUVE(Sandesh* snh) = 0;
 
+    // This function is used to send sandesh's to the server
+    virtual bool SendSandesh(Sandesh* snh) = 0;
+
     virtual ~SandeshClientSM() {}
 
 protected:

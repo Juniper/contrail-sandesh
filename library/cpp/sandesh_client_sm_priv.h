@@ -63,6 +63,7 @@ public:
     void GetCandidates(TcpServer::Endpoint& active,
             TcpServer::Endpoint &backup) const;
     bool SendSandeshUVE(Sandesh* snh);
+    bool SendSandesh(Sandesh* snh);
     void EnqueDelSession(SandeshSession * session);
 
     // Feed session events into the state machine.
@@ -95,6 +96,7 @@ public:
     int GetConnectTime() const;
 
     const std::string &StateName() const;
+    const std::string &StateName(SandeshClientSM::State state) const;
     const std::string &LastStateName() const;
 
     void set_state(State state) {
@@ -177,6 +179,8 @@ private:
     mutable tbb::mutex mutex_;
     std::string generator_key_;
     SandeshEventStatistics event_stats_;
+
+    friend class SandeshClientStateMachineTest;
 
     DISALLOW_COPY_AND_ASSIGN(SandeshClientSMImpl);
 };

@@ -117,17 +117,18 @@ sandesh_http_test = env.UnitTest('sandesh_http_test',
 env.Alias('src/sandesh:sandesh_http_test', sandesh_http_test)
 env.Requires(sandesh_http_test, '#/build/include/libxml2/libxml/tree.h')
 
+sandesh_test_common_obj = env.Object('sandesh_test_common.cc')
 sandesh_state_machine_test = env.UnitTest('sandesh_state_machine_test',
-                                          ['sandesh_state_machine_test.cc']
+                                          ['sandesh_state_machine_test.cc'] +
+                                           sandesh_test_common_obj 
                                           )
 env.Alias('src/sandesh:sandesh_state_machine_test', sandesh_state_machine_test)
 
-'''
 sandesh_client_test = env.UnitTest('sandesh_client_test',
-                                          ['sandesh_client_test.cc']
+                                          ['sandesh_client_test.cc'] +
+                                           sandesh_test_common_obj 
                                           )
 env.Alias('src/sandesh:sandesh_client_test', sandesh_client_test)
-'''
 
 test_suite = [sandesh_message_test,
               sandesh_rw_test,
@@ -136,7 +137,7 @@ test_suite = [sandesh_message_test,
               sandesh_http_test,
               sandesh_state_machine_test,
               sandesh_perf_test,
-#             sandesh_client_test,
+              sandesh_client_test,
            ]
 
 test = env.TestSuite('sandesh-test', test_suite)
