@@ -47,7 +47,7 @@ public:
     void Initiate();
     void Shutdown();
 
-    SandeshSession *CreateSMSession(
+    virtual SandeshSession *CreateSMSession(
             TcpSession::EventObserver eocb,
             SandeshReceiveMsgCb rmcb,
             TcpServer::Endpoint ep);
@@ -80,6 +80,10 @@ public:
 
     SandeshSession * session() const {
         return sm_->session();
+    }
+
+    SandeshClientSM* state_machine() const {
+        return sm_.get();
     }
 
     void SetSessionWaterMarkInfo(Sandesh::QueueWaterMarkInfo &scwm);

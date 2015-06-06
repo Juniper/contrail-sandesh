@@ -114,17 +114,7 @@ void SandeshClient::Shutdown() {
 }
 
 bool SandeshClient::SendSandesh(Sandesh *snh) {
-    if (!sm_->session() || sm_->session()->IsClosed()) {
-        return false;
-    }
-    SandeshClientSM::State state = sm_->state();
-    if (state != SandeshClientSM::CLIENT_INIT && 
-        state != SandeshClientSM::ESTABLISHED) {
-        return false;
-    }
-    // XXX No bounded work queue
-    sm_->session()->send_queue()->Enqueue(snh);
-    return true; 
+    return sm_->SendSandesh(snh);
 }
 
 bool SandeshClient::ReceiveCtrlMsg(const std::string &msg,

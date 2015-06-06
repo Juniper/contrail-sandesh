@@ -491,14 +491,21 @@ struct ClientInit : public sc::state<ClientInit, SandeshClientSMImpl> {
 
     sc::result react(const EvSandeshSend &event) {
         SandeshClientSMImpl *state_machine = &context<SandeshClientSMImpl>();
-        SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name() << " : " << event.snh->Name());
-        if (dynamic_cast<SandeshUVE *>(event.snh)) {
-            SM_LOG(INFO, "Received UVE message in wrong state : " << event.snh->Name());
-            event.snh->Release();
+        Sandesh *snh(event.snh);
+        SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name() <<
+            " : " << snh->Name());
+        if (dynamic_cast<SandeshUVE *>(snh)) {
+            if (snh->IsLoggingDroppedAllowed()) {
+                SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " <<
+                    snh->ToString());
+            }
+            Sandesh::UpdateSandeshStats(snh->Name(), 0, true, true);
+            SM_LOG(INFO, "Received UVE message in wrong state : " << snh->Name());
+            snh->Release();
             return discard_event(); 
         }
-        if (!state_machine->send_session(event.snh)) {
-            SM_LOG(ERROR, "Could not EnQ Sandesh " << event.snh->Name());
+        if (!state_machine->send_session(snh)) {
+            SM_LOG(INFO, "Could not EnQ Sandesh :" << snh->Name());
             // If Enqueue encounters an error, it will release the Sandesh
         }
         return discard_event();
@@ -634,7 +641,7 @@ struct Established : public sc::state<Established, SandeshClientSMImpl> {
 
 void SandeshClientSMImpl::SetAdminState(bool down) {
     if (down) {
-        Enqueue(scm::EvStop(false));
+        Enqueue(scm::EvStop());
     } else {
         reset_idle_hold_time();
         // On fresh restart of state machine, all previous state should be reset
@@ -659,8 +666,14 @@ void SandeshClientSMImpl::OnIdle(const Ev &event) {
 
 template <class Ev>
 void SandeshClientSMImpl::ReleaseSandesh(const Ev &event) {
-    SM_LOG(DEBUG, "Wrong state: " << StateName() << " for event: " << event.Name());
-    event.snh->Release();
+    Sandesh *snh(event.snh);
+    if (snh->IsLoggingDroppedAllowed()) {
+        SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " << snh->ToString());
+    }
+    Sandesh::UpdateSandeshStats(snh->Name(), 0, true, true);
+    SM_LOG(DEBUG, "Wrong state: " << StateName() << " for event: " <<
+       event.Name() << " message: " << snh->Name());
+    snh->Release();
 }
 
 template <class Ev>
@@ -766,6 +779,11 @@ bool SandeshClientSMImpl::SendSandeshUVE(Sandesh * snh) {
     return true;
 }
 
+bool SandeshClientSMImpl::SendSandesh(Sandesh * snh) {
+    Enqueue(scm::EvSandeshSend(snh));
+    return true;
+}
+
 void SandeshClientSMImpl::OnMessage(SandeshSession *session,
                                     const std::string &msg) {
     // Demux based on Sandesh message type
@@ -795,6 +813,11 @@ static const std::string state_names[] = {
     "ClientInit",
     "Established",
 };
+
+const string &SandeshClientSMImpl::StateName(
+    SandeshClientSM::State state) const {
+    return state_names[state];
+}
 
 const string &SandeshClientSMImpl::StateName() const {
     return state_names[state_];
