@@ -317,9 +317,9 @@ class SandeshSession(TcpSession):
         else:
             more = True
         if not self._connected:
-            self._logger.log(
-                SandeshLogger.get_py_logger_level(sandesh.level()),
-                sandesh.log())
+            if self._sandesh_instance.is_logging_dropped_allowed(sandesh):
+                self._logger.error(
+                    "SANDESH: %s: %s" % ("Not connected", sandesh.log()))
             return
         if sandesh.is_logging_allowed(self._sandesh_instance):
             self._logger.log(

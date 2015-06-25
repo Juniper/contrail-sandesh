@@ -51,6 +51,12 @@ class SandeshBaseLogger(object):
     def set_logging_params(self, **kwargs):
         self._logging_params = kwargs
 
+    def set_trace_print(self, enable_trace_print):
+        self._logging_params['enable_trace_print'] = enable_trace_print
+
+    def set_flow_logging(self, enable_flow_log):
+        self._logging_params['enable_flow_log'] = enable_flow_log
+
     def set_local_logging(self, enable_local_log):
         self._logging_params['enable_local_log'] = enable_local_log
 
@@ -66,6 +72,12 @@ class SandeshBaseLogger(object):
     def set_logging_syslog(self, enable_syslog, syslog_facility):
         self._logging_params['enable_syslog'] = enable_syslog
         self._logging_params['syslog_facility'] = syslog_facility
+
+    def is_trace_print_enabled(self):
+        return self._logging_params.get('enable_trace_print')
+
+    def is_flow_logging_enabled(self):
+        return self._logging_params.get('enable_flow_log')
 
     def is_local_logging_enabled(self):
         return self._logging_params.get('enable_local_log')
