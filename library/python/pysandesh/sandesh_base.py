@@ -149,12 +149,24 @@ class Sandesh(object):
                            level=SandeshLevel.SYS_INFO,
                            file=sand_logger.SandeshLogger._DEFAULT_LOG_FILE,
                            enable_syslog=False,
-                           syslog_facility=_DEFAULT_SYSLOG_FACILITY):
+                           syslog_facility=_DEFAULT_SYSLOG_FACILITY,
+                           enable_trace_print=False,
+                           enable_flow_log=False):
         self._sandesh_logger.set_logging_params(
             enable_local_log=enable_local_log, category=category,
             level=level, file=file, enable_syslog=enable_syslog,
-            syslog_facility=syslog_facility)
+            syslog_facility=syslog_facility,
+            enable_trace_print=enable_trace_print,
+            enable_flow_log=enable_flow_log)
     # end set_logging_params
+
+    def set_trace_print(self, enable_trace_print):
+        self._sandesh_logger.set_trace_print(enable_trace_print)
+    # end set_trace_print
+
+    def set_flow_logging(self, enable_flow_log):
+        self._sandesh_logger.set_flow_logging(enable_flow_log)
+    # end set_flow_logging
 
     def set_local_logging(self, enable_local_log):
         self._sandesh_logger.set_local_logging(enable_local_log)
@@ -171,6 +183,13 @@ class Sandesh(object):
     def set_logging_file(self, file):
         self._sandesh_logger.set_logging_file(file)
     # end set_logging_file
+
+    def is_logging_dropped_allowed(self, sandesh):
+        if sandesh.type() == SandeshType.FLOW:
+            return self.is_flow_logging_enabled()
+        else:
+            return True
+    # end is_logging_dropped_allowed
 
     def is_send_queue_enabled(self):
         return self._send_queue_enabled
@@ -283,6 +302,14 @@ class Sandesh(object):
         return self._alarm_ack_callback
     # end alarm_ack_callback
 
+    def is_flow_logging_enabled(self):
+        return self._sandesh_logger.is_flow_logging_enabled()
+    # end is_flow_logging_enabled
+
+    def is_trace_print_enabled(self):
+        return self._sandesh_logger.is_trace_print_enabled()
+    # end is_trace_print_enabled
+
     def is_local_logging_enabled(self):
         return self._sandesh_logger.is_local_logging_enabled()
     # end is_local_logging_enabled
@@ -315,6 +342,9 @@ class Sandesh(object):
         return False
 
     def is_logging_allowed(self, sandesh_init):
+        if self._type == SandeshType.FLOW:
+            return sandesh_init.is_flow_logging_enabled()
+
         if not sandesh_init.is_local_logging_enabled():
             return False
 
@@ -339,7 +369,9 @@ class Sandesh(object):
             self._client.send_sandesh(tx_sandesh)
         else:
             if self._connect_to_collector:
-                self._logger.error('SANDESH: No Client: %s', tx_sandesh.log())
+                if self.is_logging_dropped_allowed(tx_sandesh):
+                    self._logger.error('SANDESH: No Client: %s',
+                                       tx_sandesh.log())
             else:
                 self._logger.log(
                     sand_logger.SandeshLogger.get_py_logger_level(
@@ -845,6 +877,7 @@ class SandeshTrace(Sandesh):
         Sandesh.__init__(self)
         self._type = type
         self._more = False
+        self._level = SandeshLevel.SYS_DEBUG
     # end __init__
 
     def send_trace(self, context='', more=False,
@@ -871,6 +904,11 @@ class SandeshTrace(Sandesh):
             # store the trace buffer name in category
             self._category = name
             self._seqnum = sandesh._trace.TraceWrite(name, self)
+            if sandesh.is_local_logging_enabled() and \
+                    sandesh.is_trace_print_enabled():
+                sandesh._logger.log(
+                    sand_logger.SandeshLogger.get_py_logger_level(
+                        self.level()), self.log())
     # end trace_msg
 
 # end class SandeshTrace

@@ -24,6 +24,9 @@ class SandeshTraceTest(unittest.TestCase):
         http_port = test_utils.get_free_port()
         self._sandesh.init_generator('sandesh_trace_test', socket.gethostname(),
             'Test', 'Test', None, 'trace_test_ctxt', http_port)
+        self._sandesh.set_logging_params(level=SandeshLevel.SYS_DEBUG,
+                                         enable_local_log=True,
+                                         enable_trace_print=True)
         self._trace_read_list = []
     #end setUp
 
