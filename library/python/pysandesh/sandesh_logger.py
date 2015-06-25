@@ -69,13 +69,32 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
 
     def set_logging_params(self, enable_local_log=False, category='',
                            level=SandeshLevel.SYS_INFO, file=_DEFAULT_LOG_FILE,
-                           enable_syslog=False, syslog_facility='LOG_LOCAL0'):
+                           enable_syslog=False, syslog_facility='LOG_LOCAL0',
+                           enable_trace_print=False, enable_flow_log=False):
         self.set_local_logging(enable_local_log)
         self.set_logging_category(category)
         self.set_logging_level(level)
         self.set_logging_file(file)
         self.set_logging_syslog(enable_syslog, syslog_facility)
+        self.set_trace_print(enable_trace_print)
+        self.set_flow_logging(enable_flow_log)
     # end set_logging_params
+
+    def set_trace_print(self, enable_trace_print):
+        if self.is_trace_print_enabled() != enable_trace_print:
+            self._logger.info('SANDESH: Trace: PRINT: [%s] -> [%s]',
+                              self.is_trace_print_enabled(),
+                              enable_trace_print)
+            super(SandeshLogger, self).set_trace_print(enable_trace_print)
+    # end set_trace_print
+
+    def set_flow_logging(self, enable_flow_log):
+        if self.is_flow_logging_enabled() != enable_flow_log:
+            self._logger.info('SANDESH: Flow Logging: [%s] -> [%s]',
+                              self.is_flow_logging_enabled(),
+                              enable_flow_log)
+            super(SandeshLogger, self).set_flow_logging(enable_flow_log)
+    # end set_flow_logging
 
     def set_logging_level(self, level):
         if isinstance(level, str):
