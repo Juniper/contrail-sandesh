@@ -19,7 +19,7 @@ if 'threading' in sys.modules:
     del sys.modules['threading']
 from gevent import monkey; monkey.patch_all()
 import wsgiref
-from wsgiref.simple_server import make_server
+from wsgiref.simple_server import *
 import bottle
 import cStringIO
 from transport import TTransport
@@ -27,6 +27,9 @@ from protocol import TXMLProtocol
 import os
 import socket
 
+class Sandesh_WSGIServer(WSGIServer):
+    def handle_error(self, request, client_address):
+        BaseServer.handle_error(self, request, client_address)
 
 class SandeshHttp(object):
 
@@ -89,7 +92,7 @@ class SandeshHttp(object):
     def start_http_server(self):
         try:
             svr = make_server(SandeshHttp._HTTP_SERVER_IP, self._http_port,
-                              self._http_app)
+                              self._http_app, Sandesh_WSGIServer)
         except socket.error as e:
             self._logger.error('Unable to open HTTP Port %d, %s' % (self._http_port, e))
             sys.exit()
