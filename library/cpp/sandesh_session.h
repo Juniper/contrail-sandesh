@@ -219,9 +219,10 @@ private:
     friend class SandeshSessionTest;
 
     // 60 seconds - 45s + (3*5)s
-    static const int kSessionKeepaliveIdleTime = 45; // in seconds
+    static const int kSessionKeepaliveIdleTime = 15; // in seconds
     static const int kSessionKeepaliveInterval = 3; // in seconds
     static const int kSessionKeepaliveProbes = 5; // count
+    static const int kSessionTcpUserTimeout = 30000; // ms
 
     bool SendMsg(Sandesh *sandesh);
     bool SendBuffer(boost::shared_ptr<TMemoryBuffer> sbuffer);
@@ -238,6 +239,7 @@ private:
     int keepalive_idle_time_;
     int keepalive_interval_;
     int keepalive_probes_;
+    int tcp_user_timeout_;
     int reader_task_id_;
 
     // Session statistics

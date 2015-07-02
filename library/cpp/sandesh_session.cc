@@ -287,6 +287,7 @@ SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
     keepalive_idle_time_(kSessionKeepaliveIdleTime),
     keepalive_interval_(kSessionKeepaliveInterval),
     keepalive_probes_(kSessionKeepaliveProbes),
+    tcp_user_timeout_(kSessionTcpUserTimeout),
     reader_task_id_(reader_task_id) {
     if (Sandesh::role() == Sandesh::SandeshRole::Collector) {
         send_buffer_queue_.reset(new Sandesh::SandeshBufferQueue(writer_task_id,
@@ -340,7 +341,7 @@ boost::system::error_code SandeshSession::SetSocketOptions() {
         return ec;
     }
     return SetSocketKeepaliveOptions(keepalive_idle_time_, keepalive_interval_,
-            keepalive_probes_);
+            keepalive_probes_, tcp_user_timeout_);
 }
 
 void SandeshSession::OnRead(Buffer buffer) {
