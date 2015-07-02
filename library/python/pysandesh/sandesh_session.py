@@ -228,9 +228,11 @@ class SandeshWriter(object):
 
 
 class SandeshSession(TcpSession):
-    _KEEPALIVE_IDLE_TIME = 45  # in secs
+    _KEEPALIVE_IDLE_TIME = 15  # in secs
     _KEEPALIVE_INTERVAL = 3  # in secs
     _KEEPALIVE_PROBES = 5
+    _TCP_USER_TIMEOUT_OPT = 18
+    _TCP_USER_TIMEOUT_VAL = 30000 # ms
 
     def __init__(self, sandesh_instance, server, event_handler,
                  sandesh_msg_handler):
@@ -299,6 +301,12 @@ class SandeshSession(TcpSession):
         if hasattr(socket, 'TCP_KEEPCNT'):
             self._socket.setsockopt(
                 socket.IPPROTO_TCP, socket.TCP_KEEPCNT, self._KEEPALIVE_PROBES)
+        try:
+            self._socket.setsockopt(socket.IPPROTO_TCP,
+                self._TCP_USER_TIMEOUT_OPT, self._TCP_USER_TIMEOUT_VAL)
+        except:
+            self._logger.error('setsockopt failed: option %d, value %d' %
+                (self._TCP_USER_TIMEOUT_OPT, self._TCP_USER_TIMEOUT_VAL))
     # end _set_socket_options
 
     # Private functions
