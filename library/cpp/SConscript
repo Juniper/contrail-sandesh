@@ -22,6 +22,7 @@ env.Append(CPPPATH = [
 SandeshGenFiles  = env.SandeshGenCpp('../common/sandesh.sandesh')
 SandeshGenFiles += env.SandeshGenCpp('../common/sandesh_uve.sandesh')
 SandeshGenFiles += env.SandeshGenOnlyCpp('../common/sandesh_ctrl.sandesh')
+SandeshGenFiles += env.SandeshGenCpp('../common/sandesh_alarm_base.sandesh')
 SandeshGenSrcs = env.ExtractCpp(SandeshGenFiles)
 SandeshGenHdrs = env.ExtractHeader(SandeshGenFiles)
 

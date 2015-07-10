@@ -25,10 +25,10 @@ SandeshUVETypeMaps::SyncAllMaps(const map<string,uint32_t> & inpMap) {
             it != map_->end(); it++) {
         map<string,uint32_t>::const_iterator iit = inpMap.find(it->first);
         if (iit == inpMap.end()) {
-            uint count = it->second->SyncUVE(0, "", false);
+            uint count = it->second->SyncUVE("", 0, "", false);
             SANDESH_LOG(INFO, __func__ << " for " << it->first << " without seqno , total = " << count);
         } else {
-            uint count = it->second->SyncUVE(iit->second, "", false);
+            uint count = it->second->SyncUVE("", iit->second, "", false);
             SANDESH_LOG(INFO, __func__ << " for " << it->first << " with seqno " << iit->second <<
                 ", total = " << count);
         }
@@ -60,9 +60,9 @@ SandeshUVECacheReq::HandleRequest() const {
     const SandeshUVEPerTypeMap * tm = SandeshUVETypeMaps::TypeMap(get_tname());
     if (tm) {
         if (__isset.key) {
-            returned = tm->SendUVE(get_key(), context(), true);
+            returned = tm->SendUVE("", get_key(), context(), true);
         } else {
-            returned += tm->SyncUVE(0, context(), true);
+            returned += tm->SyncUVE("", 0, context(), true);
         }
     }
 

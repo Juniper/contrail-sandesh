@@ -1711,7 +1711,7 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
         assert((*f_iter)->get_name() == "data");
     
         indent(out) << "static void Send(const " << type_name((*f_iter)->get_type()) <<
-            "& data, bool seq = false, uint32_t seqno = 0," << 
+            "& data, std::string table = \"\", bool seq = false, uint32_t seqno = 0," <<
             " std::string ctx = \"\", bool more = false);" << endl;
 
     } else if (((t_base_type *)t)->is_sandesh_system() ||
@@ -1944,6 +1944,10 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   // Put the fingerprint up top for all to see.
   generate_struct_fingerprint(out, tstruct, false);
 
+#ifdef SANDESH
+  bool is_table = false;
+#endif
+
   if (!pointers) {
     // Default constructor
     indent(out) <<
@@ -1983,6 +1987,20 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
         }
       }
     }
+
+#ifdef SANDESH
+    for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+      if ((*m_iter)->get_name() == "name") {
+        std::map<std::string, std::string>::iterator it;
+        it = (*m_iter)->annotations_.find("key");
+        if (it != (*m_iter)->annotations_.end()) {
+          is_table = true;
+          out << ", table_(\"" << it->second << "\")";
+        }
+        break;
+      }
+    }
+#endif
     out << " {" << endl;
     indent_up();
     // TODO(dreiss): When everything else in Thrift is perfect,
@@ -2018,6 +2036,11 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
     indent(out) <<
       declare_field(*m_iter, false, pointers && !(*m_iter)->get_type()->is_xception(), !read) << endl;
   }
+#ifdef SANDESH
+  if (is_table) {
+    indent(out) << "std::string table_;" << endl;
+  }
+#endif
 
   // Add the __isset data member if we need it, using the definition from above
   if (has_nonrequired_fields && (!pointers || read)) {
@@ -2522,8 +2545,14 @@ void t_cpp_generator::generate_struct_writer(ofstream& out,
         out << indent() << "std::map<std::string, std::string> annotations_;" << endl;
         std::map<std::string, std::string>::iterator it;
         for (it = (*f_iter)->annotations_.begin(); it != (*f_iter)->annotations_.end(); it++) {
-            out << indent() << "annotations_.insert(std::make_pair(\"" << (*it).first
-                << "\"" << ", \"" << (*it).second << "\"));" << endl;
+            if (((*f_iter)->get_name() == "name") && (it->first == "key")) {
+              out << indent() << "assert(!table_.empty());" << endl;
+              out << indent() << "annotations_.insert(std::make_pair(\"key\", "
+                  "table_));" << endl;
+            } else {
+              out << indent() << "annotations_.insert(std::make_pair(\"" << (*it).first
+                  << "\"" << ", \"" << (*it).second << "\"));" << endl;
+            }
         }
         out << indent() << "if ((ret = oprot->writeFieldBegin(" <<
             "\"" << (*f_iter)->get_name() << "\", " <<
@@ -3064,14 +3093,14 @@ void t_cpp_generator::generate_sandesh_uve_creator(
 
     indent(out) << "void " <<  tsandesh->get_name() <<
         "::Send(const " << type_name((*f_iter)->get_type()) <<
-        "& data, bool seq, uint32_t seqno," << 
+        "& data, std::string table, bool seq, uint32_t seqno," <<
         " std::string ctx, bool more) {" << endl;
     indent_up();
 
     indent(out) << type_name((*f_iter)->get_type()) <<
         " & cdata = const_cast<" << type_name((*f_iter)->get_type()) <<
         " &>(data);" << endl;
-
+    indent(out) << "if (!table.empty()) cdata.table_ = table;" << endl;
     indent(out) << tsandesh->get_name() << " *snh;" << endl;
     indent(out) << "if (seq) snh = new " << 
         tsandesh->get_name() << "(seqno, cdata);" << endl;

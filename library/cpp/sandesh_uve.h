@@ -61,9 +61,9 @@ class SandeshUVEPerTypeMap {
 public:
     virtual ~SandeshUVEPerTypeMap() { }
     virtual uint32_t TypeSeq() = 0;
-    virtual uint32_t SyncUVE(const uint32_t seqno,
+    virtual uint32_t SyncUVE(const std::string &table, const uint32_t seqno,
             const std::string &ctx, bool more) const = 0;
-    virtual bool SendUVE(const std::string& name,
+    virtual bool SendUVE(const std::string& table, const std::string& name,
             const std::string& ctx, bool more) const = 0;
 };
 
@@ -96,6 +96,7 @@ public:
         uint32_t seqno;
     };
     typedef boost::ptr_map<std::string, UVEMapEntry> uve_type_map;
+    typedef std::map<std::string, uve_type_map> uve_map;
 
     SandeshUVEPerTypeMapImpl(char const * u_name) : uve_name_(u_name) {
         SandeshUVETypeMaps::RegisterType(u_name, this);
@@ -107,23 +108,28 @@ public:
     void UpdateUVE(T *tsnh) {
         tbb::mutex::scoped_lock lock(uve_mutex_);
 
+        const std::string &table = tsnh->get_data().table_;
+        assert(!table.empty());
         const std::string &s = tsnh->get_data().get_name();
-        typename uve_type_map::iterator mapentry = map_.find(s);
-
-        if (mapentry == map_.end()) {
-            if (!tsnh->get_data().get_deleted())
-                if (false)
-                    SANDESH_LOG(DEBUG, __func__ << " Adding to " << uve_name_ <<" cache: " << s);
-                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(tsnh->get_data(), tsnh->seqnum()));
-                map_.insert(s, ume);
+        typename uve_map::iterator omapentry = map_.find(table);
+        if (omapentry == map_.end()) {
+            omapentry = map_.insert(std::make_pair(table, uve_type_map())).first;
+        }
+        typename uve_type_map::iterator imapentry =
+            omapentry->second.find(s);
+        if (imapentry == omapentry->second.end()) {
+            std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(
+                tsnh->get_data(), tsnh->seqnum()));
+            omapentry->second.insert(s, ume);
         } else {
-            if (mapentry->second->data.get_deleted()) {
-                map_.erase(mapentry);
-                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(tsnh->get_data(), tsnh->seqnum()));
-                map_.insert(s, ume);
+            if (imapentry->second->data.get_deleted()) {
+                omapentry->second.erase(imapentry);
+                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(
+                    tsnh->get_data(), tsnh->seqnum()));
+                omapentry->second.insert(s, ume);
             } else {
-                tsnh->UpdateUVE(mapentry->second->data);
-                mapentry->second->seqno = tsnh->seqnum();
+                tsnh->UpdateUVE(imapentry->second->data);
+                imapentry->second->seqno = tsnh->seqnum();
             }
         }
     }
@@ -135,42 +141,55 @@ public:
         return T::lseqnum();
     }
 
-    uint32_t SyncUVE(const uint32_t seqno,
+    uint32_t SyncUVE(const std::string &table, const uint32_t seqno,
             const std::string &ctx, bool more) const {
         tbb::mutex::scoped_lock lock(uve_mutex_);
         uint32_t count = 0;
 
-        // Send all entries that are newer than the given sequence number
-        for (typename uve_type_map::const_iterator uit = map_.begin();
-                uit!=map_.end(); uit++) {
-            if ((seqno < uit->second->seqno) || (seqno == 0)) {
-                if (!more) {
-                    SANDESH_LOG(DEBUG, __func__ << " Syncing " <<
-                        " val " << uit->second->data.log() <<
-                        " seq " << uit->second->seqno);
+        for (typename uve_map::const_iterator oit = map_.begin();
+             oit != map_.end(); oit++) {
+            if (!table.empty() && oit->first != table)
+                continue;
+            // Send all entries that are newer than the given sequence number
+            for (typename uve_type_map::const_iterator uit =
+                 oit->second.begin(); uit != oit->second.end(); uit++) {
+                if ((seqno < uit->second->seqno) || (seqno == 0)) {
+                    if (!more) {
+                        SANDESH_LOG(DEBUG, __func__ << " Syncing " <<
+                                    " val " << uit->second->data.log() <<
+                                    " seq " << uit->second->seqno);
+                    }
+                    T::Send(uit->second->data, "", true, uit->second->seqno,
+                            ctx, more);
+                    count++;
                 }
-                T::Send(uit->second->data, true, uit->second->seqno, ctx, more);
-                count++;
             }
         }
         return count;
     }
 
-    bool SendUVE(const std::string& name, const std::string& ctx,
-                 bool more) const {
+    bool SendUVE(const std::string& table, const std::string& name,
+                 const std::string& ctx, bool more) const {
         tbb::mutex::scoped_lock lock(uve_mutex_);
-        typename uve_type_map::const_iterator uve_entry = map_.find(name);
-        if (uve_entry != map_.end()) {
-            T::Send(uve_entry->second->data, true, uve_entry->second->seqno,
-                    ctx, more);
-            return true;
+
+        for (typename uve_map::const_iterator oit = map_.begin();
+             oit != map_.end(); oit++) {
+            if (!table.empty() && oit->first != table)
+                continue;
+            typename uve_type_map::const_iterator uve_entry =
+                oit->second.find(name);
+            if (uve_entry != oit->second.end()) {
+                T::Send(uve_entry->second->data, "", true, uve_entry->second->seqno,
+                        ctx, more);
+                return true;
+            }
         }
         return false;
     }
 
 private:
 
-    uve_type_map map_;
+    uve_map map_;
     const std::string uve_name_;
     mutable tbb::mutex uve_mutex_;
 };
