@@ -61,7 +61,7 @@ SandeshLevel::type Sandesh::logging_ut_level_ =
     getenv("SANDSH_UT_DEBUG") ? SandeshLevel::SYS_DEBUG : SandeshLevel::UT_DEBUG;
 std::string Sandesh::logging_category_;
 EventManager* Sandesh::event_manager_ = NULL;
-SandeshStatistics Sandesh::stats_;
+SandeshMessageStatistics Sandesh::msg_stats_;
 tbb::mutex Sandesh::stats_mutex_;
 log4cplus::Logger Sandesh::logger_ =
     log4cplus::Logger::getInstance(LOG4CPLUS_TEXT("SANDESH"));
@@ -446,8 +446,8 @@ bool Sandesh::Enqueue(SandeshQueue *queue) {
         if (IsLoggingDroppedAllowed()) {
             SANDESH_LOG(ERROR, __func__ << ": SandeshQueue NULL : Dropping Message: "
                 << ToString());
-         }
-        Sandesh::UpdateSandeshStats(name_, 0, true, true);
+        }
+        UpdateTxMsgFailStats(name_, 0, Sandesh::DropReason::Send::NoQueue);
         Release();
         return false;
     }
@@ -584,7 +584,7 @@ bool Sandesh::SendEnqueue() {
                 Log();
             }
         }
-        Sandesh::UpdateSandeshStats(name_, 0, true, true);
+        UpdateTxMsgFailStats(name_, 0, Sandesh::DropReason::Send::NoClient);
         Release();
         return false;        
     } 
@@ -592,7 +592,8 @@ bool Sandesh::SendEnqueue() {
         if (IsLoggingDroppedAllowed()) {
             SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " << ToString());
         }
-        Sandesh::UpdateSandeshStats(name_, 0, true, true);
+        UpdateTxMsgFailStats(name_, 0,
+            Sandesh::DropReason::Send::ClientSendFailed);
         Release();
         return false;
     }
@@ -646,7 +647,8 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
     if (client_) {
         if (!client_->SendSandeshUVE(this)) {
             SANDESH_LOG(ERROR, "SandeshUVE : Send FAILED: " << ToString());
-            Sandesh::UpdateSandeshStats(Name(), 0, true, true);
+            UpdateTxMsgFailStats(Name(), 0,
+                Sandesh::DropReason::Send::ClientSendFailed);
             Release();
             return false;
         }
@@ -657,7 +659,7 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
     } else {
         Log();
     }
-    Sandesh::UpdateSandeshStats(Name(), 0, true, true);
+    UpdateTxMsgFailStats(Name(), 0, Sandesh::DropReason::Send::NoClient);
     Release();
     return false;
 }
@@ -665,7 +667,7 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
 bool SandeshRequest::Enqueue(SandeshRxQueue *queue) {
     if (!queue) {
         SANDESH_LOG(ERROR, "SandeshRequest: No RxQueue: " << ToString());
-        Sandesh::UpdateSandeshStats(Name(), 0, false, true);
+        UpdateRxMsgFailStats(Name(), 0, Sandesh::DropReason::Recv::NoQueue);
         Release();
         return false;
     }
@@ -724,24 +726,42 @@ SandeshLevel::type Sandesh::StringToLevel(std::string level) {
     return SandeshLevel::INVALID;
 }
 
-void Sandesh::UpdateSandeshStats(const std::string& sandesh_name,
-                                 uint32_t bytes, bool is_tx, bool dropped) {
+void Sandesh::UpdateRxMsgStats(const std::string &msg_name,
+                               uint64_t bytes) {
     tbb::mutex::scoped_lock lock(stats_mutex_);
-    stats_.Update(sandesh_name, bytes, is_tx, dropped);
+    msg_stats_.UpdateRecv(msg_name, bytes);
 }
 
-void Sandesh::GetSandeshStats(
-    std::vector<SandeshMessageTypeStats> &mtype_stats,
-    SandeshMessageStats &magg_stats) {
+void Sandesh::UpdateRxMsgFailStats(const std::string &msg_name,
+    uint64_t bytes, Sandesh::DropReason::Recv::type dreason) {
     tbb::mutex::scoped_lock lock(stats_mutex_);
-    stats_.Get(mtype_stats, magg_stats);
+    msg_stats_.UpdateRecvFailed(msg_name, bytes, dreason);
 }
 
-void Sandesh::GetSandeshStats(
-    boost::ptr_map<std::string, SandeshMessageTypeStats> &mtype_stats,
-    SandeshMessageStats &magg_stats) {
+void Sandesh::UpdateTxMsgStats(const std::string &msg_name,
+                               uint64_t bytes) {
     tbb::mutex::scoped_lock lock(stats_mutex_);
-    stats_.Get(mtype_stats, magg_stats);
+    msg_stats_.UpdateSend(msg_name, bytes);
+}
+
+void Sandesh::UpdateTxMsgFailStats(const std::string &msg_name,
+    uint64_t bytes, Sandesh::DropReason::Send::type dreason) {
+    tbb::mutex::scoped_lock lock(stats_mutex_);
+    msg_stats_.UpdateSendFailed(msg_name, bytes, dreason);
+}
+
+void Sandesh::GetMsgStats(
+    std::vector<SandeshMessageTypeStats> *mtype_stats,
+    SandeshMessageStats *magg_stats) {
+    tbb::mutex::scoped_lock lock(stats_mutex_);
+    msg_stats_.Get(mtype_stats, magg_stats);
+}
+
+void Sandesh::GetMsgStats(
+    boost::ptr_map<std::string, SandeshMessageTypeStats> *mtype_stats,
+    SandeshMessageStats *magg_stats) {
+    tbb::mutex::scoped_lock lock(stats_mutex_);
+    msg_stats_.Get(mtype_stats, magg_stats);
 }
 
 void Sandesh::SetSendQueue(bool enable) {
@@ -755,107 +775,6 @@ void Sandesh::SetSendQueue(bool enable) {
                 client_->session()->send_queue()->MayBeStartRunner();
             }
         } 
-    }
-}
-
-// Sandesh statistics
-
-void SandeshStatistics::Get(
-    boost::ptr_map<std::string, SandeshMessageTypeStats> &mtype_stats,
-    SandeshMessageStats &magg_stats) const {
-    mtype_stats = type_stats;    
-    magg_stats = agg_stats; 
-}
-
-void SandeshStatistics::Get(std::vector<SandeshMessageTypeStats> &mtype_stats,
-                            SandeshMessageStats &magg_stats) const {
-    for (boost::ptr_map<std::string, SandeshMessageTypeStats>::const_iterator it = 
-             type_stats.begin();
-         it != type_stats.end();
-         it++) {
-        mtype_stats.push_back(*it->second);
-    }
-    magg_stats = agg_stats; 
-}
-
-void SandeshStatistics::Update(const std::string& sandesh_name,
-                               uint32_t bytes, bool is_tx, bool dropped) {
-    boost::ptr_map<std::string, SandeshMessageTypeStats>::iterator it = 
-        type_stats.find(sandesh_name);
-    if (it == type_stats.end()) {
-        std::string name(sandesh_name);
-        SandeshMessageTypeStats *nmtstats = new SandeshMessageTypeStats;
-        nmtstats->message_type = name; 
-        it = (type_stats.insert(name, nmtstats)).first;
-    }
-    SandeshMessageTypeStats *mtstats = it->second;
-    if (is_tx) {
-        if (dropped) {
-            mtstats->stats.messages_sent_dropped++;
-            agg_stats.messages_sent_dropped++;
-        } else {
-            mtstats->stats.messages_sent++;
-            mtstats->stats.bytes_sent += bytes;
-            agg_stats.messages_sent++;
-            agg_stats.bytes_sent += bytes;
-        }
-    } else {
-        if (dropped) {
-            mtstats->stats.messages_received_dropped++;
-            agg_stats.messages_received_dropped++;
-        } else { 
-            mtstats->stats.messages_received++;
-            mtstats->stats.bytes_received += bytes;
-            agg_stats.messages_received++;
-            agg_stats.bytes_received += bytes;
-        }
-    }
-}
-
-void SandeshEventStatistics::Get(
-    std::vector<SandeshStateMachineEvStats> &ev_stats) const {
-    for (EventStatsMap::const_iterator it = event_stats.begin();
-            it != event_stats.end(); ++it) {
-        const EventStats *es = it->second;
-        SandeshStateMachineEvStats ev_stat;
-        ev_stat.event = it->first;
-        ev_stat.enqueues = es->enqueues;
-        ev_stat.dequeues = es->dequeues;
-        ev_stat.enqueue_fails = es->enqueue_fails;
-        ev_stat.dequeue_fails = es->dequeue_fails;
-        ev_stats.push_back(ev_stat);
-    }
-    SandeshStateMachineEvStats ev_agg_stat;
-    ev_agg_stat.enqueues = agg_stats.enqueues;
-    ev_agg_stat.dequeues = agg_stats.dequeues;
-    ev_agg_stat.enqueue_fails = agg_stats.enqueue_fails;
-    ev_agg_stat.dequeue_fails = agg_stats.dequeue_fails;
-    ev_stats.push_back(ev_agg_stat);
-}
-
-void SandeshEventStatistics::Update(std::string &event_name, bool enqueue,
-    bool fail) {
-    EventStatsMap::iterator it = event_stats.find(event_name);
-    if (it == event_stats.end()) {
-        it = (event_stats.insert(event_name, new EventStats)).first;
-    }
-    EventStats *es = it->second;
-    if (enqueue) {
-        if (fail) {
-            es->enqueue_fails++;
-            agg_stats.enqueue_fails++;
-        } else {
-            es->enqueues++;
-            agg_stats.enqueues++;
-        }
-    } else {
-        if (fail) {
-            es->dequeue_fails++;
-            agg_stats.dequeue_fails++;
-        } else {
-            es->dequeues++;
-            agg_stats.dequeues++;
-        }
     }
 }
 

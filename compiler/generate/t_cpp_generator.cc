@@ -113,7 +113,6 @@ class t_cpp_generator : public t_oop_generator {
   void generate_sandesh_request      (std::ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_default_ctor (std::ofstream& out, t_sandesh* tsandesh, bool is_request);
   void generate_sandesh_loggers      (std::ofstream& out, t_sandesh* tsandesh);
-  void generate_sandesh_logger       (std::ofstream& out, t_sandesh* tsandesh, bool buffer, bool forced_log);
   void generate_logger_field         (std::ofstream& out, t_field *tfield, string prefix, bool log_value_only, bool no_name_log);
   void generate_logger_struct        (std::ofstream& out, t_struct *tstruct, string prefix, string name);
   void generate_logger_container     (std::ofstream& out, t_type* ttype, string name, bool log_value_only);
@@ -351,6 +350,16 @@ class t_cpp_generator : public t_oop_generator {
 #ifdef SANDESH
   std::ofstream f_request_impl_;
   std::ofstream f_html_template_;
+  struct sandesh_logger {
+    enum type {
+      BUFFER,
+      LOG,
+      FORCED_LOG,
+      DROP_LOG,
+    };
+  };
+  void generate_sandesh_logger(std::ofstream& out, t_sandesh* tsandesh,
+    sandesh_logger::type ltype);
 #endif
 
   /**
@@ -1199,7 +1208,7 @@ std::string t_cpp_generator::generate_sandesh_async_creator(t_sandesh* tsandesh,
 void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *tsandesh) {
     std::string creator_func_name = "Send";
     std::string macro_func_name = "Log";
-
+    bool is_flow = ((t_base_type *)tsandesh->get_type())->is_sandesh_flow();
     // Generate creator
     out << indent() << "static void " << creator_func_name <<
              generate_sandesh_async_creator(tsandesh, true, false, false, "", "", true, false) <<
@@ -1207,8 +1216,13 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     indent_up();
     out << indent() << "if (level >= SendingLevel()) {" << endl;
     indent_up();
-    out << indent() << "UpdateSandeshStats(\"" << tsandesh->get_name() << "\", 0, true, true);" <<
-        endl;
+    out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
+        "\", 0, Sandesh::DropReason::Send::QueueLevel);" << endl;
+    if (!is_flow) {
+        out << indent() << "DropLog" <<
+            generate_sandesh_async_creator(tsandesh, false, false, false, "", "", false, false) <<
+            "; " << endl;
+    }
     out << indent() << "return;" << endl;
     scope_down(out);
     out << indent() << tsandesh->get_name() <<
@@ -1248,6 +1262,17 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
             endl;
     indent_down();
     indent(out) << endl << endl;
+
+    // Generate DropLog
+    if (!is_flow) {
+        out << indent() << "static void DropLog" <<
+             generate_sandesh_async_creator(tsandesh, true, false, false, "", "", false, false) <<
+             " {" << endl;
+        indent_up();
+        generate_sandesh_logger(out, tsandesh, sandesh_logger::DROP_LOG);
+        indent_down();
+        indent(out) << "}" << endl << endl;
+    }
 }
 
 std::string t_cpp_generator::generate_sandesh_trace_creator(t_sandesh *tsandesh, 
@@ -3315,20 +3340,29 @@ void t_cpp_generator::generate_logger_struct(ofstream& out,
  */
 void t_cpp_generator::generate_sandesh_logger(ofstream& out,
                                               t_sandesh* tsandesh,
-                                              bool buffer, bool forced_log) {
-    if (buffer) {
+                                              sandesh_logger::type ltype) {
+    switch (ltype) {
+    case sandesh_logger::BUFFER:
         indent(out) << "std::string " << tsandesh->get_name() <<
                 "::ToString() const {" << endl;
-    } else {
-        if (forced_log) {
-            indent(out) << "void " << tsandesh->get_name() <<
-                "::ForcedLog() const {" << endl;
-        } else {
-            indent(out) << "void " << tsandesh->get_name() <<
+        indent_up();
+        break;
+    case sandesh_logger::LOG:
+        indent(out) << "void " << tsandesh->get_name() <<
                 "::Log() const {" << endl;
-        }
+        indent_up();
+        break;
+    case sandesh_logger::FORCED_LOG:
+        indent(out) << "void " << tsandesh->get_name() <<
+                "::ForcedLog() const {" << endl;
+        indent_up();
+        break;
+    case sandesh_logger::DROP_LOG:
+        break;
+    default:
+        assert(0);
+        break;
     }
-    indent_up();
     const vector<t_field*>& fields = tsandesh->get_members();
     vector<t_field*>::const_iterator f_iter;
     bool init = false;
@@ -3340,12 +3374,26 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
         // Handle init
         if (!init) {
             init = true;
-            if (!buffer) {
+            std::string category_str, level_str, logger_level_str, drop_str;
+            if (ltype == sandesh_logger::DROP_LOG) {
+                drop_str = "\"SANDESH: Queue Drop: \" << ";
+                category_str = "category";
+                level_str = "level";
+                logger_level_str = "SandeshLevel::SYS_ERR";
+            } else {
+                drop_str = "";
+                category_str = "category()";
+                level_str = "level()";
+                logger_level_str = level_str;
+            }
+            if (ltype == sandesh_logger::LOG ||
+                ltype == sandesh_logger::FORCED_LOG ||
+                ltype == sandesh_logger::DROP_LOG) {
                 out << indent() <<
                     "log4cplus::Logger Xlogger = Sandesh::logger();" << endl;
                 out << indent() << "log4cplus::LogLevel Xlog4level(" <<
-                    "SandeshLevelTolog4Level(Sandesh::level()));" << endl;
-                if (!forced_log) {
+                    "SandeshLevelTolog4Level(" << logger_level_str << "));" << endl;
+                if (ltype != sandesh_logger::FORCED_LOG) {
                     out << indent() <<
                         "if (!Xlogger.isEnabledFor(Xlog4level)) {" << endl;
                     indent_up();
@@ -3353,7 +3401,7 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
                     scope_down(out);
                 }
                 out << indent() << "log4cplus::tostringstream Xbuf;" << endl;
-            } else {
+            } else if (ltype == sandesh_logger::BUFFER) {
                 out << indent() << "std::stringstream Xbuf;" << endl;
                 // Timestamp
                 out << indent() <<
@@ -3365,8 +3413,9 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
             if (((t_base_type *)tsandesh->get_type())->is_sandesh_system() ||
                     ((t_base_type *)tsandesh->get_type())->is_sandesh_object() ||
                     ((t_base_type *)tsandesh->get_type())->is_sandesh_flow()) {
-                out << indent() << "Xbuf << category() << \" [\" << LevelToString(level()) << \"]: " <<
-                        tsandesh->get_name() << ": \";" << endl;
+                out << indent() << "Xbuf << " << drop_str << category_str <<
+                    " << \" [\" << LevelToString(" << level_str << ") << \"]: " <<
+                    tsandesh->get_name() << ": \";" << endl;
             } else {
                 out << indent() << "Xbuf << \"" << tsandesh->get_name() << ": \";" << endl;
             }
@@ -3374,19 +3423,30 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
         generate_logger_field(out, *f_iter, prefix, log_value_only, false);
     }
     if (init) {
-        if (buffer) {
+        if (ltype == sandesh_logger::BUFFER) {
             out << indent() << "return Xbuf.str();" << endl;
         } else {
             out << indent() << "Xlogger.forcedLog(Xlog4level, Xbuf.str());" <<
                 endl;
         }
     } else {
-        if (buffer) {
+        if (ltype == sandesh_logger::BUFFER) {
             out << indent() << "return std::string();" << endl;
         }
     }
-    indent_down();
-    indent(out) << "}" << endl << endl;
+    switch (ltype) {
+    case sandesh_logger::BUFFER:
+    case sandesh_logger::LOG:
+    case sandesh_logger::FORCED_LOG:
+        indent_down();
+        indent(out) << "}" << endl << endl;
+        break;
+    case sandesh_logger::DROP_LOG:
+        break;
+    default:
+        assert(0);
+        break;
+    }
 }
 
 /**
@@ -3398,11 +3458,11 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
 void t_cpp_generator::generate_sandesh_loggers(ofstream& out,
                                                t_sandesh* tsandesh) {
     // Generate Log printing to log4cplus
-    generate_sandesh_logger(out, tsandesh, false, false);
+    generate_sandesh_logger(out, tsandesh, sandesh_logger::LOG);
     // Generate forcedLog printing to log4cplus
-    generate_sandesh_logger(out, tsandesh, false, true);
+    generate_sandesh_logger(out, tsandesh, sandesh_logger::FORCED_LOG);
     // Generate Log printing to buffer
-    generate_sandesh_logger(out, tsandesh, true, false);
+    generate_sandesh_logger(out, tsandesh, sandesh_logger::BUFFER);
 }
 
 /**
