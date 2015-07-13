@@ -114,7 +114,7 @@ public:
 //
 // Sandesh
 //
-class SandeshStatistics;
+class SandeshMessageStatistics;
 class SandeshMessageTypeStats;
 class SandeshMessageStats;
 class SandeshConnection;
@@ -135,6 +135,36 @@ public:
             Generator,
             Collector,
             Test,
+        };
+    };
+    struct DropReason {
+        struct Send {
+            enum type {
+                MinDropReason,
+                NoDrop = MinDropReason,
+                QueueLevel,
+                NoClient,
+                NoSession,
+                NoQueue,
+                ClientSendFailed,
+                HeaderWriteFailed,
+                WriteFailed,
+                SessionNotConnected,
+                WrongClientSMState,
+                MaxDropReason,
+            };
+        };
+        struct Recv {
+            enum type {
+                MinDropReason,
+                NoDrop = MinDropReason,
+                QueueLevel,
+                NoQueue,
+                ControlMsgFailed,
+                CreateFailed,
+                DecodingFailed,
+                MaxDropReason,
+            };
         };
     };
 
@@ -224,14 +254,18 @@ public:
     static int32_t ReceiveBinaryMsg(u_int8_t *buf, u_int32_t buf_len,
             int *error, SandeshContext *client_context);
     static bool SendReady(SandeshConnection * sconn = NULL);
-    static void UpdateSandeshStats(const std::string& sandesh_name,
-                                   uint32_t bytes, bool is_tx, bool dropped);
-    static void GetSandeshStats(
-        std::vector<SandeshMessageTypeStats> &mtype_stats,
-        SandeshMessageStats &magg_stats);
-    static void GetSandeshStats(
-        boost::ptr_map<std::string, SandeshMessageTypeStats> &mtype_stats,
-        SandeshMessageStats &magg_stats);
+    static void UpdateRxMsgStats(const std::string &msg_name, uint64_t bytes);
+    static void UpdateRxMsgFailStats(const std::string &msg_name,
+        uint64_t bytes, DropReason::Recv::type dreason);
+    static void UpdateTxMsgStats(const std::string &msg_name, uint64_t bytes);
+    static void UpdateTxMsgFailStats(const std::string &msg_name,
+        uint64_t bytes, DropReason::Send::type dreason);
+    static void GetMsgStats(
+        std::vector<SandeshMessageTypeStats> *mtype_stats,
+        SandeshMessageStats *magg_stats);
+    static void GetMsgStats(
+        boost::ptr_map<std::string, SandeshMessageTypeStats> *mtype_stats,
+        SandeshMessageStats *magg_stats);
     static const char *  SandeshRoleToString(SandeshRole::type role);
 
     virtual void Release() { delete this; }
@@ -371,7 +405,7 @@ private:
     static EventManager *event_manager_;
     static bool send_queue_enabled_;
     static SandeshLevel::type sending_level_;
-    static SandeshStatistics stats_;
+    static SandeshMessageStatistics msg_stats_;
     static tbb::mutex stats_mutex_;
     static log4cplus::Logger logger_;
     static bool disable_flow_collection_; // disable flow collection

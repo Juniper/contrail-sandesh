@@ -270,7 +270,7 @@ TEST_F(SandeshAsyncTest, Async) {
     {
         boost::ptr_map<std::string, SandeshMessageTypeStats> type_stats;
         SandeshMessageStats agg_stats;
-        Sandesh::GetSandeshStats(type_stats, agg_stats);
+        Sandesh::GetMsgStats(&type_stats, &agg_stats);
         boost::ptr_map<std::string, SandeshMessageTypeStats>::iterator it;
         it = type_stats.find("SystemLogTest");
         EXPECT_EQ(3, it->second->stats.messages_sent);
