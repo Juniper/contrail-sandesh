@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
  */
- 
+
 /*
  *  sandesh_uve.sandesh
  *
@@ -11,12 +11,48 @@
 include "io/io.sandesh"
 
 struct SandeshMessageStats {
-    1: i64 messages_sent;
-    2: i64 bytes_sent;
-    3: i64 messages_received;
-    4: i64 bytes_received;
-    5: i64 messages_sent_dropped;
-    6: i64 messages_received_dropped;
+    1: u64 messages_sent;
+    2: u64 bytes_sent;
+    3: u64 messages_received;
+    4: u64 bytes_received;
+    5: u64 messages_sent_dropped;
+    6: u64 bytes_sent_dropped;
+    7: u64 messages_received_dropped;
+    8: u64 bytes_received_dropped;
+    // Send
+    // Messages
+    51: u64 messages_sent_dropped_no_queue;
+    52: u64 messages_sent_dropped_no_client;
+    53: u64 messages_sent_dropped_no_session;
+    54: u64 messages_sent_dropped_queue_level;
+    55: u64 messages_sent_dropped_client_send_failed;
+    56: u64 messages_sent_dropped_session_not_connected;
+    57: u64 messages_sent_dropped_header_write_failed;
+    58: u64 messages_sent_dropped_write_failed;
+    59: u64 messages_sent_dropped_wrong_client_sm_state;
+    // Bytes
+    81: u64 bytes_sent_dropped_no_queue;
+    82: u64 bytes_sent_dropped_no_client;
+    83: u64 bytes_sent_dropped_no_session;
+    84: u64 bytes_sent_dropped_queue_level;
+    85: u64 bytes_sent_dropped_client_send_failed;
+    86: u64 bytes_sent_dropped_session_not_connected;
+    87: u64 bytes_sent_dropped_header_write_failed;
+    88: u64 bytes_sent_dropped_write_failed;
+    89: u64 bytes_sent_dropped_wrong_client_sm_state;
+    // Receive
+    // Messages
+    101: u64 messages_received_dropped_no_queue;
+    102: u64 messages_received_dropped_queue_level;
+    103: u64 messages_received_dropped_create_failed;
+    104: u64 messages_received_dropped_control_msg_failed;
+    105: u64 messages_received_dropped_decoding_failed;
+    // Bytes
+    131: u64 bytes_received_dropped_no_queue;
+    132: u64 bytes_received_dropped_queue_level;
+    133: u64 bytes_received_dropped_create_failed;
+    134: u64 bytes_received_dropped_control_msg_failed;
+    135: u64 bytes_received_dropped_decoding_failed;
 }
 
 struct SandeshMessageTypeStats {
@@ -57,7 +93,7 @@ request sandesh SandeshSendingParamsSet {
     1: optional bool high;
     2: optional u32 queue_count;
     3: optional string sending_level;
-}    
+}
 
 request sandesh SandeshSendingParamsReset {
 }
@@ -121,7 +157,7 @@ struct SandeshUVETypeInfo {
 }
 
 response sandesh SandeshUVETypesResp {
-    1: list<SandeshUVETypeInfo> type_info;    
+    1: list<SandeshUVETypeInfo> type_info;
 }
 
 struct SandeshStateMachineEvStats {
@@ -171,7 +207,7 @@ struct ModuleClientState {
     2: optional bool                       deleted
     3: optional SandeshClientInfo          client_info
     4: optional SandeshGeneratorStats      msg_stats
-    5: optional u64                        sm_queue_count (aggtype="stats", hbin="50")
+    5: optional u64                        sm_queue_count (tags="")
     6: optional SandeshStateMachineStats   sm_stats
     7: optional SandeshSessionStats        session_stats
     8: optional io.SocketIOStats           session_rx_socket_stats

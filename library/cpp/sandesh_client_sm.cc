@@ -499,7 +499,8 @@ struct ClientInit : public sc::state<ClientInit, SandeshClientSMImpl> {
                 SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " <<
                     snh->ToString());
             }
-            Sandesh::UpdateSandeshStats(snh->Name(), 0, true, true);
+            Sandesh::UpdateTxMsgFailStats(snh->Name(), 0,
+                Sandesh::DropReason::Send::WrongClientSMState);
             SM_LOG(INFO, "Received UVE message in wrong state : " << snh->Name());
             snh->Release();
             return discard_event(); 
@@ -670,7 +671,8 @@ void SandeshClientSMImpl::ReleaseSandesh(const Ev &event) {
     if (snh->IsLoggingDroppedAllowed()) {
         SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " << snh->ToString());
     }
-    Sandesh::UpdateSandeshStats(snh->Name(), 0, true, true);
+    Sandesh::UpdateTxMsgFailStats(snh->Name(), 0,
+        Sandesh::DropReason::Send::WrongClientSMState);
     SM_LOG(DEBUG, "Wrong state: " << StateName() << " for event: " <<
        event.Name() << " message: " << snh->Name());
     snh->Release();
@@ -999,7 +1001,7 @@ bool SandeshClientSMImpl::StatisticsTimerExpired() {
     }
     std::vector<SandeshStateMachineEvStats> ev_stats;
     tbb::mutex::scoped_lock lock(mutex_);
-    event_stats_.Get(ev_stats);
+    event_stats_.Get(&ev_stats);
     lock.release();
     // Send the message
     ModuleClientState mcs;
