@@ -552,7 +552,7 @@ bool SandeshStateMachine::GetStatistics(
     std::vector<SandeshStateMachineEvStats> ev_stats;
     tbb::mutex::scoped_lock elock(smutex_);
     // State machine event statistics
-    event_stats_.Get(ev_stats);
+    event_stats_.Get(&ev_stats);
     elock.release();
     sm_stats.set_ev_stats(ev_stats);
     sm_stats.set_state(StateName());
@@ -564,7 +564,7 @@ bool SandeshStateMachine::GetStatistics(
     std::vector<SandeshMessageTypeStats> mtype_stats;
     SandeshMessageStats magg_stats;
     tbb::mutex::scoped_lock mlock(smutex_);
-    message_stats_.Get(mtype_stats, magg_stats);
+    message_stats_.Get(&mtype_stats, &magg_stats);
     mlock.release();
     msg_stats.set_type_stats(mtype_stats);
     msg_stats.set_aggregate_stats(magg_stats);
@@ -603,9 +603,21 @@ void SandeshStateMachine::PassiveOpen(SandeshSession *session) {
     Enqueue(ssm::EvTcpPassiveOpen(session));
 }
 
+void SandeshStateMachine::UpdateRxMsgStats(const std::string &msg_name,
+    size_t msg_size) {
+    tbb::mutex::scoped_lock lock(smutex_);
+    message_stats_.UpdateRecv(msg_name, msg_size);
+}
+
+void SandeshStateMachine::UpdateRxMsgFailStats(const std::string &msg_name,
+    size_t msg_size, Sandesh::DropReason::Recv::type dreason) {
+    tbb::mutex::scoped_lock lock(smutex_);
+    message_stats_.UpdateRecvFailed(msg_name, msg_size, dreason);
+}
+
 void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
                                            const std::string &msg) {
-    // Demux based on Sandesh message type
+    // Demux based on Sandesh messkage type
     SandeshMessage *xmessage = builder_->Create(
         reinterpret_cast<const uint8_t *>(msg.c_str()), msg.size());
     const SandeshHeader &header(xmessage->GetHeader());
@@ -613,16 +625,11 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
     // Drop ? 
     if (DoDropSandeshMessage(header, message_drop_level_)) {
         // Update message statistics
-        tbb::mutex::scoped_lock lock(smutex_);
-        message_stats_.Update(message_type, msg.size(), false, true);
-        lock.release();
+        UpdateRxMsgFailStats(message_type, msg.size(),
+            Sandesh::DropReason::Recv::QueueLevel);
         delete xmessage;
         return;
     }
-    // Update message statistics
-    tbb::mutex::scoped_lock lock(smutex_);
-    message_stats_.Update(message_type, msg.size(), false, false);
-    lock.release();
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
         SandeshHeader ctrl_header;
         std::string ctrl_message_type;
@@ -634,6 +641,9 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
             SM_LOG(ERROR, "OnMessage control in state: " << StateName() <<
                 " session " << session->ToString() << ": Extract FAILED ("
                 << ret << ")");
+            // Update message statistics
+            UpdateRxMsgFailStats(message_type, msg.size(),
+                Sandesh::DropReason::Recv::ControlMsgFailed);
             delete xmessage;
             return;
         } 
@@ -641,10 +651,14 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
         assert(message_type == ctrl_message_type);
         SM_LOG(DEBUG, "OnMessage control in state: " << StateName() <<
                 " session " << session->ToString());
+        // Update message statistics
+        UpdateRxMsgStats(message_type, msg.size());
         Enqueue(ssm::EvSandeshCtrlMessageRecv(msg, ctrl_header,
                 ctrl_message_type, ctrl_xml_offset));
         delete xmessage;
     } else {
+        // Update message statistics
+        UpdateRxMsgStats(message_type, msg.size());
         Enqueue(ssm::EvSandeshMessageRecv(xmessage));
     }
 }

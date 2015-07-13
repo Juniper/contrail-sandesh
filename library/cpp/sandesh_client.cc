@@ -157,7 +157,12 @@ bool SandeshClient::ReceiveMsg(const std::string& msg,
 
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
         bool success = ReceiveCtrlMsg(msg, header, sandesh_name, header_offset);
-        Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, !success);
+        if (success) {
+            Sandesh::UpdateRxMsgStats(sandesh_name, msg.size());
+        } else {
+            Sandesh::UpdateRxMsgFailStats(sandesh_name, msg.size(),
+                Sandesh::DropReason::Recv::ControlMsgFailed);
+        }
         return success;
     }
 
@@ -165,7 +170,8 @@ bool SandeshClient::ReceiveMsg(const std::string& msg,
     Sandesh *sandesh = SandeshBaseFactory::CreateInstance(sandesh_name);
     if (sandesh == NULL) {
         SANDESH_LOG(ERROR, __func__ << ": Unknown sandesh: " << sandesh_name);
-        Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, true);
+        Sandesh::UpdateRxMsgFailStats(sandesh_name, msg.size(),
+            Sandesh::DropReason::Recv::CreateFailed);
         return true;
     }
     boost::shared_ptr<sandesh_trans::TMemoryBuffer> btrans =
@@ -177,11 +183,12 @@ bool SandeshClient::ReceiveMsg(const std::string& msg,
     int32_t xfer = sandesh->Read(prot);
     if (xfer < 0) {
         SANDESH_LOG(ERROR, __func__ << ": Decoding " << sandesh_name << " FAILED");
-        Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, true);
+        Sandesh::UpdateRxMsgFailStats(sandesh_name, msg.size(),
+            Sandesh::DropReason::Recv::DecodingFailed);
         return false;
     }
 
-    Sandesh::UpdateSandeshStats(sandesh_name, msg.size(), false, false);
+    Sandesh::UpdateRxMsgStats(sandesh_name, msg.size());
     SandeshRequest *sr = dynamic_cast<SandeshRequest *>(sandesh);
     assert(sr);
     sr->Enqueue(Sandesh::recv_queue());
