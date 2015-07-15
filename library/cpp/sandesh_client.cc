@@ -40,7 +40,7 @@ using boost::system::error_code;
 
 const std::string SandeshClient::kSMTask = "sandesh::SandeshClientSM";
 const std::string SandeshClient::kSessionWriterTask = "sandesh::SandeshClientSession";
-const std::string SandeshClient::kSessionReaderTask = "io::ReaderTask";
+const std::string SandeshClient::kSessionReaderTask = "sandesh::SandeshClientReader";
 bool SandeshClient::task_policy_set_ = false;
 const std::vector<Sandesh::QueueWaterMarkInfo> 
     SandeshClient::kSessionWaterMarkInfo = boost::assign::tuple_list_of
