@@ -5,21 +5,32 @@
 #ifndef __SANDESH_STATISTICS_H__
 #define __SANDESH_STATISTICS_H__
 
+#include <boost/ptr_container/ptr_map.hpp>
 #include <sandesh/sandesh_uve_types.h>
 
-class SandeshStatistics {
+class SandeshMessageStatistics {
 public:
-    SandeshStatistics() {}
+    SandeshMessageStatistics() {}
 
-    void Update(const std::string& sandesh_name,
-                uint32_t bytes, bool is_tx, bool dropped);
-    void Get(std::vector<SandeshMessageTypeStats> &mtype_stats,
-             SandeshMessageStats &magg_stats) const;
-    void Get(boost::ptr_map<std::string, SandeshMessageTypeStats> &mtype_stats,
-             SandeshMessageStats &magg_stats) const;
+    void UpdateSend(const std::string &msg_name, uint64_t bytes);
+    void UpdateSendFailed(const std::string &msg_name, uint64_t bytes,
+                          Sandesh::DropReason::Send::type dreason);
+    void UpdateRecv(const std::string &msg_name, uint64_t bytes);
+    void UpdateRecvFailed(const std::string &msg_name, uint64_t bytes,
+                          Sandesh::DropReason::Recv::type dreason);
+    void Get(std::vector<SandeshMessageTypeStats> *mtype_stats,
+             SandeshMessageStats *magg_stats) const;
+    void Get(boost::ptr_map<std::string, SandeshMessageTypeStats> *mtype_stats,
+             SandeshMessageStats *magg_stats) const;
 
-    boost::ptr_map<std::string, SandeshMessageTypeStats> type_stats;
-    SandeshMessageStats agg_stats;
+private:
+    void UpdateInternal(const std::string &msg_name,
+                        uint64_t bytes, bool is_tx, bool dropped,
+                        Sandesh::DropReason::Send::type send_dreason,
+                        Sandesh::DropReason::Recv::type recv_dreason);
+
+    boost::ptr_map<std::string, SandeshMessageTypeStats> type_stats_;
+    SandeshMessageStats agg_stats_;
 };
 
 struct EventStats {
@@ -40,7 +51,7 @@ public:
     SandeshEventStatistics() {}
 
     void Update(std::string &event_name, bool enqueue, bool fail);
-    void Get(std::vector<SandeshStateMachineEvStats> &ev_stats) const;
+    void Get(std::vector<SandeshStateMachineEvStats> *ev_stats) const;
 
     typedef boost::ptr_map<std::string, EventStats> EventStatsMap;
     EventStatsMap event_stats;

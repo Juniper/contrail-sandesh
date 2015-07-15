@@ -130,6 +130,10 @@ sandesh_client_test = env.UnitTest('sandesh_client_test',
                                           )
 env.Alias('src/sandesh:sandesh_client_test', sandesh_client_test)
 
+sandesh_statistics_test = env.UnitTest('sandesh_statistics_test',
+                                       ['sandesh_statistics_test.cc'])
+env.Alias('src/sandesh:sandesh_statistics_test', sandesh_statistics_test)
+
 test_suite = [sandesh_message_test,
               sandesh_rw_test,
               sandesh_session_test,
@@ -138,6 +142,7 @@ test_suite = [sandesh_message_test,
               sandesh_state_machine_test,
               sandesh_perf_test,
               sandesh_client_test,
+              sandesh_statistics_test,
            ]
 
 test = env.TestSuite('sandesh-test', test_suite)

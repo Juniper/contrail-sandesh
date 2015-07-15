@@ -24,7 +24,7 @@ void SandeshMessageStatsReq::HandleRequest() const {
     SandeshMessageStatsResp *resp(new SandeshMessageStatsResp);
     std::vector<SandeshMessageTypeStats> mtype_stats;
     SandeshMessageStats magg_stats;
-    GetSandeshStats(mtype_stats, magg_stats);
+    GetMsgStats(&mtype_stats, &magg_stats);
     SandeshGeneratorStats sandesh_stats;
     sandesh_stats.set_type_stats(mtype_stats);
     sandesh_stats.set_aggregate_stats(magg_stats);
