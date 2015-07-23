@@ -106,7 +106,7 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
             " Sequence Number:" << sandesh->seqnum());
         session_->increment_send_msg_fail();
         Sandesh::UpdateTxMsgFailStats(sandesh->Name(), 0,
-            Sandesh::DropReason::Send::HeaderWriteFailed);
+            SandeshTxDropReason::HeaderWriteFailed);
         sandesh->Release();
         return;
     }
@@ -119,7 +119,7 @@ void SandeshWriter::SendMsg(Sandesh *sandesh, bool more) {
             " Sequence Number:" << sandesh->seqnum());
         session_->increment_send_msg_fail();
         Sandesh::UpdateTxMsgFailStats(sandesh->Name(), 0,
-            Sandesh::DropReason::Send::WriteFailed);
+            SandeshTxDropReason::WriteFailed);
         sandesh->Release();
         return;
     }
@@ -359,7 +359,7 @@ bool SandeshSession::SendMsg(Sandesh *sandesh) {
         }
         increment_send_msg_fail();
         Sandesh::UpdateTxMsgFailStats(sandesh->Name(), 0,
-            Sandesh::DropReason::Send::SessionNotConnected);
+            SandeshTxDropReason::SessionNotConnected);
         sandesh->Release();
         return true;
     }

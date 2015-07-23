@@ -57,6 +57,33 @@ enum SandeshLevel {
       INVALID = 0x7fffffff  
 }
 
+enum SandeshTxDropReason {
+    MinDropReason = 0,
+    NoDrop,
+    ValidationFailed,
+    QueueLevel,
+    NoClient,
+    NoSession,
+    NoQueue,
+    ClientSendFailed,
+    HeaderWriteFailed,
+    WriteFailed,
+    SessionNotConnected,
+    WrongClientSMState,
+    MaxDropReason
+}
+
+enum SandeshRxDropReason {
+    MinDropReason = 0,
+    NoDrop,
+    QueueLevel,
+    NoQueue,
+    ControlMsgFailed,
+    CreateFailed,
+    DecodingFailed,
+    MaxDropReason
+}
+
 const i32 SANDESH_KEY_HINT = 0x1
 const i32 SANDESH_CONTROL_HINT = 0x2
 const i32 SANDESH_SYNC_HINT = 0x4

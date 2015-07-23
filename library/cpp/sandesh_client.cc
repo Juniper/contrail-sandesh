@@ -161,7 +161,7 @@ bool SandeshClient::ReceiveMsg(const std::string& msg,
             Sandesh::UpdateRxMsgStats(sandesh_name, msg.size());
         } else {
             Sandesh::UpdateRxMsgFailStats(sandesh_name, msg.size(),
-                Sandesh::DropReason::Recv::ControlMsgFailed);
+                SandeshRxDropReason::ControlMsgFailed);
         }
         return success;
     }
@@ -171,7 +171,7 @@ bool SandeshClient::ReceiveMsg(const std::string& msg,
     if (sandesh == NULL) {
         SANDESH_LOG(ERROR, __func__ << ": Unknown sandesh: " << sandesh_name);
         Sandesh::UpdateRxMsgFailStats(sandesh_name, msg.size(),
-            Sandesh::DropReason::Recv::CreateFailed);
+            SandeshRxDropReason::CreateFailed);
         return true;
     }
     boost::shared_ptr<sandesh_trans::TMemoryBuffer> btrans =
@@ -184,7 +184,7 @@ bool SandeshClient::ReceiveMsg(const std::string& msg,
     if (xfer < 0) {
         SANDESH_LOG(ERROR, __func__ << ": Decoding " << sandesh_name << " FAILED");
         Sandesh::UpdateRxMsgFailStats(sandesh_name, msg.size(),
-            Sandesh::DropReason::Recv::DecodingFailed);
+            SandeshRxDropReason::DecodingFailed);
         return false;
     }
 
