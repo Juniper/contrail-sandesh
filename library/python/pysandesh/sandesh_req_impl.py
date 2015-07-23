@@ -47,7 +47,7 @@ class SandeshReqImpl(object):
         SandeshLoggingParamsStatus.handle_request = \
             self.sandesh_logging_params_status_handle_request
         SandeshMessageStatsReq.handle_request = \
-            self.sandesh_stats_handle_request
+            self.sandesh_msg_stats_handle_request
         SandeshTraceBufferListRequest.handle_request = \
             self.sandesh_trace_buffer_list_request_handle_request
         SandeshTraceRequest.handle_request = \
@@ -194,28 +194,16 @@ class SandeshReqImpl(object):
         ack_response.response(sandesh_req.context())
     # end sandesh_alarm_ack_request_handler
 
-    def sandesh_stats_handle_request(self, sandesh_req):
-        sandesh_stats = self._sandesh.stats()
-        stats_map = sandesh_stats.stats_map()
-        stats_list = []
-        for sandesh_name, stats in stats_map.iteritems():
-            msg_stat = SandeshMessageStats(stats.tx_count,
-                                           stats.tx_bytes,
-                                           stats.rx_count,
-                                           stats.rx_bytes)
-            mtype_stat = SandeshMessageTypeStats(sandesh_name,
-                                                 msg_stat)
-            stats_list.append(mtype_stat)
-
+    def sandesh_msg_stats_handle_request(self, sandesh_req):
+        sandesh_msg_stats = self._sandesh.msg_stats()
+        msg_type_stats = sandesh_msg_stats.message_type_stats()
+        msg_stats_list = []
+        for msg_type, stats in msg_type_stats.iteritems():
+            mtype_stat = SandeshMessageTypeStats(msg_type, stats)
+            msg_stats_list.append(mtype_stat)
         gen_stats = SandeshGeneratorStats()
-        gen_stats.type_stats = stats_list
-        gen_stats.aggregate_stats = SandeshMessageStats()
-        gen_stats.aggregate_stats.messages_sent = sandesh_stats._sandesh_sent
-        gen_stats.aggregate_stats.bytes_sent = sandesh_stats._bytes_sent
-        gen_stats.aggregate_stats.messages_received = \
-            sandesh_stats._sandesh_received
-        gen_stats.aggregate_stats.bytes_received = \
-            sandesh_stats._bytes_received
+        gen_stats.type_stats = msg_stats_list
+        gen_stats.aggregate_stats = sandesh_msg_stats.aggregate_stats()
         connection = self._sandesh.client().connection()
         if connection and connection.session():
             session = connection.session()
@@ -228,7 +216,7 @@ class SandeshReqImpl(object):
             gen_stats.send_queue_stats = send_queue_stats
         stats_resp = SandeshMessageStatsResp(gen_stats)
         stats_resp.response(sandesh_req.context())
-    # end sandesh_stats_handle_request
+    # end sandesh_msg_stats_handle_request
 
     def sandesh_trace_buffer_list_request_handle_request(self, sandesh_req):
         tbuf_info_list = [SandeshTraceBufInfo(trace_buf_name=tbuf)

@@ -1217,7 +1217,7 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     out << indent() << "if (level >= SendingLevel()) {" << endl;
     indent_up();
     out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
-        "\", 0, Sandesh::DropReason::Send::QueueLevel);" << endl;
+        "\", 0, SandeshTxDropReason::QueueLevel);" << endl;
     if (!is_flow) {
         out << indent() << "DropLog" <<
             generate_sandesh_async_creator(tsandesh, false, false, false, "", "", false, false) <<

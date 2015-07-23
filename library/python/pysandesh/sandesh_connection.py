@@ -8,13 +8,13 @@
 
 import gevent
 import os
-from sandesh_session import SandeshSession
-from sandesh_session import SandeshReader
-from sandesh_state_machine import SandeshStateMachine, Event
 from transport import TTransport
 from protocol import TXMLProtocol
-from gen_py.sandesh.constants import *
+from sandesh_session import SandeshSession, SandeshReader
+from sandesh_state_machine import SandeshStateMachine, Event
 from sandesh_uve import SandeshUVETypeMaps
+from gen_py.sandesh.ttypes import SandeshRxDropReason
+from gen_py.sandesh.constants import *
 
 class SandeshConnection(object):
 
@@ -147,13 +147,16 @@ class SandeshConnection(object):
     def _receive_sandesh_msg(self, session, msg):
         (hdr, hdr_len, sandesh_name) = SandeshReader.extract_sandesh_header(msg)
         if sandesh_name is None:
+            self._sandesh_instance.msg_stats().update_rx_stats('__UNKNOWN__',
+                len(msg), SandeshRxDropReason.DecodingFailed)
             self._logger.error('Failed to decode sandesh header for "%s"' % (msg))
             return
-        # update the sandesh rx stats
-        self._sandesh_instance.stats().update_stats(sandesh_name, len(msg), False)
         if hdr.Hints & SANDESH_CONTROL_HINT:
             self._logger.debug('Received sandesh control message [%s]' % (sandesh_name))
             if sandesh_name != 'SandeshCtrlServerToClient':
+                self._sandesh_instance.msg_stats().update_rx_stats(
+                    sandesh_name, len(msg),
+                    SandeshRxDropReason.ControlMsgFailed)
                 self._logger.error('Invalid sandesh control message [%s]' % (sandesh_name))
                 return
             transport = TTransport.TMemoryBuffer(msg[hdr_len:])
@@ -162,13 +165,19 @@ class SandeshConnection(object):
             from gen_py.sandesh_ctrl.ttypes import SandeshCtrlServerToClient
             sandesh_ctrl_msg = SandeshCtrlServerToClient()
             if sandesh_ctrl_msg.read(protocol) == -1:
+                self._sandesh_instance.msg_stats().update_rx_stats(
+                    sandesh_name, len(msg),
+                    SandeshRxDropReason.DecodingFailed)
                 self._logger.error('Failed to decode sandesh control message "%s"' %(msg))
             else:
+                self._sandesh_instance.msg_stats().update_rx_stats(
+                    sandesh_name, len(msg))
                 self._state_machine.on_sandesh_ctrl_msg_receive(session, sandesh_ctrl_msg, 
                                                                 hdr.Source)
         else:
             self._logger.debug('Received sandesh message [%s]' % (sandesh_name))
-            self._client.handle_sandesh_msg(sandesh_name, msg[hdr_len:])
+            self._client.handle_sandesh_msg(sandesh_name,
+                msg[hdr_len:], len(msg))
     #end _receive_sandesh_msg
 
 #end class SandeshConnection
