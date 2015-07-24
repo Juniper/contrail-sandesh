@@ -80,6 +80,7 @@ TEST_F(SandeshStatisticsTest, MsgStats) {
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_no_client);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_no_session);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_queue_level);
+    EXPECT_EQ(1, test1_sms->messages_sent_dropped_validation_failed);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_client_send_failed);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_session_not_connected);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_header_write_failed);

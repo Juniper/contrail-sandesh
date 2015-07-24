@@ -142,6 +142,7 @@ public:
             enum type {
                 MinDropReason,
                 NoDrop = MinDropReason,
+                ValidationFailed,
                 QueueLevel,
                 NoClient,
                 NoSession,

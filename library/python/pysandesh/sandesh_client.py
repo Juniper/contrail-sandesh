@@ -6,6 +6,7 @@
 # Sandesh Client
 #
 
+from sandesh_base import Sandesh
 from sandesh_connection import SandeshConnection
 from sandesh_logger import SandeshLogger
 from transport import TTransport
@@ -46,8 +47,14 @@ class SandeshClient(object):
         else:
             if (self._connection.session() is None):
                 error_str = "No Connection"
+                self._sandesh_instance.msg_stats().update_tx_stats(
+                    sandesh.__class__.__name__, 0,
+                    Sandesh.DropReason.Tx.NoSession)
             else:
                 error_str = "No ModuleId"
+                self._sandesh_instance.msg_stats().update_tx_stats(
+                    sandesh.__class__.__name__, 0,
+                    Sandesh.DropReason.Tx.ClientSendFailed)
             if self._sandesh_instance.is_logging_dropped_allowed(sandesh):
                 self._logger.error(
                     "SANDESH: %s: %s" % (error_str, sandesh.log()))
@@ -58,17 +65,23 @@ class SandeshClient(object):
         self._connection.statemachine().on_sandesh_uve_msg_send(uve_sandesh)
     #end send_uve_sandesh
 
-    def handle_sandesh_msg(self, sandesh_name, sandesh_xml):
+    def handle_sandesh_msg(self, sandesh_name, sandesh_xml, msg_len):
         transport = TTransport.TMemoryBuffer(sandesh_xml)
         protocol_factory = TXMLProtocol.TXMLProtocolFactory()
         protocol = protocol_factory.getProtocol(transport)
         sandesh_req = self._sandesh_instance.get_sandesh_request_object(sandesh_name)
         if sandesh_req:
             if sandesh_req.read(protocol) == -1:
+                self._sandesh_instance.update_rx_stats(sandesh_name, msg_len,
+                    Sandesh.DropReason.Rx.DecodingFailed)
                 self._logger.error('Failed to decode sandesh request "%s"' \
                     % (sandesh_name))
             else:
+                self._sandesh_instance.update_rx_stats(sandesh_name, msg_len)
                 self._sandesh_instance.enqueue_sandesh_request(sandesh_req)
+        else:
+            self._sandesh_instance.update_rx_stats(sandesh_name, msg_len,
+                Sandesh.DropReason.Rx.CreateFailed)
     #end handle_sandesh_msg
 
     def handle_sandesh_ctrl_msg(self, sandesh_ctrl_msg):
