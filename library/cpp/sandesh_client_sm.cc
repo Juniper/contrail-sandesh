@@ -500,7 +500,7 @@ struct ClientInit : public sc::state<ClientInit, SandeshClientSMImpl> {
                     snh->ToString());
             }
             Sandesh::UpdateTxMsgFailStats(snh->Name(), 0,
-                Sandesh::DropReason::Send::WrongClientSMState);
+                SandeshTxDropReason::WrongClientSMState);
             SM_LOG(INFO, "Received UVE message in wrong state : " << snh->Name());
             snh->Release();
             return discard_event(); 
@@ -672,7 +672,7 @@ void SandeshClientSMImpl::ReleaseSandesh(const Ev &event) {
         SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " << snh->ToString());
     }
     Sandesh::UpdateTxMsgFailStats(snh->Name(), 0,
-        Sandesh::DropReason::Send::WrongClientSMState);
+        SandeshTxDropReason::WrongClientSMState);
     SM_LOG(DEBUG, "Wrong state: " << StateName() << " for event: " <<
        event.Name() << " message: " << snh->Name());
     snh->Release();

@@ -26,27 +26,27 @@ TEST_F(SandeshStatisticsTest, MsgStats) {
     msg_stats_.UpdateSend("Test1", 64);
     msg_stats_.UpdateSend("Test1", 64);
     // TX Fail
-    for (int i = static_cast<int>(Sandesh::DropReason::Send::MinDropReason);
-         i < static_cast<int>(Sandesh::DropReason::Send::MaxDropReason);
+    for (int i = static_cast<int>(SandeshTxDropReason::MinDropReason+1);
+         i < static_cast<int>(SandeshTxDropReason::MaxDropReason);
          i++) {
-        if (i == static_cast<int>(Sandesh::DropReason::Send::NoDrop)) {
+        if (i == static_cast<int>(SandeshTxDropReason::NoDrop)) {
             continue;
         }
         msg_stats_.UpdateSendFailed("Test1", 64,
-            static_cast<Sandesh::DropReason::Send::type>(i));
+            static_cast<SandeshTxDropReason::type>(i));
     }
     // RX
     msg_stats_.UpdateRecv("Test", 64);
     msg_stats_.UpdateRecv("Test1", 128);
     // RX Fail
-    for (int i = static_cast<int>(Sandesh::DropReason::Recv::MinDropReason);
-         i < static_cast<int>(Sandesh::DropReason::Recv::MaxDropReason);
+    for (int i = static_cast<int>(SandeshRxDropReason::MinDropReason+1);
+         i < static_cast<int>(SandeshRxDropReason::MaxDropReason);
          i++) {
-        if (i == static_cast<int>(Sandesh::DropReason::Recv::NoDrop)) {
+        if (i == static_cast<int>(SandeshRxDropReason::NoDrop)) {
             continue;
         }
         msg_stats_.UpdateRecvFailed("Test1", 64,
-            static_cast<Sandesh::DropReason::Recv::type>(i));
+            static_cast<SandeshRxDropReason::type>(i));
     }
     // Get
     boost::ptr_map<std::string, SandeshMessageTypeStats> mt_stats;
@@ -71,8 +71,8 @@ TEST_F(SandeshStatisticsTest, MsgStats) {
     EXPECT_EQ(2 , test1_sms->messages_sent);
     EXPECT_EQ(128, test1_sms->bytes_sent);
     int expected_sent_msg_dropped(
-        static_cast<int>(Sandesh::DropReason::Send::MaxDropReason) -
-        static_cast<int>(Sandesh::DropReason::Send::MinDropReason) - 1);
+        static_cast<int>(SandeshTxDropReason::MaxDropReason) -
+        static_cast<int>(SandeshTxDropReason::MinDropReason) - 2);
     int expected_sent_bytes_dropped(expected_sent_msg_dropped * 64);
     EXPECT_EQ(expected_sent_msg_dropped, test1_sms->messages_sent_dropped);
     EXPECT_EQ(expected_sent_bytes_dropped, test1_sms->bytes_sent_dropped);
@@ -80,6 +80,7 @@ TEST_F(SandeshStatisticsTest, MsgStats) {
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_no_client);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_no_session);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_queue_level);
+    EXPECT_EQ(1, test1_sms->messages_sent_dropped_validation_failed);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_client_send_failed);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_session_not_connected);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_header_write_failed);
@@ -95,8 +96,8 @@ TEST_F(SandeshStatisticsTest, MsgStats) {
     EXPECT_EQ(64, test1_sms->bytes_sent_dropped_write_failed);
     EXPECT_EQ(64, test1_sms->bytes_sent_dropped_wrong_client_sm_state);
     int expected_recv_msg_dropped(
-        static_cast<int>(Sandesh::DropReason::Recv::MaxDropReason) -
-        static_cast<int>(Sandesh::DropReason::Recv::MinDropReason) - 1);
+        static_cast<int>(SandeshRxDropReason::MaxDropReason) -
+        static_cast<int>(SandeshRxDropReason::MinDropReason) - 2);
     int expected_recv_bytes_dropped(expected_recv_msg_dropped * 64);
     EXPECT_EQ(1, test1_sms->messages_received);
     EXPECT_EQ(128, test1_sms->bytes_received);

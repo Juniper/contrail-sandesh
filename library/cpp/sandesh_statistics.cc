@@ -34,75 +34,79 @@ void SandeshMessageStatistics::Get(
 }
 
 static void UpdateSandeshMessageStatsDrops(SandeshMessageStats *smstats,
-    bool sent, uint64_t bytes, Sandesh::DropReason::Send::type send_dreason,
-    Sandesh::DropReason::Recv::type recv_dreason) {
+    bool sent, uint64_t bytes, SandeshTxDropReason::type send_dreason,
+    SandeshRxDropReason::type recv_dreason) {
     if (sent) {
         switch (send_dreason) {
-          case Sandesh::DropReason::Send::QueueLevel:
+          case SandeshTxDropReason::ValidationFailed:
+            smstats->messages_sent_dropped_validation_failed++;
+            smstats->bytes_sent_dropped_validation_failed += bytes;
+            break;
+          case SandeshTxDropReason::QueueLevel:
             smstats->messages_sent_dropped_queue_level++;
             smstats->bytes_sent_dropped_queue_level += bytes;
             break;
-          case Sandesh::DropReason::Send::NoClient:
+          case SandeshTxDropReason::NoClient:
             smstats->messages_sent_dropped_no_client++;
             smstats->bytes_sent_dropped_no_client += bytes;
             break;
-          case Sandesh::DropReason::Send::NoSession:
+          case SandeshTxDropReason::NoSession:
             smstats->messages_sent_dropped_no_session++;
             smstats->bytes_sent_dropped_no_session += bytes;
             break;
-          case Sandesh::DropReason::Send::NoQueue:
+          case SandeshTxDropReason::NoQueue:
             smstats->messages_sent_dropped_no_queue++;
             smstats->bytes_sent_dropped_no_queue += bytes;
             break;
-          case Sandesh::DropReason::Send::ClientSendFailed:
+          case SandeshTxDropReason::ClientSendFailed:
             smstats->messages_sent_dropped_client_send_failed++;
             smstats->bytes_sent_dropped_client_send_failed += bytes;
             break;
-          case Sandesh::DropReason::Send::WrongClientSMState:
+          case SandeshTxDropReason::WrongClientSMState:
             smstats->messages_sent_dropped_wrong_client_sm_state++;
             smstats->bytes_sent_dropped_wrong_client_sm_state += bytes;
             break;
-          case Sandesh::DropReason::Send::WriteFailed:
+          case SandeshTxDropReason::WriteFailed:
             smstats->messages_sent_dropped_write_failed++;
             smstats->bytes_sent_dropped_write_failed += bytes;
             break;
-          case Sandesh::DropReason::Send::HeaderWriteFailed:
+          case SandeshTxDropReason::HeaderWriteFailed:
             smstats->messages_sent_dropped_header_write_failed++;
             smstats->bytes_sent_dropped_header_write_failed += bytes;
             break;
-          case Sandesh::DropReason::Send::SessionNotConnected:
+          case SandeshTxDropReason::SessionNotConnected:
             smstats->messages_sent_dropped_session_not_connected++;
             smstats->bytes_sent_dropped_session_not_connected += bytes;
             break;
           default:
-            break;
+            assert(0);
         }
         smstats->messages_sent_dropped++;
         smstats->bytes_sent_dropped += bytes;
     } else {
         switch (recv_dreason) {
-          case Sandesh::DropReason::Recv::QueueLevel:
+          case SandeshRxDropReason::QueueLevel:
             smstats->messages_received_dropped_queue_level++;
             smstats->bytes_received_dropped_queue_level += bytes;
             break;
-          case Sandesh::DropReason::Recv::NoQueue:
+          case SandeshRxDropReason::NoQueue:
             smstats->messages_received_dropped_no_queue++;
             smstats->bytes_received_dropped_no_queue += bytes;
             break;
-          case Sandesh::DropReason::Recv::DecodingFailed:
+          case SandeshRxDropReason::DecodingFailed:
             smstats->messages_received_dropped_decoding_failed++;
             smstats->bytes_received_dropped_decoding_failed += bytes;
             break;
-          case Sandesh::DropReason::Recv::ControlMsgFailed:
+          case SandeshRxDropReason::ControlMsgFailed:
             smstats->messages_received_dropped_control_msg_failed++;
             smstats->bytes_received_dropped_control_msg_failed += bytes;
             break;
-          case Sandesh::DropReason::Recv::CreateFailed:
+          case SandeshRxDropReason::CreateFailed:
             smstats->messages_received_dropped_create_failed++;
             smstats->bytes_received_dropped_create_failed += bytes;
             break;
           default:
-            break;
+            assert(0);
         }
         smstats->messages_received_dropped++;
         smstats->bytes_received_dropped += bytes;
@@ -112,31 +116,31 @@ static void UpdateSandeshMessageStatsDrops(SandeshMessageStats *smstats,
 void SandeshMessageStatistics::UpdateSend(const std::string &msg_name,
     uint64_t bytes) {
     UpdateInternal(msg_name, bytes, true, false,
-        Sandesh::DropReason::Send::NoDrop, Sandesh::DropReason::Recv::NoDrop);
+        SandeshTxDropReason::NoDrop, SandeshRxDropReason::NoDrop);
 }
 
 void SandeshMessageStatistics::UpdateSendFailed(const std::string &msg_name,
-    uint64_t bytes, Sandesh::DropReason::Send::type dreason) {
+    uint64_t bytes, SandeshTxDropReason::type dreason) {
     UpdateInternal(msg_name, bytes, true, true, dreason,
-        Sandesh::DropReason::Recv::NoDrop);
+        SandeshRxDropReason::NoDrop);
 }
 
 void SandeshMessageStatistics::UpdateRecv(const std::string &msg_name,
     uint64_t bytes) {
     UpdateInternal(msg_name, bytes, false, false,
-        Sandesh::DropReason::Send::NoDrop, Sandesh::DropReason::Recv::NoDrop);
+        SandeshTxDropReason::NoDrop, SandeshRxDropReason::NoDrop);
 }
 
 void SandeshMessageStatistics::UpdateRecvFailed(const std::string &msg_name,
-    uint64_t bytes, Sandesh::DropReason::Recv::type dreason) {
+    uint64_t bytes, SandeshRxDropReason::type dreason) {
     UpdateInternal(msg_name, bytes, false, true,
-        Sandesh::DropReason::Send::NoDrop, dreason);
+        SandeshTxDropReason::NoDrop, dreason);
 }
 
 void SandeshMessageStatistics::UpdateInternal(const std::string &msg_name,
     uint64_t bytes, bool is_tx, bool dropped,
-    Sandesh::DropReason::Send::type send_dreason,
-    Sandesh::DropReason::Recv::type recv_dreason) {
+    SandeshTxDropReason::type send_dreason,
+    SandeshRxDropReason::type recv_dreason) {
     boost::ptr_map<std::string, SandeshMessageTypeStats>::iterator it =
         type_stats_.find(msg_name);
     if (it == type_stats_.end()) {

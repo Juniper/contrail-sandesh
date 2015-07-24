@@ -14,10 +14,10 @@ public:
 
     void UpdateSend(const std::string &msg_name, uint64_t bytes);
     void UpdateSendFailed(const std::string &msg_name, uint64_t bytes,
-                          Sandesh::DropReason::Send::type dreason);
+                          SandeshTxDropReason::type dreason);
     void UpdateRecv(const std::string &msg_name, uint64_t bytes);
     void UpdateRecvFailed(const std::string &msg_name, uint64_t bytes,
-                          Sandesh::DropReason::Recv::type dreason);
+                          SandeshRxDropReason::type dreason);
     void Get(std::vector<SandeshMessageTypeStats> *mtype_stats,
              SandeshMessageStats *magg_stats) const;
     void Get(boost::ptr_map<std::string, SandeshMessageTypeStats> *mtype_stats,
@@ -26,8 +26,8 @@ public:
 private:
     void UpdateInternal(const std::string &msg_name,
                         uint64_t bytes, bool is_tx, bool dropped,
-                        Sandesh::DropReason::Send::type send_dreason,
-                        Sandesh::DropReason::Recv::type recv_dreason);
+                        SandeshTxDropReason::type send_dreason,
+                        SandeshRxDropReason::type recv_dreason);
 
     boost::ptr_map<std::string, SandeshMessageTypeStats> type_stats_;
     SandeshMessageStats agg_stats_;

@@ -27,7 +27,8 @@ test_modules = [
                 'sandesh_trace_test.py',
                 'sandesh_http_test.py',
                 'sandesh_uve_alarm_test.py',
-                'conn_info_test.py'
+                'conn_info_test.py',
+                'sandesh_stats_test.py'
                ]
 
 test_modules_rules = []

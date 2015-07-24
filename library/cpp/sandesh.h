@@ -137,37 +137,6 @@ public:
             Test,
         };
     };
-    struct DropReason {
-        struct Send {
-            enum type {
-                MinDropReason,
-                NoDrop = MinDropReason,
-                QueueLevel,
-                NoClient,
-                NoSession,
-                NoQueue,
-                ClientSendFailed,
-                HeaderWriteFailed,
-                WriteFailed,
-                SessionNotConnected,
-                WrongClientSMState,
-                MaxDropReason,
-            };
-        };
-        struct Recv {
-            enum type {
-                MinDropReason,
-                NoDrop = MinDropReason,
-                QueueLevel,
-                NoQueue,
-                ControlMsgFailed,
-                CreateFailed,
-                DecodingFailed,
-                MaxDropReason,
-            };
-        };
-    };
-
     typedef boost::tuple<size_t, SandeshLevel::type, bool, bool> QueueWaterMarkInfo;
     typedef boost::function<void (std::string serviceName, uint8_t numbOfInstances,
             DiscoveryServiceClient::ServiceHandler)> CollectorSubFn;
@@ -252,10 +221,10 @@ public:
     static bool SendReady(SandeshConnection * sconn = NULL);
     static void UpdateRxMsgStats(const std::string &msg_name, uint64_t bytes);
     static void UpdateRxMsgFailStats(const std::string &msg_name,
-        uint64_t bytes, DropReason::Recv::type dreason);
+        uint64_t bytes, SandeshRxDropReason::type dreason);
     static void UpdateTxMsgStats(const std::string &msg_name, uint64_t bytes);
     static void UpdateTxMsgFailStats(const std::string &msg_name,
-        uint64_t bytes, DropReason::Send::type dreason);
+        uint64_t bytes, SandeshTxDropReason::type dreason);
     static void GetMsgStats(
         std::vector<SandeshMessageTypeStats> *mtype_stats,
         SandeshMessageStats *magg_stats);

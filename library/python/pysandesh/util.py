@@ -11,6 +11,11 @@ import sys
 import traceback
 
 
+def enum(*sequential, **named):
+    enums = dict(zip(sequential, range(len(sequential))), **named)
+    return type('Enum', (), enums)
+# end enum
+
 def UTCTimestampUsec():
     epoch = datetime.datetime.utcfromtimestamp(0)
     now = datetime.datetime.utcnow()
