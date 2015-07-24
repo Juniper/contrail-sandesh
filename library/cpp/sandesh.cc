@@ -447,7 +447,7 @@ bool Sandesh::Enqueue(SandeshQueue *queue) {
             SANDESH_LOG(ERROR, __func__ << ": SandeshQueue NULL : Dropping Message: "
                 << ToString());
         }
-        UpdateTxMsgFailStats(name_, 0, Sandesh::DropReason::Send::NoQueue);
+        UpdateTxMsgFailStats(name_, 0, SandeshTxDropReason::NoQueue);
         Release();
         return false;
     }
@@ -584,7 +584,7 @@ bool Sandesh::SendEnqueue() {
                 Log();
             }
         }
-        UpdateTxMsgFailStats(name_, 0, Sandesh::DropReason::Send::NoClient);
+        UpdateTxMsgFailStats(name_, 0, SandeshTxDropReason::NoClient);
         Release();
         return false;        
     } 
@@ -593,7 +593,7 @@ bool Sandesh::SendEnqueue() {
             SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " << ToString());
         }
         UpdateTxMsgFailStats(name_, 0,
-            Sandesh::DropReason::Send::ClientSendFailed);
+            SandeshTxDropReason::ClientSendFailed);
         Release();
         return false;
     }
@@ -648,7 +648,7 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
         if (!client_->SendSandeshUVE(this)) {
             SANDESH_LOG(ERROR, "SandeshUVE : Send FAILED: " << ToString());
             UpdateTxMsgFailStats(Name(), 0,
-                Sandesh::DropReason::Send::ClientSendFailed);
+                SandeshTxDropReason::ClientSendFailed);
             Release();
             return false;
         }
@@ -659,7 +659,7 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
     } else {
         Log();
     }
-    UpdateTxMsgFailStats(Name(), 0, Sandesh::DropReason::Send::NoClient);
+    UpdateTxMsgFailStats(Name(), 0, SandeshTxDropReason::NoClient);
     Release();
     return false;
 }
@@ -667,7 +667,7 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
 bool SandeshRequest::Enqueue(SandeshRxQueue *queue) {
     if (!queue) {
         SANDESH_LOG(ERROR, "SandeshRequest: No RxQueue: " << ToString());
-        UpdateRxMsgFailStats(Name(), 0, Sandesh::DropReason::Recv::NoQueue);
+        UpdateRxMsgFailStats(Name(), 0, SandeshRxDropReason::NoQueue);
         Release();
         return false;
     }
@@ -733,7 +733,7 @@ void Sandesh::UpdateRxMsgStats(const std::string &msg_name,
 }
 
 void Sandesh::UpdateRxMsgFailStats(const std::string &msg_name,
-    uint64_t bytes, Sandesh::DropReason::Recv::type dreason) {
+    uint64_t bytes, SandeshRxDropReason::type dreason) {
     tbb::mutex::scoped_lock lock(stats_mutex_);
     msg_stats_.UpdateRecvFailed(msg_name, bytes, dreason);
 }
@@ -745,7 +745,7 @@ void Sandesh::UpdateTxMsgStats(const std::string &msg_name,
 }
 
 void Sandesh::UpdateTxMsgFailStats(const std::string &msg_name,
-    uint64_t bytes, Sandesh::DropReason::Send::type dreason) {
+    uint64_t bytes, SandeshTxDropReason::type dreason) {
     tbb::mutex::scoped_lock lock(stats_mutex_);
     msg_stats_.UpdateSendFailed(msg_name, bytes, dreason);
 }

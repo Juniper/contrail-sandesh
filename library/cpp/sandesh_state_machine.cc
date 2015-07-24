@@ -610,7 +610,7 @@ void SandeshStateMachine::UpdateRxMsgStats(const std::string &msg_name,
 }
 
 void SandeshStateMachine::UpdateRxMsgFailStats(const std::string &msg_name,
-    size_t msg_size, Sandesh::DropReason::Recv::type dreason) {
+    size_t msg_size, SandeshRxDropReason::type dreason) {
     tbb::mutex::scoped_lock lock(smutex_);
     message_stats_.UpdateRecvFailed(msg_name, msg_size, dreason);
 }
@@ -626,7 +626,7 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
     if (DoDropSandeshMessage(header, message_drop_level_)) {
         // Update message statistics
         UpdateRxMsgFailStats(message_type, msg.size(),
-            Sandesh::DropReason::Recv::QueueLevel);
+            SandeshRxDropReason::QueueLevel);
         delete xmessage;
         return;
     }
@@ -643,7 +643,7 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
                 << ret << ")");
             // Update message statistics
             UpdateRxMsgFailStats(message_type, msg.size(),
-                Sandesh::DropReason::Recv::ControlMsgFailed);
+                SandeshRxDropReason::ControlMsgFailed);
             delete xmessage;
             return;
         } 

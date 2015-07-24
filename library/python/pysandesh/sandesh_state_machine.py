@@ -11,6 +11,7 @@ from fysom import Fysom
 from work_queue import WorkQueue
 from sandesh_logger import SandeshLogger
 from sandesh_session import SandeshSession
+from gen_py.sandesh.ttypes import SandeshTxDropReason
 
 class State(object):
     # FSM states
@@ -453,6 +454,9 @@ class SandeshStateMachine(object):
             if self._fsm.current == State._ESTABLISHED or self._fsm.current == State._CLIENT_INIT:
                 self._connection.handle_sandesh_uve_msg(event.msg)
             else:
+                self._connection.sandesh_instance().msg_stats().update_tx_stats(
+                    event.msg.__class__.__name__, 0,
+                    SandeshTxDropReason.WrongClientSMState)
                 self._logger.info("Discarding event[%s] in state[%s]" \
                                   % (event.event, self._fsm.current))
         elif event.event == Event._EV_SANDESH_CTRL_MESSAGE_RECV and \

@@ -176,7 +176,7 @@ private:
     void UpdateRxMsgStats(const std::string &msg_name,
         size_t msg_size);
     void UpdateRxMsgFailStats(const std::string &msg_name,
-        size_t msg_size, Sandesh::DropReason::Recv::type dreason);
+        size_t msg_size, SandeshRxDropReason::type dreason);
     void UpdateEventDequeue(const sc::event_base &event);
     void UpdateEventDequeueFail(const sc::event_base &event);
     void UpdateEventEnqueue(const sc::event_base &event);
