@@ -77,7 +77,7 @@ class ConnectionState(object):
     #end get_process_state_cb
 
     @staticmethod     
-    def update(conn_type, name, status, server_addrs, message):
+    def update(conn_type, name, status, server_addrs = None, message = None):
         conn_key = (conn_type, name)
         conn_info = ConnectionInfo(type = ConnectionTypeNames[conn_type],
                                    name = name,
