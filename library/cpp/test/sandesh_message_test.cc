@@ -31,17 +31,18 @@
 #include <sandesh/sandesh_ctrl_types.h>
 #include <sandesh/sandesh_uve_types.h>
 #include <sandesh/sandesh_message_builder.h>
-#include "sandesh_statistics.h"
-#include "sandesh_client.h"
-#include "sandesh_server.h"
+#include <sandesh/sandesh_statistics.h>
+#include <sandesh/sandesh_client.h>
 #include "sandesh_message_test_types.h"
 #include "sandesh_buffer_test_types.h"
+#include "sandesh_test_common.h"
 
 using std::string;
 using namespace contrail::sandesh::protocol;
 using namespace contrail::sandesh::transport;
 using boost::asio::ip::address;
 using boost::asio::ip::tcp;
+using namespace contrail::sandesh::test;
 
 bool asyncserver_done = false;
 bool requestserver_done = false;
@@ -57,28 +58,6 @@ void SandeshRequestTest1::HandleRequest() const {
 }
 
 namespace {
-
-class SandeshServerTest : public SandeshServer {
-public:
-    typedef boost::function<bool(SandeshSession *session,
-            const SandeshMessage *msg)> ReceiveMsgCb;
-
-    SandeshServerTest(EventManager *evm, ReceiveMsgCb cb) :
-            SandeshServer(evm),
-            cb_(cb) {
-    }
-
-    virtual ~SandeshServerTest() {
-    }
-
-    virtual bool ReceiveSandeshMsg(SandeshSession *session, 
-        const SandeshMessage *msg, bool rsc) {
-        return cb_(session, msg);
-    }
-
-private:
-    ReceiveMsgCb cb_;
-};
 
 class SandeshAsyncTest : public ::testing::Test {
 protected:
