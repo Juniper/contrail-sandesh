@@ -287,7 +287,7 @@ protected:
     void EvSandeshMessageRecv(SandeshSessionMock *session = NULL) {
         session = GetSession(session);
         uint8_t msg[1024];
-        CreateFakeMessage(msg, sizeof(msg));
+        contrail::sandesh::test::CreateFakeMessage(msg, sizeof(msg));
         string xml((const char *)msg, sizeof(msg));
         sm_->OnMessage(session, xml);
     }

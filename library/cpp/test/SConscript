@@ -134,6 +134,12 @@ sandesh_statistics_test = env.UnitTest('sandesh_statistics_test',
                                        ['sandesh_statistics_test.cc'])
 env.Alias('src/sandesh:sandesh_statistics_test', sandesh_statistics_test)
 
+sandesh_request_test = env.UnitTest('sandesh_request_test',
+                                    ['sandesh_request_test.cc'] +
+                                     sandesh_test_common_obj
+                                    )
+env.Alias('src/sandesh:sandesh_request_test', sandesh_request_test)
+
 test_suite = [sandesh_message_test,
               sandesh_rw_test,
               sandesh_session_test,
@@ -143,6 +149,7 @@ test_suite = [sandesh_message_test,
               sandesh_perf_test,
               sandesh_client_test,
               sandesh_statistics_test,
+              sandesh_request_test,
            ]
 
 test = env.TestSuite('sandesh-test', test_suite)

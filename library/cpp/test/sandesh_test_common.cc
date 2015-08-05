@@ -19,6 +19,10 @@ using namespace contrail::sandesh::transport;
 static const std::string FakeMessageSandeshBegin("<FakeSandesh type=\"sandesh\"><str1 type=\"string\" identifier=\"1\">");
 static const std::string FakeMessageSandeshEnd("</str1></FakeSandesh>");
 
+namespace contrail {
+namespace sandesh {
+namespace test {
+
 void CreateFakeMessage(uint8_t *data, size_t length) {
     size_t offset = 0;
     SandeshHeader header;
@@ -62,3 +66,7 @@ void CreateFakeMessage(uint8_t *data, size_t length) {
     offset += FakeMessageSandeshEnd.size();
     EXPECT_EQ(offset, length);
 }
+
+} // end namespace test
+} // end namespace sandesh
+} // end namespace contrail
