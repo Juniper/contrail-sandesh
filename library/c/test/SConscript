@@ -80,6 +80,6 @@ env.Depends(sandesh_c_test, env.Alias('src/sandesh:sandesh_pre_c_test'))
 test_suite = [sandesh_pre_c_test,
               sandesh_c_test]
 
-test = env.TestSuite('sandesh-test', test_suite)
+test = env.TestSuite('sandesh-c-test', test_suite)
 env.Alias('sandesh:ctest', test)
 Return('test_suite')

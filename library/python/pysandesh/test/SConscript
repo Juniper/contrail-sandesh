@@ -65,7 +65,7 @@ _deps = []
 _deps += env.venv_add_pip_pkg(venv, pip_pkgs)
 _deps += env.venv_add_build_pkg(venv, map(lambda x: Dir(x).abspath, sandesh_pkgs))
 
-pysandesh_ut = env.PyTestSuite('sandesh-test', test_modules, venv=env['env_venv'])
+pysandesh_ut = env.PyTestSuite('sandesh-py-test', test_modules, venv=env['env_venv'])
 for d in _deps:
     env.Requires(pysandesh_ut, d.name)
 env.Depends(pysandesh_ut, test_depend_modules_rules)
