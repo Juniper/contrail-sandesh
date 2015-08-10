@@ -138,6 +138,9 @@ env.Install(env['TOP_INCLUDE'] + '/sandesh/transport', 'transport/TBufferTranspo
 
 test_suite = SandeshEnv.SConscript('test/SConscript', exports='SandeshEnv SandeshTraceGenSrcs', duplicate = 0)
 
+import copy
+test_suite_cpp = copy.copy(test_suite)
+
 def code_coverage(target, source, env):
     # rm -rf sandesh/library/cpp/test_coverage
     import shutil
@@ -151,17 +154,21 @@ def code_coverage(target, source, env):
     import subprocess
     ShEnv = {env['ENV_SHLIB_PATH']: 'build/lib'}
 
-    for test in test_suite:
+    for test in test_suite_cpp:
         cmd = test[0].path
         logfile = open(cmd + '.log', 'w')
         subprocess.call([cmd], stdout=logfile, env=ShEnv)
 
-    # lcov --base-directory $ROOT -- directory . -c -o bgp_test.info
+    # lcov --base-directory $ROOT -- directory . -c -o sandesh_cpp_test_intermediate.info
     os.system('lcov --base-directory . --directory ' + Dir('.').path +
-              ' -c -o sandesh_cpp_test.info')
+              ' -c -o sandesh_cpp_test_intermediate.info')
 
-    # genhtml -o bgp/test_coverage sandesh_cpp_test.info
-    os.system('genhtml -o ' + target[0].path +
+    os.system('lcov -e sandesh_cpp_test_intermediate.info ' +
+            Dir('#').abspath + '/tools/sandesh/library/cpp/*' +
+            ' -o sandesh_cpp_test.info')
+
+    # genhtml -o tools/sandesh/library/cpp/test_coverage sandesh_cpp_test.info
+    os.system('genhtml --no-branch-coverage -o ' + target[0].path +
               ' -t "test coverage" --num-spaces 4 sandesh_cpp_test.info')
 
 if env['OPT'] == 'coverage':
