@@ -80,6 +80,61 @@ private:
     ReceiveMsgCb cb_;
 };
 
+class SandeshSendRatelimitTest : public ::testing::Test {
+protected:
+    SandeshSendRatelimitTest() {
+    }
+
+    virtual void SetUp() {
+        msg_num_ = 0 ;
+        asyncserver_done = false;
+        evm_.reset(new EventManager());
+        server_ = new SandeshServerTest(evm_.get(),
+                boost::bind(&SandeshSendRatelimitTest::ReceiveSandeshMsg, this, _1, _2));
+        thread_.reset(new ServerThread(evm_.get()));
+    }
+
+    virtual void TearDown() {
+        task_util::WaitForIdle();
+        Sandesh::Uninit();
+        task_util::WaitForIdle();
+        TASK_UTIL_EXPECT_FALSE(server_->HasSessions());
+        task_util::WaitForIdle();
+        server_->Shutdown();
+        task_util::WaitForIdle();
+        TcpServerManager::DeleteServer(server_);
+        task_util::WaitForIdle();
+        evm_->Shutdown();
+        if (thread_.get() != NULL) {
+            thread_->Join();
+        }
+        task_util::WaitForIdle();
+    }
+
+    bool ReceiveSandeshMsg(SandeshSession *session,
+            const SandeshMessage *msg) {
+        const SandeshHeader &header(msg->GetHeader());
+        const SandeshXMLMessage *xmsg =
+            dynamic_cast<const SandeshXMLMessage *>(msg);
+        EXPECT_TRUE(xmsg != NULL);
+        std::string message(xmsg->ExtractMessage());
+
+        if (header.get_Type() == SandeshType::UVE) {
+            return true;
+        }
+        msg_num_++;
+        if (msg_num_ > 13) {
+            asyncserver_done = true;
+        }
+        return true;
+    }
+
+    uint32_t msg_num_;
+    SandeshServerTest *server_;
+    std::auto_ptr<ServerThread> thread_;
+    std::auto_ptr<EventManager> evm_;
+};
+
 class SandeshAsyncTest : public ::testing::Test {
 protected:
     SandeshAsyncTest() {
@@ -281,6 +336,45 @@ TEST_F(SandeshAsyncTest, Async) {
         it = type_stats.find("ObjectLogInnerAnnTest");
         EXPECT_EQ(1, it->second->stats.messages_sent);
     }
+}
+
+TEST_F(SandeshSendRatelimitTest, Buffer) {
+    server_->Initialize(0);
+    thread_->Start();       // Must be called after initialization
+    int port = server_->GetPort();
+    ASSERT_LT(0, port);
+    // Connect to the server
+    Sandesh::set_send_rate_limit(10);
+    Sandesh::InitGenerator("SandeshSendRatelimitTest-Client", "localhost",
+                           "Test", "Test", evm_.get(),0);
+
+    Sandesh::ConnectToCollector("127.0.0.1", port);
+    EXPECT_TRUE(Sandesh::IsConnectToCollectorEnabled());
+    EXPECT_TRUE(Sandesh::client() != NULL);
+    TASK_UTIL_EXPECT_TRUE(Sandesh::client()->state() == SandeshClientSM::ESTABLISHED);
+    Sandesh::SetLoggingParams(true, "SystemLogTest", SandeshLevel::SYS_INFO);
+    boost::ptr_map<std::string, SandeshMessageTypeStats> type_stats;
+    SandeshMessageStats agg_stats;
+    Sandesh::GetMsgStats(&type_stats, &agg_stats);
+    boost::ptr_map<std::string, SandeshMessageTypeStats>::iterator it;
+    it = type_stats.find("SystemLogTest");
+    //Initialize dropped rate to 0
+    it->second->stats.messages_sent_dropped = 0;
+    /*
+     * First 10 out of the 15 msgs will be recived.messages 15-20 should albe received
+     */
+    for (int cnt = 0; cnt < 20; cnt++) {
+        SystemLogTest::Send("SystemLogTest", SandeshLevel::SYS_INFO, "Test", cnt, 100, "sat1string100");
+        if (cnt == 15) {
+            sleep(1);
+        }
+    }
+    //Allow all messages to be recieved
+    sleep(1);
+    Sandesh::GetMsgStats(&type_stats, &agg_stats);
+    it = type_stats.find("SystemLogTest");
+    TASK_UTIL_EXPECT_TRUE(msg_num_ == 20 -
+        it->second->stats.messages_sent_dropped);
 }
 
 class SandeshUVEAlarmTest : public ::testing::Test {

@@ -132,12 +132,16 @@ class t_cpp_generator : public t_oop_generator {
                                                const vector<t_field*>& fields);
   std::string generate_sandesh_async_creator(t_sandesh *tsandesh, bool signature, bool expand_autogen, bool skip_autogen, 
                                              std::string prefix, std::string suffix, bool category_level_file_line_first,
-                                             bool autogen_category_level);
+                                             bool autogen_category_level, bool drop_log_reason);
   void generate_sandesh_async_creators(ofstream &out, t_sandesh *tsandesh);
   void generate_sandesh_uve_creator(std::ofstream& out, t_sandesh* tsandesh);
   std::string generate_sandesh_trace_creator(t_sandesh *tsandesh, bool signature, bool expand_autogen, bool skip_autogen, 
                                              std::string prefix, std::string suffix);
   void generate_sandesh_updater(ofstream& out, t_sandesh* tsandesh);
+  void generate_isRatelimitPass(ofstream& out, t_sandesh* tsandesh);
+  void generate_sandesh_static_rate_limit_log_def(ofstream& out, t_sandesh* tsandesh);
+  void generate_sandesh_static_rate_limit_mutex_def(ofstream& out, t_sandesh* tsandesh);
+  void generate_sandesh_static_rate_limit_buffer_def(ofstream& out, t_sandesh* tsandesh);
 #endif
 
   void generate_cpp_struct(t_struct* tstruct, bool is_exception);
@@ -958,6 +962,8 @@ void t_cpp_generator::generate_cpp_sandesh(t_sandesh* tsandesh) {
             ((t_base_type *)tsandesh->get_type())->is_sandesh_uve();
     bool is_alarm =
             ((t_base_type *)tsandesh->get_type())->is_sandesh_alarm();
+    bool is_system =
+            ((t_base_type *)tsandesh->get_type())->is_sandesh_system();
 
     generate_sandesh_definition(f_types_, tsandesh);
     generate_sandesh_fingerprint(f_types_impl_, tsandesh, true);
@@ -980,6 +986,12 @@ void t_cpp_generator::generate_cpp_sandesh(t_sandesh* tsandesh) {
     if (is_uve || is_alarm) {
         generate_sandesh_updater(out,tsandesh);
     }
+    if (is_system) {
+        generate_sandesh_static_rate_limit_log_def(out, tsandesh);
+        generate_sandesh_static_rate_limit_mutex_def(out, tsandesh);
+        generate_sandesh_static_rate_limit_buffer_def(out, tsandesh);
+    }
+
 }
 
 /**
@@ -1099,7 +1111,9 @@ std::string t_cpp_generator::generate_sandesh_no_static_const_string_function(t_
 
 std::string t_cpp_generator::generate_sandesh_async_creator(t_sandesh* tsandesh, bool signature,
         bool expand_autogen, bool skip_autogen, std::string prefix, std::string suffix,
-        bool category_level_file_line_first, bool autogen_category_level) {
+        bool category_level_file_line_first, bool autogen_category_level, bool
+        drop_log_reason)
+        {
     string result = "";
     string temp = "";
     string category_def = prefix + "category" + suffix;
@@ -1107,22 +1121,28 @@ std::string t_cpp_generator::generate_sandesh_async_creator(t_sandesh* tsandesh,
     string category_dec = "std::string " + category_def;
     string level_dec = "SandeshLevel::type " + level_def;
     string module_name = "\"\"";
+    string drop_reason_dec;
+    string drop_reason_def;
     bool is_flow = ((t_base_type *)tsandesh->get_type())->is_sandesh_flow();
     // Get members
     vector<t_field*>::const_iterator m_iter;
     const vector<t_field*>& members = tsandesh->get_members();
     bool init_function = false;
+    if (drop_log_reason) {
+        drop_reason_def = prefix + "drop_reason" + suffix + ", ";
+        drop_reason_dec = "const std::string& " + drop_reason_def;
+    }
 
     if (category_level_file_line_first) {
         if (signature) {
-            result += "(" + category_dec + ", " + level_dec;
+            result += "(" + drop_reason_dec + category_dec + ", " + level_dec;
             if (!is_flow) result += ", std::string file, int32_t line";
         } else {
             if (!autogen_category_level) {
-                result += "(" + category_def + ", " + level_def;
+                result += "(" + drop_reason_dec + category_def + ", " + level_def;
                 if (!is_flow) result += ", __FILE__, __LINE__";
             } else {
-                result += "(" + module_name + ", SandeshLevel::SYS_INFO";
+                result += "(" + drop_reason_dec + module_name + ", SandeshLevel::SYS_INFO";
                 if (!is_flow) result += ", __FILE__, __LINE__";
             }
         }
@@ -1130,12 +1150,12 @@ std::string t_cpp_generator::generate_sandesh_async_creator(t_sandesh* tsandesh,
     } else {
         if (signature) {
             if (!autogen_category_level) {
-                result += "(" + category_dec + ", " +  level_dec;
+                result += "(" + drop_reason_dec + category_dec + ", " +  level_dec;
                 init_function = true;
             }
         } else {
             if (!autogen_category_level) {
-                result += "(" + category_def + ", " + level_def;
+                result += "(" + drop_reason_def + category_def + ", " + level_def;
                 init_function = true;
             }
         }
@@ -1209,9 +1229,10 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     std::string creator_func_name = "Send";
     std::string macro_func_name = "Log";
     bool is_flow = ((t_base_type *)tsandesh->get_type())->is_sandesh_flow();
+    bool is_system = ((t_base_type *)tsandesh->get_type())->is_sandesh_system();
     // Generate creator
     out << indent() << "static void " << creator_func_name <<
-             generate_sandesh_async_creator(tsandesh, true, false, false, "", "", true, false) <<
+             generate_sandesh_async_creator(tsandesh, true, false, false, "", "", true, false, false) <<
              " {" << endl;
     indent_up();
     out << indent() << "if (level >= SendingLevel()) {" << endl;
@@ -1219,12 +1240,57 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
         "\", 0, Sandesh::DropReason::Send::QueueLevel);" << endl;
     if (!is_flow) {
+        out << indent() << "std::string drop_reason = \"SANDESH: Queue Drop:"
+            " \";" << endl;
         out << indent() << "DropLog" <<
-            generate_sandesh_async_creator(tsandesh, false, false, false, "", "", false, false) <<
+            generate_sandesh_async_creator(tsandesh, false, false, false, "", "", false, false, true) <<
             "; " << endl;
     }
     out << indent() << "return;" << endl;
     scope_down(out);
+
+        //Adjust the buffer size if its capacity is different from configured size
+    if (is_system) {
+        out << indent() << "if (!HandleTest(level, category)) {" << endl;
+        indent_up();
+        out << indent() << "if (!IsRatelimitPass()) {" << endl;
+        indent_up();
+        out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
+            "\", 0, Sandesh::DropReason::Send::RatelimitDrop);" << endl;
+        out << indent() << "if (do_rate_limit_drop_log_) {" << endl;
+        indent_up();
+        out << indent() << "std::stringstream ratelimit_val;" << endl;
+        out << indent() << " ratelimit_val << Sandesh::get_send_rate_limit();"
+            << endl;
+        out << indent() << "std::string drop_reason = \"SANDESH: Ratelimit"
+            " Drop (\" + ratelimit_val.str() + std::string(\" messages"
+             "/second): \") ;" << endl;
+        out << indent() << "DropLog" <<
+           generate_sandesh_async_creator(tsandesh, false, false, false, "",
+                                          "", false, false, true) <<
+           "; " << endl;
+        out << indent() << "do_rate_limit_drop_log_ = false;" << endl;
+        scope_down(out);
+        out << indent() << "return;" << endl;
+        scope_down(out);
+        indent_down();
+        indent(out) << "} else {" << endl;
+        indent_up();
+        out << indent() << "if (IsLevelCategoryLoggingAllowed(level,category))"
+            " {" << endl;
+        indent_up();
+        out << indent() << "std::stringstream ratelimit_val;" << endl;
+        out << indent() << " ratelimit_val << Sandesh::get_send_rate_limit();"
+            << endl;
+        out << indent() << "std::string drop_reason = \"\";" << endl;
+        out << indent() << "DropLog" <<
+           generate_sandesh_async_creator(tsandesh, false, false, false, "",
+                                          "", false, false, true) << "; " << endl;
+        scope_down(out);
+        out << indent() << "return;" << endl;
+        scope_down(out);
+    }
+
     out << indent() << tsandesh->get_name() <<
           " * snh = new " << tsandesh->get_name() <<
           generate_sandesh_no_static_const_string_function(tsandesh, false, false, false, false) <<
@@ -1240,11 +1306,11 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     string creator_name_usc = underscore(creator_name);
     string creator_name_uc = uppercase(creator_name_usc);
     out << indent() << "#define " << creator_name_uc <<
-            generate_sandesh_async_creator(tsandesh, false, false, true, "_", "", false, false) <<
+            generate_sandesh_async_creator(tsandesh, false, false, true, "_", "", false, false, false) <<
             "\\" << endl;
     indent_up();
     out << indent() << tsandesh->get_name() << "::" << creator_func_name <<
-            generate_sandesh_async_creator(tsandesh, false, true, false, "(_", ")", true, false) <<
+            generate_sandesh_async_creator(tsandesh, false, true, false, "(_", ")", true, false, false) <<
             endl;
     indent_down();
     indent(out) << endl << endl;
@@ -1254,11 +1320,11 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     creator_name_usc = underscore(creator_name);
     creator_name_uc = uppercase(creator_name_usc);
     out << indent() << "#define " << creator_name_uc <<
-            generate_sandesh_async_creator(tsandesh, false, false, true, "_", "", false, true) <<
+            generate_sandesh_async_creator(tsandesh, false, false, true, "_", "", false, true, false) <<
             "\\" << endl;
     indent_up();
     out << indent() << tsandesh->get_name() << "::" << creator_func_name <<
-            generate_sandesh_async_creator(tsandesh, false, true, false, "(_", ")", true, true) <<
+            generate_sandesh_async_creator(tsandesh, false, true, false, "(_", ")", true, true, false) <<
             endl;
     indent_down();
     indent(out) << endl << endl;
@@ -1266,13 +1332,23 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     // Generate DropLog
     if (!is_flow) {
         out << indent() << "static void DropLog" <<
-             generate_sandesh_async_creator(tsandesh, true, false, false, "", "", false, false) <<
+             generate_sandesh_async_creator(tsandesh, true, false, false, "", "", false, false, true) <<
              " {" << endl;
         indent_up();
         generate_sandesh_logger(out, tsandesh, sandesh_logger::DROP_LOG);
         indent_down();
         indent(out) << "}" << endl << endl;
     }
+
+    // Generate WriteToBuffer
+    if (is_system) {
+         out << indent() << "static bool IsRatelimitPass() {" << endl;
+         indent_up();
+         generate_isRatelimitPass(out, tsandesh);
+         indent_down();
+         indent(out) << "}" << endl << endl;
+    }
+
 }
 
 std::string t_cpp_generator::generate_sandesh_trace_creator(t_sandesh *tsandesh, 
@@ -1852,6 +1928,15 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
 
     out << indent() << "int32_t Write(" <<
         "boost::shared_ptr<contrail::sandesh::protocol::TProtocol> oprot) const;" << endl;
+
+    if (((t_base_type *)t)->is_sandesh_system()) {
+        out << indent() << "static bool do_rate_limit_drop_log_;" << endl;
+
+        out << indent() << "static boost::circular_buffer<time_t>"
+                            " rate_limit_buffer_;" << endl;
+
+        out << indent() << "static tbb::mutex rate_limit_mutex_;" << endl;
+    }
 
     out << endl;
     indent_down();
@@ -2697,6 +2782,24 @@ void t_cpp_generator::generate_sandesh_static_versionsig_def(ofstream& out,
         << tsandesh->get_4byte_fingerprint() << "U;" << endl << endl;
 }
 
+void t_cpp_generator::generate_sandesh_static_rate_limit_buffer_def(
+                                           ofstream& out, t_sandesh* tsandesh) {
+    out << "boost::circular_buffer<time_t> " << tsandesh->get_name() <<
+        "::rate_limit_buffer_(Sandesh::get_send_rate_limit());" << endl << endl;
+}
+
+void t_cpp_generator::generate_sandesh_static_rate_limit_mutex_def(
+                                           ofstream& out,t_sandesh* tsandesh) {
+    out << "tbb::mutex " << tsandesh->get_name() << "::rate_limit_mutex_; "
+        << endl << endl;
+}
+
+void t_cpp_generator::generate_sandesh_static_rate_limit_log_def(
+                                           ofstream& out, t_sandesh* tsandesh) {
+    out << "bool " << tsandesh->get_name() << "::do_rate_limit_drop_log_ = true;"
+        << endl << endl;
+}
+
 
 /**
  * Makes a helper function to gen a sandesh reader.
@@ -3345,14 +3448,12 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
         // Handle init
         if (!init) {
             init = true;
-            std::string category_str, level_str, logger_level_str, drop_str;
+            std::string category_str, level_str, logger_level_str ;
             if (ltype == sandesh_logger::DROP_LOG) {
-                drop_str = "\"SANDESH: Queue Drop: \" << ";
                 category_str = "category";
                 level_str = "level";
                 logger_level_str = "SandeshLevel::SYS_ERR";
             } else {
-                drop_str = "";
                 category_str = "category()";
                 level_str = "level()";
                 logger_level_str = level_str;
@@ -3384,7 +3485,11 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
             if (((t_base_type *)tsandesh->get_type())->is_sandesh_system() ||
                     ((t_base_type *)tsandesh->get_type())->is_sandesh_object() ||
                     ((t_base_type *)tsandesh->get_type())->is_sandesh_flow()) {
-                out << indent() << "Xbuf << " << drop_str << category_str <<
+                std::string drop_str="Xbuf << ";
+                if ( ltype == sandesh_logger::DROP_LOG ) {
+                    drop_str = "Xbuf << drop_reason << ";
+                }
+                out << indent() << drop_str << category_str <<
                     " << \" [\" << LevelToString(" << level_str << ") << \"]: " <<
                     tsandesh->get_name() << ": \";" << endl;
             } else {
@@ -3467,6 +3572,49 @@ void t_cpp_generator::generate_sandesh_trace(ofstream& out,
     indent(out) <<
             "}" << endl << endl;
 }
+
+/*
+ * Generate IsRatelimitPass function
+ *
+ */
+void t_cpp_generator::generate_isRatelimitPass(ofstream& out,
+                                           t_sandesh* tsandesh) {
+    out << indent() << "if (Sandesh::get_send_rate_limit() == 0) {" << endl;
+    indent_up();
+    out << indent() << "return false;";
+    indent_down();
+    out << indent() << "}" << endl;
+    out << indent() << "tbb::mutex::scoped_lock lock(rate_limit_mutex_);" << endl;
+    out << indent() << "if (rate_limit_buffer_.capacity() !="
+        " Sandesh::get_send_rate_limit()) {" << endl;
+    indent_up();
+    out << indent() << "//Resize the buffer to the "
+        "buffer_threshold_" << endl;
+    out << indent() << "rate_limit_buffer_.rresize(Sandesh::get_send_rate_limit());"
+        << endl;
+    out << indent() << "rate_limit_buffer_.set_capacity("
+        "Sandesh::get_send_rate_limit());" << endl;
+    indent_down();
+    out << indent() << "}" << endl;
+    out << indent() << "time_t current_time = time(0);" << endl;
+    out << indent() << "if (rate_limit_buffer_.capacity() == rate_limit_buffer_"
+        ".size()) {" << endl;
+    indent_up();
+    out << indent() << "if (*rate_limit_buffer_.begin() == current_time) {" << endl;
+    indent_up();
+    out << indent() << "//update tx and call droplog" << endl;
+    out << indent() << "//Dont have to log more than once" << endl;
+    out << indent() << "return false;" << endl;
+    indent_down();
+    out << indent() << "}" << endl;
+    indent_down();
+    out << indent() << "}" << endl;
+    out << indent() << "//Should log failure after a sucessful write" << endl;
+    out << indent() << "do_rate_limit_drop_log_ = true;" << endl;
+    out << indent() << "rate_limit_buffer_.push_back(current_time);" << endl;
+    out << indent() << "return true;" << endl;
+}
+
 
 #endif
 

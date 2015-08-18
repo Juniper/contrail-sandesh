@@ -142,6 +142,8 @@ public:
             enum type {
                 MinDropReason,
                 NoDrop = MinDropReason,
+                ValidationFailed,
+                RatelimitDrop,
                 QueueLevel,
                 NoClient,
                 NoSession,
@@ -323,6 +325,10 @@ public:
     static const char* LevelToString(SandeshLevel::type level);
     static SandeshLevel::type StringToLevel(std::string level);
     static log4cplus::Logger& logger() { return logger_; }
+    static void set_send_rate_limit(uint32_t rate_limit) {
+        sandesh_send_ratelimit_ = rate_limit;
+    }
+    static uint32_t get_send_rate_limit() { return sandesh_send_ratelimit_; }
 
 protected:
     void set_timestamp(time_t timestamp) { timestamp_ = timestamp; }
@@ -362,6 +368,9 @@ protected:
     }
     static SandeshCallback response_callback_;
     static SandeshClient *client_;
+    static bool IsLevelUT(SandeshLevel::type level);
+    static bool IsLevelCategoryLoggingAllowed(SandeshLevel::type level,
+                                              const std::string& category);
 
 private:
     friend class SandeshTracePerfTest;
@@ -381,9 +390,6 @@ private:
             EventManager *evm,
             unsigned short http_port,
             SandeshContext *client_context = NULL);
-
-    bool IsLevelUT();
-    bool IsLevelCategoryLoggingAllowed() const;
 
     static SandeshRole::type role_;
     static std::string module_;
@@ -419,6 +425,7 @@ private:
     SandeshLevel::type level_;
     std::string category_;
     std::string name_;
+    static tbb::atomic<uint32_t> sandesh_send_ratelimit_;
 };
 
 #define SANDESH_LOG(_Level, _Msg)                                \
@@ -495,6 +502,8 @@ class SandeshSystem : public Sandesh {
 protected:
     SandeshSystem(const std::string& name, uint32_t seqno) :
         Sandesh(SandeshType::SYSTEM, name, seqno) {}
+    static bool HandleTest(SandeshLevel::type level, const
+        std::string& category);
 };
 
 class SandeshObject : public Sandesh {

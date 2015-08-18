@@ -38,6 +38,14 @@ static void UpdateSandeshMessageStatsDrops(SandeshMessageStats *smstats,
     Sandesh::DropReason::Recv::type recv_dreason) {
     if (sent) {
         switch (send_dreason) {
+          case Sandesh::DropReason::Send::ValidationFailed:
+            smstats->messages_sent_dropped_validation_failed++;
+            smstats->bytes_sent_dropped_validation_failed += bytes;
+            break;
+          case Sandesh::DropReason::Send::RatelimitDrop:
+            smstats->messages_sent_dropped_rate_limited++;
+            smstats->bytes_sent_dropped_rate_limited += bytes;
+            break;
           case Sandesh::DropReason::Send::QueueLevel:
             smstats->messages_sent_dropped_queue_level++;
             smstats->bytes_sent_dropped_queue_level += bytes;

@@ -68,6 +68,7 @@ log4cplus::Logger Sandesh::logger_ =
     log4cplus::Logger::getInstance(LOG4CPLUS_TEXT("SANDESH"));
 
 Sandesh::ModuleContextMap Sandesh::module_context_;
+tbb::atomic<uint32_t> Sandesh::sandesh_send_ratelimit_;
 
 const char * Sandesh::SandeshRoleToString(SandeshRole::type role) {
     switch (role) {
@@ -140,6 +141,11 @@ void Sandesh::Initialize(SandeshRole::type role,
     instance_id_    = instance_id;
     client_context_ = client_context;
     event_manager_  = evm;
+    //If Sandesh::sandesh_send_ratelimit_ is not defined by client,
+    // assign a default value to it
+    if (get_send_rate_limit() == 0) {
+        set_send_rate_limit(g_sandesh_constants.DEFAULT_SANDESH_SEND_RATELIMIT);
+    }
 
     InitReceive(Task::kTaskInstanceAny);
     http_port_ = SandeshHttp::Init(evm, module, http_port, &SandeshHttpCallback);
@@ -573,8 +579,8 @@ int32_t Sandesh::ReceiveBinaryMsg(u_int8_t *buf, u_int32_t buf_len,
 
 bool Sandesh::HandleTest() {
     // Handle unit test scenario
-    if (IsUnitTest() || IsLevelUT()) {
-        if (IsLevelCategoryLoggingAllowed()) {
+    if (IsUnitTest() || IsLevelUT(level_)) {
+        if (IsLevelCategoryLoggingAllowed(level_, category_)) {
             ForcedLog();
         }
         Release();
@@ -686,15 +692,16 @@ bool SandeshRequest::Enqueue(SandeshRxQueue *queue) {
     return true;
 }
 
-bool Sandesh::IsLevelUT() {
-    return level_ >= SandeshLevel::UT_START &&
-            level_ <= SandeshLevel::UT_END;
+bool Sandesh::IsLevelUT(SandeshLevel::type level) {
+    return level >= SandeshLevel::UT_START &&
+            level <= SandeshLevel::UT_END;
 }
 
-bool Sandesh::IsLevelCategoryLoggingAllowed() const {
-    bool level_allowed = logging_level_ >= level_;
+bool Sandesh::IsLevelCategoryLoggingAllowed(SandeshLevel::type level,
+                                                   const std::string& category) {
+    bool level_allowed = logging_level_ >= level;
     bool category_allowed = !logging_category_.empty() ?
-            logging_category_ == category_ : true;
+            logging_category_ == category : true;
     return level_allowed && category_allowed;
 }
 
@@ -702,7 +709,8 @@ bool Sandesh::IsLoggingAllowed() const {
     if (type_ == SandeshType::FLOW) {
         return enable_flow_log_;
     } else {
-        return IsLocalLoggingEnabled() && IsLevelCategoryLoggingAllowed();
+        return IsLocalLoggingEnabled() &&
+                IsLevelCategoryLoggingAllowed(level_, category_);
     }
 }
 
@@ -822,4 +830,13 @@ void Sandesh::set_module_context(const std::string &module_name,
     if (!result.second) {
         result.first->second = context;
     }
+}
+
+bool SandeshSystem::HandleTest(SandeshLevel::type level,
+                                      const std::string& category) {
+    // Handle unit test scenario
+    if (IsUnitTest() || IsLevelUT(level)) {
+        return true;
+    }
+    return false;
 }
