@@ -60,6 +60,7 @@ enum SandeshLevel {
 enum SandeshTxDropReason {
     MinDropReason = 0,
     NoDrop,
+    BufferFull,
     ValidationFailed,
     QueueLevel,
     NoClient,
