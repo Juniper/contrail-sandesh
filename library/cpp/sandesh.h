@@ -288,6 +288,7 @@ public:
     static const char* LevelToString(SandeshLevel::type level);
     static SandeshLevel::type StringToLevel(std::string level);
     static log4cplus::Logger& logger() { return logger_; }
+    static tbb::atomic<uint32_t> sandesh_send_ratelimit_;
 
 protected:
     void set_timestamp(time_t timestamp) { timestamp_ = timestamp; }
@@ -327,6 +328,9 @@ protected:
     }
     static SandeshCallback response_callback_;
     static SandeshClient *client_;
+    static bool IsLevelUT(SandeshLevel::type level);
+    static bool IsLevelCategoryLoggingAllowed(SandeshLevel::type level,
+                                               std::string category);
 
 private:
     friend class SandeshTracePerfTest;
@@ -346,9 +350,6 @@ private:
             EventManager *evm,
             unsigned short http_port,
             SandeshContext *client_context = NULL);
-
-    bool IsLevelUT();
-    bool IsLevelCategoryLoggingAllowed() const;
 
     static SandeshRole::type role_;
     static std::string module_;
@@ -459,6 +460,7 @@ class SandeshSystem : public Sandesh {
 protected:
     SandeshSystem(const std::string& name, uint32_t seqno) :
         Sandesh(SandeshType::SYSTEM, name, seqno) {}
+    static bool HandleTest(SandeshLevel::type level, std::string category);
 };
 
 class SandeshObject : public Sandesh {

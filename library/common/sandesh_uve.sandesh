@@ -31,6 +31,7 @@ struct SandeshMessageStats {
     58: u64 messages_sent_dropped_write_failed;
     59: u64 messages_sent_dropped_wrong_client_sm_state;
     60: u64 messages_sent_dropped_validation_failed;
+    61: u64 messages_sent_dropped_buffer_full;
     // Bytes
     81: u64 bytes_sent_dropped_no_queue;
     82: u64 bytes_sent_dropped_no_client;
@@ -42,6 +43,7 @@ struct SandeshMessageStats {
     88: u64 bytes_sent_dropped_write_failed;
     89: u64 bytes_sent_dropped_wrong_client_sm_state;
     90: u64 bytes_sent_dropped_validation_failed;
+    91: u64 bytes_sent_dropped_buffer_full;
     // Receive
     // Messages
     101: u64 messages_received_dropped_no_queue;
