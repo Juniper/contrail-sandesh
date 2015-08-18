@@ -67,6 +67,7 @@ log4cplus::Logger Sandesh::logger_ =
     log4cplus::Logger::getInstance(LOG4CPLUS_TEXT("SANDESH"));
 
 Sandesh::ModuleContextMap Sandesh::module_context_;
+tbb::atomic<uint32_t> Sandesh::systemlog_buffer_size_;
 
 const char * Sandesh::SandeshRoleToString(SandeshRole::type role) {
     switch (role) {
@@ -89,6 +90,7 @@ void Sandesh::InitReceive(int recv_task_inst) {
     recv_task_id_ = scheduler->GetTaskId("sandesh::RecvQueue");
     recv_queue_.reset(new SandeshRxQueue(recv_task_id_, recv_task_inst,
             &Sandesh::ProcessRecv));
+    systemlog_buffer_size_=10;
 }
 
 void Sandesh::InitClient(EventManager *evm, Endpoint server) {

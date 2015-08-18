@@ -288,6 +288,7 @@ public:
     static const char* LevelToString(SandeshLevel::type level);
     static SandeshLevel::type StringToLevel(std::string level);
     static log4cplus::Logger& logger() { return logger_; }
+    static tbb::atomic<uint32_t> systemlog_buffer_size_;
 
 protected:
     void set_timestamp(time_t timestamp) { timestamp_ = timestamp; }
@@ -321,6 +322,14 @@ protected:
     virtual bool SendEnqueue();
 
     bool HandleTest();
+
+    static bool IsTestMessage(SandeshLevel::type level_ut) {
+        if (IsUnitTest() || (level_ut >= SandeshLevel::UT_START &&
+            level_ut <= SandeshLevel::UT_END)) {
+            return true;
+        }
+        return false;
+    }
 
     static bool IsUnitTest() {
         return role_ == SandeshRole::Invalid || role_ == SandeshRole::Test;

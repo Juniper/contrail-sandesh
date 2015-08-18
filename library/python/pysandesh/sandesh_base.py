@@ -15,6 +15,10 @@ import base64
 import sandesh_logger as sand_logger
 import trace
 import util
+import calendar
+import collections
+import time
+import copy
 
 from gen_py.sandesh.ttypes import SandeshType, SandeshLevel, \
      SandeshTxDropReason
@@ -30,6 +34,7 @@ class Sandesh(object):
     _DEFAULT_LOG_FILE = sand_logger.SandeshLogger._DEFAULT_LOG_FILE
     _DEFAULT_SYSLOG_FACILITY = (
         sand_logger.SandeshLogger._DEFAULT_SYSLOG_FACILITY)
+    _DEFAULT_BUFFER_THRESHOLD = 10
 
     class SandeshRole:
         INVALID = 0
@@ -703,13 +708,52 @@ class SandeshAsync(Sandesh):
             sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
                 0, SandeshTxDropReason.ValidationFailed)
             sandesh._logger.error('sandesh "%s" validation failed [%s]'
-                                  % (self.__class__.__name__, e))
+                                   % (self.__class__.__name__, e))
             return -1
+        #If systemlog message first check if the transmit side buffer
+        # has space
+        if self._type == SandeshType.SYSTEM:
+            self.log_buffer(sandesh)
         self._seqnum = self.next_seqnum()
         if self.handle_test(sandesh):
             return 0
         sandesh.send_sandesh(self)
         return 0
+
+    def log_buffer(self,sandesh):
+        #Check if buffer resize is reqd
+        if (self.__class__.threshold_buffer.maxlen != \
+                sandesh._DEFAULT_BUFFER_THRESHOLD):
+            temp_buffer = copy.deepcopy(self.__class__.threshold_buffer)
+            self.__class__.threshold_buffer = collections.deque(temp_buffer, \
+                maxlen=sandesh._DEFAULT_BUFFER_THRESHOLD)
+            del temp_buffer
+        cur_time=calendar.timegm(time.gmtime())
+        #Check if circular buffer is full
+        if len(self.__class__.threshold_buffer) == \
+            self.__class__.threshold_buffer.maxlen :
+            # Read the element in buffer and compare with cur_time
+            if(self.__class__.threshold_buffer[0] == cur_time):
+                #Sender generating more messages/sec than the
+                #buffer_threshold size
+                sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
+                     0, SandeshTxDropReason.BufferFull)
+                sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
+                     0, SandeshTxDropReason.ValidationFailed)
+                if self.__class__.buffer_overflow_logged:
+                    sandesh._logger.error('Message dropped because of Tx side'
+                        'buffer full for %s' % (self.__class__.__name__))
+                    sandesh._logger.error('Threshold val %d' % \
+                        (self.__class__.threshold_buffer.maxlen))
+                    #Disable logging
+                    self.__class__.buffer_overflow_logged = False
+                return
+        #If logging is disabled enable it
+        if (not self.__class__.buffer_overflow_logged):
+            self.__class__.buffer_overflow_logged = True
+        self.__class__.threshold_buffer.append(cur_time)
+        return
+
     # end send
 
 # end class SandeshAsync
