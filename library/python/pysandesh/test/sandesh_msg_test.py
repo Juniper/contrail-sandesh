@@ -13,6 +13,7 @@ import sys
 import os
 import socket
 import test_utils
+import time
 
 sys.path.insert(1, sys.path[0]+'/../../../python')
 
@@ -89,6 +90,22 @@ class SandeshMsgTest(unittest.TestCase):
         self.assertNotEqual(-1, self._writer.send_msg(objectlog_msg, False))
         self.assertNotEqual(-1, self._reader.read_msg(self._session.write_buf))
     #end test_objectlog_msg_key_hint
+
+    def test_systemlog_msg_buffer_threshold(self):
+        print '------------------------------'
+        print ' Test SystemLog Msg Buffer Limit  '
+        print '------------------------------'
+        systemlog_msg = SystemLogTest()
+        self._expected_type = SandeshType.SYSTEM
+        self._expected_hints = 0
+        time.sleep(1)
+        #sandesh_global._DEFAULT_SANDESH_RATELIMIT = 20
+        for i in xrange(0,15):
+            systemlog_msg.send(sandesh=sandesh_global)
+        self.assertEqual(5,sandesh_global.msg_stats(). \
+             message_type_stats()['SystemLogTest']. \
+             messages_sent_dropped_buffer_full)
+    #end test_systemlog_msg_buffer_threshold
 
 #end class SandeshMsgTest
 

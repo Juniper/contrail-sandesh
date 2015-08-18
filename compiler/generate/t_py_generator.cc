@@ -513,7 +513,8 @@ string t_py_generator::render_sandesh_includes() {
       "from pysandesh.sandesh_http import SandeshHttp\n"
       "from pysandesh.sandesh_uve import SandeshUVETypeMaps\n"
       "from pysandesh.util import UTCTimestampUsec, UTCTimestampUsecToString\n"
-      "from pysandesh.gen_py.sandesh.constants import *\n";
+      "from pysandesh.gen_py.sandesh.constants import *\n"
+      "import collections\n";
   }
   return sandesh_includes;
 }
@@ -1406,7 +1407,14 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
   } else {
     indent(out) << "thrift_spec = None" << endl << endl;
   }
-  
+
+  if (sandesh_type->is_sandesh_system() ||
+        sandesh_type->is_sandesh_object()) {
+    indent(out) << "rate_limit_buffer = collections.deque(maxlen=sandesh_base."
+                   "Sandesh._DEFAULT_SANDESH_RATELIMIT)" << endl << endl;
+    indent(out) << "rate_limit_logged = True" << endl << endl;
+  }
+
   {
     out <<
       indent() << "def __init__(self";
@@ -1753,6 +1761,7 @@ void t_py_generator::generate_py_sandesh_writer(ofstream& out,
 
 void t_py_generator::generate_py_sandesh_required_validator(ofstream& out,
                                                             t_sandesh* tsandesh) {
+  t_base_type *sandesh_type = (t_base_type *)tsandesh->get_type();
   indent(out) << "def validate(self):" << endl;
   indent_up();
 
