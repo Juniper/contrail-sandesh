@@ -138,6 +138,10 @@ class t_cpp_generator : public t_oop_generator {
   std::string generate_sandesh_trace_creator(t_sandesh *tsandesh, bool signature, bool expand_autogen, bool skip_autogen, 
                                              std::string prefix, std::string suffix);
   void generate_sandesh_updater(ofstream& out, t_sandesh* tsandesh);
+  void generate_isRatelimitPass(ofstream& out, t_sandesh* tsandesh);
+  void generate_sandesh_static_rate_limit_log_def(ofstream& out, t_sandesh* tsandesh);
+  void generate_sandesh_static_rate_limit_mutex_def(ofstream& out, t_sandesh* tsandesh);
+  void generate_sandesh_static_rate_limit_buffer_def(ofstream& out, t_sandesh* tsandesh);
 #endif
 
   void generate_cpp_struct(t_struct* tstruct, bool is_exception);
@@ -958,6 +962,8 @@ void t_cpp_generator::generate_cpp_sandesh(t_sandesh* tsandesh) {
             ((t_base_type *)tsandesh->get_type())->is_sandesh_uve();
     bool is_alarm =
             ((t_base_type *)tsandesh->get_type())->is_sandesh_alarm();
+    bool is_system =
+            ((t_base_type *)tsandesh->get_type())->is_sandesh_system();
 
     generate_sandesh_definition(f_types_, tsandesh);
     generate_sandesh_fingerprint(f_types_impl_, tsandesh, true);
@@ -980,6 +986,12 @@ void t_cpp_generator::generate_cpp_sandesh(t_sandesh* tsandesh) {
     if (is_uve || is_alarm) {
         generate_sandesh_updater(out,tsandesh);
     }
+    if (is_system) {
+        generate_sandesh_static_rate_limit_log_def(out, tsandesh);
+        generate_sandesh_static_rate_limit_mutex_def(out, tsandesh);
+        generate_sandesh_static_rate_limit_buffer_def(out, tsandesh);
+    }
+
 }
 
 /**
@@ -1209,6 +1221,7 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     std::string creator_func_name = "Send";
     std::string macro_func_name = "Log";
     bool is_flow = ((t_base_type *)tsandesh->get_type())->is_sandesh_flow();
+    bool is_system = ((t_base_type *)tsandesh->get_type())->is_sandesh_system();
     // Generate creator
     out << indent() << "static void " << creator_func_name <<
              generate_sandesh_async_creator(tsandesh, true, false, false, "", "", true, false) <<
@@ -1225,6 +1238,37 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     }
     out << indent() << "return;" << endl;
     scope_down(out);
+
+        //Adjust the buffer size if its capacity is different from configured size
+    if (is_system) {
+        out << indent() << "if (!HandleTest(level, category)) {" << endl;
+        indent_up();
+        out << indent() << "if (!IsRatelimitPass()) {" << endl;
+        indent_up();
+        out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
+            "\", 0, SandeshTxDropReason::RatelimitDrop);" << endl;
+        out << indent() << "if (do_rate_limit_drop_log_) {" << endl;
+        indent_up();
+        out << indent() << "DropLog" <<
+           generate_sandesh_async_creator(tsandesh, false, false, false, "",
+                                          "", false, false) << "; " << endl;
+        out << indent() << "do_rate_limit_drop_log_ = false;" << endl;
+        scope_down(out);
+        out << indent() << "return;" << endl;
+        scope_down(out);
+        indent_down();
+        indent(out) << "} else {" << endl;
+        indent_up();
+        out << indent() << "if (IsLevelCategoryLoggingAllowed(level,category)) {" << endl;
+        indent_up();
+        out << indent() << "DropLog" <<
+           generate_sandesh_async_creator(tsandesh, false, false, false, "",
+                                          "", false, false) << "; " << endl;
+        scope_down(out);
+        out << indent() << "return;" << endl;
+        scope_down(out);
+    }
+
     out << indent() << tsandesh->get_name() <<
           " * snh = new " << tsandesh->get_name() <<
           generate_sandesh_no_static_const_string_function(tsandesh, false, false, false, false) <<
@@ -1273,6 +1317,16 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
         indent_down();
         indent(out) << "}" << endl << endl;
     }
+
+    // Generate WriteToBuffer
+    if (is_system) {
+         out << indent() << "static bool IsRatelimitPass() {" << endl;
+         indent_up();
+         generate_isRatelimitPass(out, tsandesh);
+         indent_down();
+         indent(out) << "}" << endl << endl;
+    }
+
 }
 
 std::string t_cpp_generator::generate_sandesh_trace_creator(t_sandesh *tsandesh, 
@@ -1852,6 +1906,15 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
 
     out << indent() << "int32_t Write(" <<
         "boost::shared_ptr<contrail::sandesh::protocol::TProtocol> oprot) const;" << endl;
+
+    if (((t_base_type *)t)->is_sandesh_system()) {
+        out << indent() << "static bool do_rate_limit_drop_log_;" << endl;
+
+        out << indent() << "static boost::circular_buffer<time_t>"
+                            " rate_limit_buffer_;" << endl;
+
+        out << indent() << "static tbb::mutex rate_limit_mutex_;" << endl;
+    }
 
     out << endl;
     indent_down();
@@ -2726,6 +2789,24 @@ void t_cpp_generator::generate_sandesh_static_versionsig_def(ofstream& out,
         << tsandesh->get_4byte_fingerprint() << "U;" << endl << endl;
 }
 
+void t_cpp_generator::generate_sandesh_static_rate_limit_buffer_def(
+                                           ofstream& out, t_sandesh* tsandesh) {
+    out << "boost::circular_buffer<time_t> " << tsandesh->get_name() <<
+        "::rate_limit_buffer_(Sandesh::sandesh_send_ratelimit_);" << endl << endl;
+}
+
+void t_cpp_generator::generate_sandesh_static_rate_limit_mutex_def(
+                                           ofstream& out,t_sandesh* tsandesh) {
+    out << "tbb::mutex " << tsandesh->get_name() << "::rate_limit_mutex_; "
+        << endl << endl;
+}
+
+void t_cpp_generator::generate_sandesh_static_rate_limit_log_def(
+                                           ofstream& out, t_sandesh* tsandesh) {
+    out << "bool " << tsandesh->get_name() << "::do_rate_limit_drop_log_ = true;"
+        << endl << endl;
+}
+
 
 /**
  * Makes a helper function to gen a sandesh reader.
@@ -3496,6 +3577,51 @@ void t_cpp_generator::generate_sandesh_trace(ofstream& out,
     indent(out) <<
             "}" << endl << endl;
 }
+
+/*
+ * Generate IsRatelimitPass function
+ *
+ */
+void t_cpp_generator::generate_isRatelimitPass(ofstream& out,
+                                           t_sandesh* tsandesh) {
+    out << indent() << "if (Sandesh::sandesh_send_ratelimit_ == 0) {" << endl;
+    indent_up();
+    out << indent() << "return false;";
+    indent_down();
+    out << indent() << "}" << endl;
+    out << indent() << "tbb::mutex::scoped_lock lock(rate_limit_mutex_);" << endl;
+    out << indent() << "if (rate_limit_buffer_.capacity() !="
+        " Sandesh::sandesh_send_ratelimit_) {" << endl;
+    indent_up();
+    out << indent() << "//Resize the buffer to the "
+        "buffer_threshold_" << endl;
+    out << indent() << "rate_limit_buffer_.rresize(Sandesh::sandesh_send_ratelimit_);"
+        << endl;
+    out << indent() << "rate_limit_buffer_.set_capacity("
+        "Sandesh::sandesh_send_ratelimit_);" << endl;
+    indent_down();
+    out << indent() << "}" << endl;
+    out << indent() << "time_t current_time = time(0);" << endl;
+    out << indent() << "if (rate_limit_buffer_.capacity() == rate_limit_buffer_"
+        ".size()) {" << endl;
+    indent_up();
+    out << indent() << "if (*rate_limit_buffer_.begin() == current_time) {" << endl;
+    indent_up();
+    out << indent() << "//update tx and call droplog" << endl;
+    out << indent() << "//Dont have to log more than once" << endl;
+    out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
+           "\", 0, SandeshTxDropReason::RatelimitDrop);" << endl;
+    out << indent() << "return false;" << endl;
+    indent_down();
+    out << indent() << "}" << endl;
+    indent_down();
+    out << indent() << "}" << endl;
+    out << indent() << "//Should log failure after a sucessful write" << endl;
+    out << indent() << "do_rate_limit_drop_log_ = true;" << endl;
+    out << indent() << "rate_limit_buffer_.push_back(current_time);" << endl;
+    out << indent() << "return true;" << endl;
+}
+
 
 #endif
 
