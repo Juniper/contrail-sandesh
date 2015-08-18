@@ -42,6 +42,10 @@ static void UpdateSandeshMessageStatsDrops(SandeshMessageStats *smstats,
             smstats->messages_sent_dropped_validation_failed++;
             smstats->bytes_sent_dropped_validation_failed += bytes;
             break;
+          case SandeshTxDropReason::RatelimitDrop:
+            smstats->messages_sent_dropped_rate_limited++;
+            smstats->bytes_sent_dropped_rate_limited += bytes;
+            break;
           case SandeshTxDropReason::QueueLevel:
             smstats->messages_sent_dropped_queue_level++;
             smstats->bytes_sent_dropped_queue_level += bytes;
