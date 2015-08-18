@@ -15,6 +15,9 @@ import base64
 import sandesh_logger as sand_logger
 import trace
 import util
+import collections
+import time
+import copy
 
 from gen_py.sandesh.ttypes import SandeshType, SandeshLevel, \
      SandeshTxDropReason
@@ -705,17 +708,59 @@ class SandeshAsync(Sandesh):
             sandesh._logger.error('sandesh "%s" validation failed [%s]'
                                   % (self.__class__.__name__, e))
             return -1
+        #If systemlog message first check if the transmit side buffer
+        # has space
+        if self._type == SandeshType.SYSTEM:
+            if (not self.is_rate_limit_pass(sandesh)):
+                return -1
         self._seqnum = self.next_seqnum()
         if self.handle_test(sandesh):
             return 0
         sandesh.send_sandesh(self)
         return 0
+
+    def is_rate_limit_pass(self,sandesh):
+        #If buffer size 0 return
+        if self.__class__.rate_limit_buffer.maxlen == 0:
+            return False
+        #Check if buffer resize is reqd
+        if (self.__class__.rate_limit_buffer.maxlen != \
+                SandeshSystem._DEFAULT_SEND_RATELIMIT):
+            temp_buffer = copy.deepcopy(self.__class__.rate_limit_buffer)
+            self.__class__.rate_limit_buffer = collections.deque(temp_buffer, \
+                maxlen=SandeshSystem._DEFAULT_SEND_RATELIMIT)
+            del temp_buffer
+        cur_time=int(time.time())
+        #Check if circular buffer is full
+        if len(self.__class__.rate_limit_buffer) == \
+            self.__class__.rate_limit_buffer.maxlen :
+            # Read the element in buffer and compare with cur_time
+            if(self.__class__.rate_limit_buffer[0] == cur_time):
+                #Sender generating more messages/sec than the
+                #buffer_threshold size
+                sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
+                     0, SandeshTxDropReason.RatelimitDrop)
+                if self.__class__.do_rate_limit_drop_log:
+                    sandesh._logger.error('SANDESH: Ratelimit Drop ' \
+                        '(%d messages/sec): for %s' % \
+                        (self.__class__.rate_limit_buffer.maxlen, \
+                         self.__class__.__name__))
+                    #Disable logging
+                    self.__class__.do_rate_limit_drop_log = False
+                return False
+        #If logging is disabled enable it
+        self.__class__.do_rate_limit_drop_log = True
+        self.__class__.rate_limit_buffer.append(cur_time)
+        return True
+
     # end send
 
 # end class SandeshAsync
 
 
 class SandeshSystem(SandeshAsync):
+
+    _DEFAULT_SEND_RATELIMIT = DEFAULT_SANDESH_SEND_RATELIMIT
 
     def __init__(self):
         SandeshAsync.__init__(self)
