@@ -28,7 +28,8 @@ test_modules = [
                 'sandesh_http_test.py',
                 'sandesh_uve_alarm_test.py',
                 'conn_info_test.py',
-                'sandesh_stats_test.py'
+                'sandesh_stats_test.py',
+                'work_queue_test.py'
                ]
 
 test_modules_rules = []
