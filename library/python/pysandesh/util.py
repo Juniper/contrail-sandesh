@@ -26,6 +26,12 @@ def UTCTimestampUsecToString(utc_usec):
 # end UTCTimestampUsecToString
 
 
+def enum(*sequential, **named):
+    enums = dict(zip(sequential, range(len(sequential))), **named)
+    return type('Enum', (), enums)
+# end enum
+
+
 def import_class(import_str):
     """Returns a class from a string including module and class."""
     mod_str, _sep, class_str = import_str.rpartition('.')
