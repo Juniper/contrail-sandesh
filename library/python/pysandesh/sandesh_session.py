@@ -7,12 +7,14 @@
 #
 
 import socket
+import sys
+from functools import partial
 from transport import TTransport
 from protocol import TXMLProtocol
-from work_queue import WorkQueue
+from work_queue import WorkQueue, WaterMark
 from tcp_session import TcpSession
 from sandesh_logger import SandeshLogger
-from gen_py.sandesh.ttypes import SandeshTxDropReason
+from gen_py.sandesh.ttypes import SandeshLevel, SandeshTxDropReason
 
 _XML_SANDESH_OPEN = '<sandesh length="0000000000">'
 _XML_SANDESH_OPEN_ATTR_LEN = '<sandesh length="'
@@ -168,15 +170,13 @@ class SandeshWriter(object):
         # write the sandesh header
         if sandesh_hdr.write(protocol) < 0:
             if sandesh_instance is not None:
-                sandesh_instance.msg_stats().update_tx_stats(
-                    sandesh.__class__.__name__, 0,
+                sandesh_instance.drop_tx_sandesh(sandesh,
                     SandeshTxDropReason.HeaderWriteFailed)
             return None
         # write the sandesh
         if sandesh.write(protocol) < 0:
             if sandesh_instance is not None:
-                sandesh_instance.msg_stats().update_tx_stats(
-                    sandesh.__class__.__name__, 0,
+                sandesh_instance.drop_tx_sandesh(sandesh,
                     SandeshTxDropReason.WriteFailed)
             return None
         # get the message
@@ -233,6 +233,34 @@ class SandeshWriter(object):
 # end class SandeshWriter
 
 
+class SandeshSendQueue(WorkQueue):
+
+    _SENDQ_WATERMARKS = [
+        # (size, sandesh_level, is_high_watermark)
+        (150*1024*1024, SandeshLevel.SYS_EMERG, True),
+        (100*1024*1024, SandeshLevel.SYS_ERR, True),
+        (50*1024*1024, SandeshLevel.SYS_DEBUG, True),
+        (125*1024*1024, SandeshLevel.SYS_ERR, False),
+        (75*1024*1024, SandeshLevel.SYS_DEBUG, False),
+        (25*1024*1024, SandeshLevel.INVALID, False)]
+
+    class Element(object):
+        def __init__(self, sandesh):
+            self.sandesh = sandesh
+            self.size = sys.getsizeof(sandesh)
+    # end class Element
+
+    def increment_queue_size(self, element):
+        self._qsize += element.size
+    # end increment_queue_size
+
+    def decrement_queue_size(self, element):
+        self._qsize -= element.size
+    # end decrement_queue_size
+
+# end class SandeshSendQueue
+
+
 class SandeshSession(TcpSession):
     _KEEPALIVE_IDLE_TIME = 15  # in secs
     _KEEPALIVE_INTERVAL = 3  # in secs
@@ -242,17 +270,35 @@ class SandeshSession(TcpSession):
 
     def __init__(self, sandesh_instance, server, event_handler,
                  sandesh_msg_handler):
+        TcpSession.__init__(self, server)
         self._sandesh_instance = sandesh_instance
         self._logger = sandesh_instance._logger
         self._event_handler = event_handler
         self._reader = SandeshReader(self, sandesh_msg_handler)
         self._writer = SandeshWriter(self)
-        self._send_queue = WorkQueue(self._send_sandesh,
-                                     self._is_ready_to_send_sandesh)
-        TcpSession.__init__(self, server)
+        self._send_queue = SandeshSendQueue(self._send_sandesh,
+                                            self._is_ready_to_send_sandesh)
+        self.set_send_queue_watermarks(SandeshSendQueue._SENDQ_WATERMARKS)
     # end __init__
 
     # Public functions
+
+    def set_send_queue_watermarks(self, watermarks):
+        # watermarks is a list of tuples
+        # (size, sandesh_level, is_high_watermark)
+        wm_callback = self._sandesh_instance.set_send_level
+        high_wm = []
+        low_wm = []
+        for wm in watermarks:
+            if wm[2] is True:
+                high_wm.append(WaterMark(wm[0], partial(wm_callback,
+                                    sandesh_level=wm[1])))
+            else:
+                low_wm.append(WaterMark(wm[0], partial(wm_callback,
+                                    sandesh_level=wm[1])))
+        self._send_queue.set_high_watermarks(high_wm)
+        self._send_queue.set_low_watermarks(low_wm)
+    # end set_send_queue_watermarks
 
     def sandesh_instance(self):
         return self._sandesh_instance
@@ -267,7 +313,7 @@ class SandeshSession(TcpSession):
     # end is_connected
 
     def enqueue_sandesh(self, sandesh):
-        self._send_queue.enqueue(sandesh)
+        self._send_queue.enqueue(SandeshSendQueue.Element(sandesh))
     # end enqueue_sandesh
 
     def send_queue(self):
@@ -317,7 +363,8 @@ class SandeshSession(TcpSession):
 
     # Private functions
 
-    def _send_sandesh(self, sandesh):
+    def _send_sandesh(self, queue_element):
+        sandesh = queue_element.sandesh
         if self._send_queue.is_queue_empty():
             more = False
         else:
@@ -326,8 +373,7 @@ class SandeshSession(TcpSession):
             if self._sandesh_instance.is_logging_dropped_allowed(sandesh):
                 self._logger.error(
                     "SANDESH: %s: %s" % ("Not connected", sandesh.log()))
-            self._sandesh_instance.msg_stats().update_tx_stats(
-                sandesh.__class__.__name__, 0,
+            self._sandesh_instance.drop_tx_sandesh(sandesh,
                 SandeshTxDropReason.SessionNotConnected)
             return
         if sandesh.is_logging_allowed(self._sandesh_instance):

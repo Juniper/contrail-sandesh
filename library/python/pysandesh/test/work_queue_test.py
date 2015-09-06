@@ -40,7 +40,7 @@ class WaterMarkCbInfo(object):
         self.wm_cb_count = 0
     # end __init__
 
-    def callback(self, qsize, wm_cb_type=cb_type):
+    def callback(self, qsize, wm_cb_type):
         self.wm_cb_qsize = qsize
         self.wm_cb_type = wm_cb_type
         self.wm_cb_count += 1

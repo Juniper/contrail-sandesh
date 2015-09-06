@@ -5,20 +5,21 @@
 #
 # Sandesh
 #
+
 import importlib
 import os
+import sys
 import pkgutil
-
 import gevent
 import json
 import base64
-import sandesh_logger as sand_logger
-import trace
-import util
 import collections
 import time
 import copy
 
+import sandesh_logger as sand_logger
+import trace
+import util
 from gen_py.sandesh.ttypes import SandeshType, SandeshLevel, \
      SandeshTxDropReason
 from gen_py.sandesh.constants import *
@@ -80,6 +81,7 @@ class Sandesh(object):
         self._collectors = collectors
         self._connect_to_collector = connect_to_collector
         self._rcv_queue = WorkQueue(self._process_rx_sandesh)
+        self._send_level = SandeshLevel.INVALID
         self._init_logger(module, logger_class=logger_class,
                           logger_config_file=logger_config_file)
         self._logger.info('SANDESH: CONNECT TO COLLECTOR: %s',
@@ -214,6 +216,18 @@ class Sandesh(object):
                     connection.session().send_queue().may_be_start_runner()
     # end set_send_queue
 
+    def set_send_level(self, count, sandesh_level):
+        if self._send_level != sandesh_level:
+            self._logger.info('Sandesh Send Level [%s] -> [%s]' % \
+                              (SandeshLevel._VALUES_TO_NAMES[self._send_level],
+                               SandeshLevel._VALUES_TO_NAMES[sandesh_level]))
+            self._send_level = sandesh_level
+    # end set_send_level
+
+    def send_level(self):
+        return self._send_level
+    # end send_level
+
     def init_collector(self):
         pass
     # end init_collector
@@ -340,7 +354,7 @@ class Sandesh(object):
 
     def handle_test(self, sandesh_init):
         if sandesh_init.is_unit_test() or self._is_level_ut():
-            if self._is_logging_allowed(sandesh_init):
+            if self.is_logging_allowed(sandesh_init):
                 sandesh_init._logger.debug(self.log())
                 return True
         return False
@@ -373,16 +387,25 @@ class Sandesh(object):
             self._client.send_sandesh(tx_sandesh)
         else:
             if self._connect_to_collector:
-                if self.is_logging_dropped_allowed(tx_sandesh):
-                    self._logger.error('SANDESH: No Client: %s',
-                                       tx_sandesh.log())
+                self.drop_tx_sandesh(tx_sandesh, SandeshTxDropReason.NoClient,
+                    tx_sandesh.level())
             else:
-                self._logger.log(
-                    sand_logger.SandeshLogger.get_py_logger_level(
-                        tx_sandesh.level()), tx_sandesh.log())
-            self._msg_stats.update_tx_stats(tx_sandesh.__class__.__name__,
-                0, SandeshTxDropReason.NoClient)
+                self.drop_tx_sandesh(tx_sandesh, SandeshTxDropReason.NoClient)
     # end send_sandesh
+
+    def drop_tx_sandesh(self, tx_sandesh, drop_reason, level=None):
+        self._msg_stats.update_tx_stats(tx_sandesh.__class__.__name__,
+            sys.getsizeof(tx_sandesh), drop_reason)
+        if self.is_logging_dropped_allowed(tx_sandesh):
+            if level is not None:
+                self._logger.log(
+                    sand_logger.SandeshLogger.get_py_logger_level(level),
+                    tx_sandesh.log())
+            else:
+                self._logger.error('SANDESH: [DROP: %s] %s' % \
+                    (SandeshTxDropReason._VALUES_TO_NAMES[drop_reason],
+                     tx_sandesh.log()))
+    # end drop_tx_sandesh
 
     def send_generator_info(self):
         from gen_py.sandesh_uve.ttypes import SandeshClientInfo, \
@@ -703,15 +726,17 @@ class SandeshAsync(Sandesh):
         try:
             self.validate()
         except e:
-            sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
-                0, SandeshTxDropReason.ValidationFailed)
-            sandesh._logger.error('sandesh "%s" validation failed [%s]'
-                                  % (self.__class__.__name__, e))
+            sandesh.drop_tx_sandesh(self, SandeshTxDropReason.ValidationFailed)
             return -1
-        #If systemlog message first check if the transmit side buffer
+        if self._level >= sandesh.send_level():
+            sandesh.drop_tx_sandesh(self, SandeshTxDropReason.QueueLevel)
+            return -1
+        # For systemlog message, first check if the transmit side buffer
         # has space
         if self._type == SandeshType.SYSTEM:
             if (not self.is_rate_limit_pass(sandesh)):
+                sandesh.drop_tx_sandesh(self,
+                    SandeshTxDropReason.RatelimitDrop)
                 return -1
         self._seqnum = self.next_seqnum()
         if self.handle_test(sandesh):
@@ -738,8 +763,6 @@ class SandeshAsync(Sandesh):
             if(self.__class__.rate_limit_buffer[0] == cur_time):
                 #Sender generating more messages/sec than the
                 #buffer_threshold size
-                sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
-                     0, SandeshTxDropReason.RatelimitDrop)
                 if self.__class__.do_rate_limit_drop_log:
                     sandesh._logger.error('SANDESH: Ratelimit Drop ' \
                         '(%d messages/sec): for %s' % \
@@ -811,10 +834,7 @@ class SandeshRequest(Sandesh):
         try:
             self.validate()
         except e:
-            sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
-                0, SandeshTxDropReason.ValidationFailed)
-            sandesh._logger.error('sandesh "%s" validation failed [%s]'
-                                  % (self.__class__.__name__, e))
+            sandesh.drop_tx_sandesh(self, SandeshTxDropReason.ValidationFailed)
             return -1
         if context == 'ctrl':
             self._hints |= SANDESH_CONTROL_HINT
@@ -841,10 +861,7 @@ class SandeshResponse(Sandesh):
         try:
             self.validate()
         except e:
-            sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
-                0, SandeshTxDropReason.ValidationFailed)
-            sandesh._logger.error('sandesh "%s" validation failed [%s]'
-                                  % (self.__class__.__name__, e))
+            sandesh.drop_tx_sandesh(self, SandeshTxDropReason.ValidationFailed)
             return -1
         self._context = context
         self._more = more
@@ -874,10 +891,7 @@ class SandeshUVE(Sandesh):
         try:
             self.validate()
         except e:
-            sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
-                0, SandeshTxDropReason.ValidationFailed)
-            sandesh._logger.error('sandesh "%s" validation failed [%s]'
-                                  % (self.__class__.__name__, e))
+            sandesh.drop_tx_sandesh(self, SandeshTxDropReason.ValidationFailed)
             return -1
         if isseq is True:
             self._seqnum = seqno
@@ -887,16 +901,15 @@ class SandeshUVE(Sandesh):
                 self.__class__.__name__)
             if uve_type_map is None:
                 sandesh._logger.error('sandesh uve <%s> not registered: %s'\
-                    % (self.__class__.__name__, self.log()))
-                sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
-                    0, SandeshTxDropReason.ValidationFailed)
+                    % (self.__class__.__name__))
+                sandesh.drop_tx_sandesh(self,
+                    SandeshTxDropReason.ValidationFailed)
                 return -1
             self._seqnum = self.next_seqnum()
             if not uve_type_map.update_uve(self):
-                sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
-                    0, SandeshTxDropReason.ValidationFailed)
-                sandesh._logger.error('Failed to update sandesh in cache. '
-                                      + self.log())
+                sandesh._logger.error('Failed to update sandesh in cache')
+                sandesh.drop_tx_sandesh(self,
+                    SandeshTxDropReason.ValidationFailed)
                 return -1
         self._context = context
         self._more = more
@@ -932,10 +945,9 @@ class SandeshAlarm(SandeshUVE):
                              'timestamp': alarm.timestamp}
                     alarm.token = base64.b64encode(json.dumps(token))
         except Exception as e:
-            sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
-                0, SandeshTxDropReason.ValidationFailed)
             sandesh._logger.error('Failed to encode token for sandesh alarm: %s'
                                   % (str(e)))
+            sandesh.drop_tx_sandesh(self, SandeshTxDropReason.ValidationFailed)
             return -1
         else:
             return super(SandeshAlarm, self).send(isseq, seqno, context,
@@ -959,10 +971,7 @@ class SandeshTrace(Sandesh):
         try:
             self.validate()
         except e:
-            sandesh.msg_stats().update_tx_stats(self.__class__.__name__,
-                0, SandeshTxDropReason.ValidationFailed)
-            sandesh._logger.error('sandesh "%s" validation failed [%s]'
-                                  % (self.__class__.__name__, e))
+            sandesh.drop_tx_sandesh(self, SandeshTxDropReason.ValidationFailed)
             return -1
         self._context = context
         self._more = more
