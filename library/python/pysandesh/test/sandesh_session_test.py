@@ -18,7 +18,9 @@ import test_utils
 sys.path.insert(1, sys.path[0]+'/../../../python')
 
 from pysandesh import sandesh_session
+from pysandesh.sandesh_session import *
 from pysandesh.sandesh_base import *
+from pysandesh.test.gen_py.msg_test.ttypes import *
 
 sandesh_test_started = False
 
@@ -250,5 +252,94 @@ class SandeshWriterTest(unittest.TestCase):
 
 #end class SandeshWriterTest
 
+
+class SandeshSendQueueTest(unittest.TestCase):
+
+    def setUp(self):
+        self.maxDiff = None
+        self.sandesh_sendq = SandeshSendQueue(self.sandesh_queue_callback)
+    # end setUp
+
+    def tearDown(self):
+        pass
+    # end tearDown
+
+    def sandesh_queue_callback(self):
+        pass
+    # end sandesh_queue_callback
+
+    def test_sandesh_send_queue_size(self):
+        # enqueue sandesh and verify that the queue size is incremented
+        # by sandesh size
+        systemlog = SystemLogTest()
+        self.sandesh_sendq.enqueue(SandeshSendQueue.Element(systemlog))
+        expected_qsize = sys.getsizeof(systemlog)
+        self.assertEqual(expected_qsize, self.sandesh_sendq.size())
+
+        # enqueue one more entry
+        objectlog = ObjectLogTest(StructObject())
+        self.sandesh_sendq.enqueue(SandeshSendQueue.Element(objectlog))
+        expected_qsize += sys.getsizeof(objectlog)
+        self.assertEqual(expected_qsize, self.sandesh_sendq.size())
+
+        # dequeue sandesh and verify that the queue size is decremented
+        # by sandesh size
+        self.sandesh_sendq.dequeue()
+        expected_qsize -= sys.getsizeof(systemlog)
+        self.assertEqual(expected_qsize, self.sandesh_sendq.size())
+
+        # dequeue last entry
+        self.sandesh_sendq.dequeue()
+        expected_qsize = 0
+        self.assertEqual(expected_qsize, self.sandesh_sendq.size())
+    # end test_sandesh_send_queue_size
+
+# end class SandeshSendQueueTest
+
+
+class SandeshSessionTest(unittest.TestCase):
+
+    def setUp(self):
+        self.sandesh_instance = Sandesh()
+        self.sandesh_instance.init_generator('SandeshSessionTest', 'localhost',
+            'UT', 0, None, 'context', -1, connect_to_collector=False)
+    # end setUp
+
+    def tearDown(self):
+        pass
+    # end tearDown
+
+    def verify_watermarks(self, expected_wms, actual_wms):
+        expected_wms.sort()
+        actual_wms.sort()
+        print '== verify watermarks =='
+        print expected_wms
+        self.assertEqual(len(expected_wms), len(actual_wms))
+        for i in range(len(expected_wms)):
+            self.assertEqual(expected_wms[i][0], actual_wms[i].size)
+            # Invoke the watermark callback and verify that the
+            # send_level is set correctly
+            actual_wms[i].callback(expected_wms[i][0])
+            self.assertEqual(expected_wms[i][1],
+                             self.sandesh_instance.send_level())
+    # end verify_watermarks
+
+    def test_send_queue_watermarks(self):
+        session = SandeshSession(self.sandesh_instance, None, None, None)
+        wms = SandeshSendQueue._SENDQ_WATERMARKS
+        # verify high watermarks are set properly in sandesh send queue
+        high_wms = [wm for wm in wms if wm[2] is True]
+        sendq_hwms = session.send_queue().high_watermarks()
+        self.verify_watermarks(high_wms, sendq_hwms)
+
+        # verify low watermarks are set properly in sandesh send queue
+        low_wms = [wm for wm in wms if wm[2] is False]
+        sendq_lwms = session.send_queue().low_watermarks()
+        self.verify_watermarks(low_wms, sendq_lwms)
+    # end test_send_queue_watermarks
+
+# end class SandeshSessionTest
+
+
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(verbosity=2, catchbreak=True)

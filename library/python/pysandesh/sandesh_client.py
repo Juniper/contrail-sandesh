@@ -46,18 +46,11 @@ class SandeshClient(object):
             self._connection.session().enqueue_sandesh(sandesh)
         else:
             if (self._connection.session() is None):
-                error_str = "No Connection"
-                self._sandesh_instance.msg_stats().update_tx_stats(
-                    sandesh.__class__.__name__, 0,
+                self._sandesh_instance.drop_tx_sandesh(sandesh,
                     SandeshTxDropReason.NoSession)
             else:
-                error_str = "No ModuleId"
-                self._sandesh_instance.msg_stats().update_tx_stats(
-                    sandesh.__class__.__name__, 0,
+                self._sandesh_instance.drop_tx_sandesh(sandesh,
                     SandeshTxDropReason.ClientSendFailed)
-            if self._sandesh_instance.is_logging_dropped_allowed(sandesh):
-                self._logger.error(
-                    "SANDESH: %s: %s" % (error_str, sandesh.log()))
         return 0
     #end send_sandesh
 

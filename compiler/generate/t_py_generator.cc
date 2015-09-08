@@ -134,6 +134,7 @@ class t_py_generator : public t_generator {
   void generate_py_function_helpers(t_function* tfunction);
 #ifdef SANDESH
   void generate_py_struct_logger(std::ofstream& out, t_struct* tstruct);
+  void generate_py_struct_sizeof(std::ofstream& out, t_struct* tstruct);
 #endif
 
   /**
@@ -166,6 +167,11 @@ class t_py_generator : public t_generator {
   void generate_py_sandesh_alarm_list(std::ofstream& out);
   void generate_py_sandesh_alarm_data_list(std::ofstream& out);
   void generate_py_sandesh_trace(std::ofstream& out, t_sandesh* tsandesh);
+  void generate_py_sandesh_sizeof(std::ofstream& out, t_sandesh* tsandesh);
+#endif
+
+#ifdef SANDESH
+  void generate_py_sizeof(std::ofstream& out, const vector<t_field*>& fields);
 #endif
 
   /**
@@ -505,7 +511,9 @@ string t_py_generator::render_sandesh_includes() {
   std::string sandesh_includes("\n");
   sandesh_includes += 
     "import cStringIO\n"
-    "import uuid\n";
+    "import uuid\n"
+    "from sys import getsizeof\n"
+    "from itertools import chain\n";
   if (module != "sandesh") {
     sandesh_includes +=
       "import bottle\n"
@@ -965,6 +973,7 @@ void t_py_generator::generate_py_struct_definition(ofstream& out,
 
 #ifdef SANDESH
   generate_py_struct_logger(out, tstruct);
+  generate_py_struct_sizeof(out, tstruct);
 #endif
 
   // For exceptions only, generate a __str__ method. This is
@@ -1521,6 +1530,7 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
   }
 
   generate_py_sandesh_compare(out, tsandesh);
+  generate_py_sandesh_sizeof(out, tsandesh);
 
   if (!gen_slots_) {
     // Printing utilities so that on the command line thrift
@@ -2244,6 +2254,47 @@ void t_py_generator::generate_py_struct_logger(ofstream &out,
   indent(out) <<
     "return log_str.getvalue()" << endl << endl;
   indent_down();
+}
+
+void t_py_generator::generate_py_sizeof(std::ofstream& out,
+                                        const vector<t_field*>& fields) {
+  indent(out) << "def __sizeof__(self):" << endl;
+  indent_up();
+  indent(out) << "size = 0" << endl;
+  vector<t_field*>::const_iterator f_iter;
+  for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
+    std::string fname((*f_iter)->get_name());
+    indent(out) << "if self." << fname << " is not None:" << endl;
+    indent_up();
+    indent(out) << "size += getsizeof(self." << fname << ")" << endl;
+    t_type* type = get_true_type((*f_iter)->get_type());
+    if (type->is_container()) {
+      if (type->is_map()) {
+        indent(out) <<
+          "size += sum(map(getsizeof, chain.from_iterable(self." <<
+          fname << ")))" << endl;
+
+      } else {
+        indent(out) <<
+          "size += sum(map(getsizeof, self." << fname << "))" << endl;
+      }
+    }
+    indent_down();
+  }
+  indent(out) << "return size" << endl << endl;
+  indent_down();
+}
+
+void t_py_generator::generate_py_struct_sizeof(std::ofstream& out,
+                                               t_struct* tstruct) {
+    const vector<t_field*>& fields = tstruct->get_members();
+    generate_py_sizeof(out, fields);
+}
+
+void t_py_generator::generate_py_sandesh_sizeof(std::ofstream& out,
+                                                t_sandesh* tsandesh) {
+    const vector<t_field*>& fields = tsandesh->get_members();
+    generate_py_sizeof(out, fields);
 }
 
 void t_py_generator::generate_py_sandesh_hint(ofstream& out,
