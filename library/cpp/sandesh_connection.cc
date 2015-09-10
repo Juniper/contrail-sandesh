@@ -82,7 +82,9 @@ bool SandeshConnection::SendSandesh(Sandesh *snh) {
         return false;
     }
     // XXX No bounded work queue
-    session_->send_queue()->Enqueue(snh);
+    Element element;
+    element.snh=snh;
+    session_->send_queue()->Enqueue(element);
     return true;
 }
 

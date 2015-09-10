@@ -120,10 +120,12 @@ class SandeshMessageStats;
 class SandeshConnection;
 class SandeshRequest;
 
+struct Element;
+
 class Sandesh {
 public:
     typedef WorkQueue<SandeshRequest *> SandeshRxQueue;
-    typedef WorkQueue<Sandesh *> SandeshQueue;
+    typedef WorkQueue<Element> SandeshQueue;
     typedef WorkQueue<
             boost::shared_ptr<contrail::sandesh::transport::TMemoryBuffer> >
             SandeshBufferQueue;
@@ -200,6 +202,9 @@ public:
     static void SetLoggingCategory(std::string category);
     static std::string LoggingCategory() { return logging_category_; }
     static void SendLoggingResponse(std::string context);
+
+    //GetSize method to report the size
+    virtual const size_t GetSize() = 0;
 
     // Send queue processing
     static void SetSendQueue(bool enable);
@@ -292,6 +297,7 @@ public:
         sandesh_send_ratelimit_ = rate_limit;
     }
     static uint32_t get_send_rate_limit() { return sandesh_send_ratelimit_; }
+
 
 protected:
     void set_timestamp(time_t timestamp) { timestamp_ = timestamp; }
@@ -389,6 +395,21 @@ private:
     std::string name_;
     static tbb::atomic<uint32_t> sandesh_send_ratelimit_;
 };
+
+struct Element {
+    Sandesh *snh;
+    const size_t GetSize() const {
+        return snh->GetSize();
+    }
+};
+
+template<>
+size_t Sandesh::SandeshQueue::AtomicIncrementQueueCount(
+    Element *element);
+
+template<>
+size_t Sandesh::SandeshQueue::AtomicDecrementQueueCount(
+    Element *element);
 
 #define SANDESH_LOG(_Level, _Msg)                                \
     do {                                                         \
