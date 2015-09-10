@@ -119,6 +119,13 @@ class t_cpp_generator : public t_oop_generator {
   void generate_logger_map_element   (std::ofstream& out, t_map* tmap, string iter, bool log_value_only);
   void generate_logger_set_element   (std::ofstream& out, t_set* tset, string iter, bool log_value_only);
   void generate_logger_list_element   (std::ofstream& out, t_list* tlist, string iter, bool log_value_only);
+  void generate_sandesh_get_size     (std::ofstream& out, t_sandesh* tsandesh);
+  void generate_get_size_field       (std::ofstream& out, t_field *tfield);
+  void generate_get_size_struct      (std::ofstream& out, t_struct *tstruct, string name);
+  void generate_get_size_container   (std::ofstream& out, t_type* ttype, string name);
+  void generate_get_size_map_element (std::ofstream& out, t_map* tmap, string name);
+  void generate_get_size_list_element(std::ofstream& out, t_list* ttype, string name);
+  void generate_get_size_set_element (std::ofstream& out, t_set* ttype, string name);
   void generate_sandesh_trace        (std::ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_context      (std::ofstream& out, t_sandesh* tsandesh, string val);
   void generate_sandesh_seqnum(std::ofstream& out, t_sandesh* tsandesh);
@@ -159,6 +166,8 @@ class t_cpp_generator : public t_oop_generator {
 #ifdef SANDESH
   void generate_static_const_string_definition(std::ofstream& out, t_struct* tstruct);
   void generate_struct_logger        (ofstream& out, const string& name,
+                                             const vector<t_field*>& fields);
+  void generate_struct_get_size      (ofstream& out, const string& name,
                                              const vector<t_field*>& fields);
 #endif
 
@@ -941,6 +950,7 @@ void t_cpp_generator::generate_cpp_struct(t_struct* tstruct, bool is_exception) 
   generate_struct_writer(out, tstruct);
 #ifdef SANDESH
   generate_struct_logger(out, tstruct->get_name(), tstruct->get_members());
+  generate_struct_get_size(out, tstruct->get_name(), tstruct->get_members());
 #endif
 }
 
@@ -974,6 +984,7 @@ void t_cpp_generator::generate_cpp_sandesh(t_sandesh* tsandesh) {
     generate_sandesh_reader(out, tsandesh);
     generate_sandesh_writer(out, tsandesh);
     generate_sandesh_loggers(out, tsandesh);
+    generate_sandesh_get_size(out, tsandesh);
 
     if (!is_trace) {
         generate_sandesh_static_seqnum_def(out, tsandesh);
@@ -1866,6 +1877,8 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
 
     out << indent() << "std::string ToString() const;" << endl;
 
+    out << indent() << "size_t GetSize() const;" << endl;
+
     // Private members
     out << endl;
     out << "private:" << endl << endl;
@@ -2244,6 +2257,7 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   }
 #ifdef SANDESH
   out << indent() << "std::string log() const;" << endl;
+  out << indent() << "size_t GetSize() const;" << endl;
 #endif
   out << endl;
 
@@ -2695,6 +2709,28 @@ void t_cpp_generator::generate_struct_writer(ofstream& out,
 }
 
 #ifdef SANDESH
+/**
+ * Generate get size for structs
+ *
+ * @param out Stream to write to
+ * @param tstruct The struct tstruct->get_members() tstruct->get_name()
+ */
+void t_cpp_generator::generate_struct_get_size(ofstream& out, const string& name,
+                                             const vector<t_field*>& fields) {
+    //Generate GetSize function to return size of sandesh
+     indent(out) << "size_t " << name <<
+                "::GetSize() const {" << endl;
+     indent_up();
+     indent(out) << "size_t size = 0;" << endl;
+     vector<t_field*>::const_iterator f_iter;
+     for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
+         generate_get_size_field(out, *f_iter);
+     }
+     indent(out) << "return size;" << endl;
+     indent_down();
+     indent(out) << "}" << endl << endl;
+}
+
 /**
  * Generate logger for structs
  *
@@ -3254,6 +3290,35 @@ void t_cpp_generator::generate_sandesh_creator(ofstream& out,
 }
 
 /**
+ * finds size of a field of any type.
+ */
+void t_cpp_generator::generate_get_size_field(ofstream& out, t_field *tfield) {
+    t_type* type = get_true_type(tfield->get_type());
+    string name = tfield->get_name();
+    // Handle optional elements
+    if (tfield->get_req() == t_field::T_OPTIONAL) {
+        out << indent() << "if (__isset." << name << ") {" <<
+                endl;
+        indent_up();
+    }
+    if (type->is_struct()) {
+        generate_get_size_struct(out, (t_struct *)type, name);
+    } else if (type->is_container()) {
+        generate_get_size_container(out, type, name);
+    } else if (type->is_string() || type->is_xml() ||
+               type->is_static_const_string()) {
+        out << indent() << "size += " << name << ".length();" << endl;
+    } else {
+        out << indent() << "size += sizeof(" + name +");" << endl;
+    }
+    // Handle optional elements
+    if (tfield->get_req() == t_field::T_OPTIONAL) {
+        indent_down();
+        out << indent() << "}" << endl;
+    }
+}
+
+/**
  * Logs a field of any type.
  */
 void t_cpp_generator::generate_logger_field(ofstream& out,
@@ -3329,6 +3394,62 @@ void t_cpp_generator::generate_logger_field(ofstream& out,
 }
 
 /**
+ * Generate code to find size of a container
+ */
+void t_cpp_generator::generate_get_size_container(ofstream& out,
+                                                t_type* ttype,
+                                                string name) {
+    scope_up(out);
+    string iter = tmp("_iter");
+    out << indent() << type_name(ttype) << "::const_iterator " << iter
+        << ";" << endl;
+    out << indent() << "for (" << iter << " = " << name  << ".begin(); "
+        << iter << " != " << name << ".end(); ++" << iter << ")" << endl;
+    scope_up(out);
+    if (ttype->is_map()) {
+        generate_get_size_map_element(out, (t_map *)ttype, iter);
+    } else if(ttype->is_set()) {
+        generate_get_size_set_element(out, (t_set *)ttype, iter);
+    } else if(ttype->is_list()) {
+        generate_get_size_list_element(out, (t_list *)ttype, iter);
+    }
+    scope_down(out);
+    scope_down(out);
+}
+
+/**
+ * Generate code to find size of a map element
+ */
+void t_cpp_generator::generate_get_size_map_element(ofstream& out,
+                                                  t_map* tmap,
+                                                  string iter) {
+     t_field kfield(tmap->get_key_type(), iter + "->first");
+     generate_get_size_field(out, &kfield);
+     t_field vfield(tmap->get_val_type(), iter + "->second");
+     generate_get_size_field(out, &vfield);
+}
+
+/**
+ * Generate code to find size of list element
+ */
+void t_cpp_generator::generate_get_size_list_element(ofstream& out,
+                                                  t_list* tlist,
+                                                  string iter) {
+    t_field efield(tlist->get_elem_type(), "(*" + iter + ")");
+    generate_get_size_field(out, &efield);
+}
+
+/**
+ * Generate code to find size of set element
+ */
+void t_cpp_generator::generate_get_size_set_element(ofstream& out,
+                                                  t_set* tset,
+                                                  string iter) {
+    t_field efield(tset->get_elem_type(), "(*" + iter + ")");
+    generate_get_size_field(out, &efield);
+}
+
+/**
  * Generate code to log a container
  */
 void t_cpp_generator::generate_logger_container(ofstream& out,
@@ -3392,6 +3513,16 @@ void t_cpp_generator::generate_logger_list_element(ofstream& out,
     string prefix = "\" \" << ";
     t_field efield(tlist->get_elem_type(), "(*" + iter + ")");
     generate_logger_field(out, &efield, prefix, log_value_only, true);
+}
+
+/**
+ * Generate code to find size of a struct.
+ */
+void t_cpp_generator::generate_get_size_struct(ofstream& out,
+                                             t_struct *tstruct,
+                                             string name) {
+    (void) tstruct;
+    out << indent() << "size += " << name << ".GetSize();" << endl;
 }
 
 /**
@@ -3523,6 +3654,29 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
         assert(0);
         break;
     }
+}
+
+/**
+ * Generate GetSize for sandesh
+ *
+ * @param out The output stream
+ * @param tsandesh The sandesh
+ */
+void t_cpp_generator::generate_sandesh_get_size(ofstream& out,
+                                               t_sandesh* tsandesh) {
+     //Generate GetSize function to return size of sandesh
+     indent(out) << "size_t " << tsandesh->get_name() <<
+                "::GetSize() const {" << endl;
+     indent_up();
+     indent(out) << "size_t size = 0;" << endl;
+     const vector<t_field*>& fields = tsandesh->get_members();
+     vector<t_field*>::const_iterator f_iter;
+     for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
+         generate_get_size_field(out, *f_iter);
+     }
+     indent(out) << "return size;" << endl;
+     indent_down();
+     indent(out) << "}" << endl << endl;
 }
 
 /**

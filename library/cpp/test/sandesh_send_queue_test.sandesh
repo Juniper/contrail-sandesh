@@ -1,0 +1,38 @@
+/*
+ * Copyright (c) 2015 Juniper Networks, Inc. All rights reserved.
+ */
+
+/*
+ * sandesh_send_queue_test.sandesh
+ *
+ * Sandesh definitions for sandesh_send_queue test
+ */
+
+struct SandeshListTestElement {
+    1: i32                           i32Elem;
+}
+
+struct SandeshStructTest {
+    1: "Const static string is";
+    2: i32                           i32Test;
+    3: list<SandeshListTestElement>  listTest;
+    4: list<i32>                     basicTypeListTest;
+    5: map<i32, string>              basicTypeMapTest;
+    6: map<i32, SandeshListTestElement> complexTypeMapTest;
+    7: u16                           u16Test;
+    8: u32                           u32Test;
+    9: u64                           u64Test;
+    10: xml                          xmlTest;
+    11: xml                          xmlTest1;
+    12: xml                          xmlTest2;
+    13: xml                          xmlTest3;
+    14: ipv4                         ipv4Test;
+    15: uuid_t                       uuidTest;
+    16: list<uuid_t>                 uuidListTest;
+    17: uuid_t                       uuidDefaultTest = "00010203-0405-0607-0423-023434265323";
+}
+
+response sandesh SandeshResponseTest {
+    1: SandeshStructTest data
+}
+

@@ -82,8 +82,8 @@ protected:
     virtual void TearDown() {
     }
 
-    bool DequeueSandesh(Sandesh *entry) {
-        entry->Release();
+    bool DequeueSandesh(SandeshElement element) {
+        element.snh_->Release();
         return true;
     }
 
@@ -137,7 +137,8 @@ struct WorkQueueDelete<SandeshPerfTestEnqueue::TestStructPool *> {
 TEST_F(SandeshPerfTestEnqueue, DISABLED_SandeshEnqueue) {
     for (int i = 0; i < 1000000; i++) {
         PerfTestSandesh *sandesh = new PerfTestSandesh();
-        sandesh_queue_->Enqueue(sandesh);
+        SandeshElement element(sandesh);
+        sandesh_queue_->Enqueue(element);
     }
     sandesh_queue_->Shutdown();   
 }

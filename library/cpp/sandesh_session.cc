@@ -285,7 +285,8 @@ SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
     reader_(new SandeshReader(this)),
     send_queue_(new Sandesh::SandeshQueue(writer_task_id,
             task_instance,
-            boost::bind(&SandeshSession::SendMsg, this, _1))),
+            boost::bind(&SandeshSession::SendMsg, this, _1),
+            kQueueSize)),
     keepalive_idle_time_(kSessionKeepaliveIdleTime),
     keepalive_interval_(kSessionKeepaliveInterval),
     keepalive_probes_(kSessionKeepaliveProbes),
@@ -350,7 +351,8 @@ void SandeshSession::OnRead(Buffer buffer) {
     reader_->OnRead(buffer);
 }
 
-bool SandeshSession::SendMsg(Sandesh *sandesh) {
+bool SandeshSession::SendMsg(SandeshElement element) {
+    Sandesh *sandesh = element.snh_;
     tbb::mutex::scoped_lock lock(send_mutex_);
     if (!IsEstablished()) {
         if (sandesh->IsLoggingDroppedAllowed()) {
