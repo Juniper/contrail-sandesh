@@ -126,6 +126,9 @@ class Sandesh(object):
     def kill_httpd(self):
         if self._gev_httpd:
             try:
+                self._http_server.stop_http_server()
+                self._http_server = None
+                gevnt.sleep(0)
                 self._gev_httpd.kill()
             except Exception as e:
                 self._logger.debug(str(e))
