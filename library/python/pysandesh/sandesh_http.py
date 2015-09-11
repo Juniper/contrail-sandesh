@@ -78,6 +78,7 @@ class SandeshHttp(object):
         self._jquery_collapse_storage_js_path = None
         self._jquery_collapse_js_path = None
         self._jquery_1_8_1_js_path = None
+        self._svr = None
         try:
             imp_pysandesh = __import__('pysandesh')
         except ImportError:
@@ -95,18 +96,25 @@ class SandeshHttp(object):
 
     #end __init__
 
+    def stop_http_server(self):
+        if self._svr:
+            self._svr.shutdown()
+            self._svr = None
+            self._logger.error('Stopped http server')
+
     def start_http_server(self):
         try:
-            svr = make_server(SandeshHttp._HTTP_SERVER_IP, self._http_port,
-                              self._http_app, SandeshWSGIServer)
+            self._svr = make_server(SandeshHttp._HTTP_SERVER_IP,
+                                    self._http_port,
+                                    self._http_app, SandeshWSGIServer)
         except socket.error as e:
             self._logger.error('Unable to open HTTP Port %d, %s' % (self._http_port, e))
             sys.exit()
-        self._http_port = svr.server_port
+        self._http_port = self._svr.server_port
         self._logger.error('Starting Introspect on HTTP Port %d' % self._http_port)
         self._sandesh.record_port("http", self._http_port)
-        svr.allow_reuse_address = True
-        svr.serve_forever()
+        self._svr.allow_reuse_address = True
+        self._svr.serve_forever()
        
     #end start_http_server
 
