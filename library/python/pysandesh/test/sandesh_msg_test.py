@@ -14,6 +14,8 @@ import os
 import socket
 import test_utils
 import time
+import uuid
+from itertools import chain
 
 sys.path.insert(1, sys.path[0]+'/../../../python')
 
@@ -108,6 +110,63 @@ class SandeshMsgTest(unittest.TestCase):
                 self.assertEqual(queue_level_drop, sandesh_global.msg_stats().\
                     aggregate_stats().messages_sent_dropped_queue_level)
     # end test_sandesh_queue_level_drop
+
+    def test_sandesh_sizeof(self):
+        # test sizeof SystemLogTest sandesh without setting any members
+        system_log = SystemLogTest()
+        exp_system_log_size = sys.getsizeof('Async Test')
+        self.assertEqual(exp_system_log_size, system_log.__sizeof__())
+
+        # test sizeof SystemLogTest by setting list1 and uuid1
+        l1 = [10, 10934, 34]
+        uuid1 = uuid.UUID('{00010203-0405-0607-0809-0a0b0c0d0e0f}')
+        system_log = SystemLogTest(list1=l1, uuid1=uuid1)
+        # verify that the size of individual elements in the list is
+        # accounted while calclulating the size of a list
+        exp_system_log_size += sys.getsizeof(l1)
+        exp_system_log_size += sum(map(sys.getsizeof, l1))
+        exp_system_log_size += sys.getsizeof(uuid1)
+        self.assertEqual(exp_system_log_size, system_log.__sizeof__())
+
+        # test sizeof SystemLogTest by setting list1, uuid1 and map1
+        m1 = {1: 'collector', 2: 'query-engine', 3: 'opserver'}
+        system_log = SystemLogTest(list1=l1, map1=m1, uuid1=uuid1)
+        # verify that the size of individual elements (key, value)
+        # in the map is accounted which calculating the size of a map
+        exp_system_log_size += sys.getsizeof(m1)
+        exp_system_log_size += \
+            sum(map(sys.getsizeof, chain.from_iterable(m1.iteritems())))
+        self.assertEqual(exp_system_log_size, system_log.__sizeof__())
+
+        # test the size of struct
+        exp_struct_obj_size = 0
+        f1 = False
+        lxml1 = '<sandesh>EOM</sandesh>'
+        lxml2 = '<test>sizeof</test>'
+        l1 = [lxml1, lxml2]
+        struct_obj1 = StructObject(flag1=f1, list1=l1)
+        exp_struct_obj_size += sys.getsizeof('Object')
+        exp_struct_obj_size += sys.getsizeof(f1)
+        exp_struct_obj_size += sys.getsizeof(lxml1)
+        exp_struct_obj_size += sys.getsizeof(lxml2)
+        exp_struct_obj_size += sys.getsizeof(l1)
+        self.assertEqual(exp_struct_obj_size, struct_obj1.__sizeof__())
+
+        # test the size of ObjectLogTest
+        objlog = ObjectLogTest(object=struct_obj1)
+        exp_objlog_size = sys.getsizeof(struct_obj1)
+        self.assertEqual(exp_objlog_size, objlog.__sizeof__())
+
+        # modify objlog and verify the size
+        struct_obj2 = StructObject(s1='contrail-collector')
+        list_obj = [struct_obj1, struct_obj2]
+        objlog.object = None
+        objlog.list_obj1 = list_obj
+        exp_objlog_size = sys.getsizeof(list_obj)
+        exp_objlog_size += sys.getsizeof(struct_obj1)
+        exp_objlog_size += sys.getsizeof(struct_obj2)
+        self.assertEqual(exp_objlog_size, objlog.__sizeof__())
+    # end test_sandesh_sizeof
 
 # end class SandeshMsgTest
 

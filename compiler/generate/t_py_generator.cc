@@ -2272,7 +2272,7 @@ void t_py_generator::generate_py_sizeof(std::ofstream& out,
       if (type->is_map()) {
         indent(out) <<
           "size += sum(map(getsizeof, chain.from_iterable(self." <<
-          fname << ")))" << endl;
+          fname << ".iteritems())))" << endl;
 
       } else {
         indent(out) <<
