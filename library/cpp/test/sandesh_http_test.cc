@@ -240,8 +240,10 @@ public:
         evm_.reset(new EventManager());
         ServerThread *st = new ServerThread(evm_.get());
         thread_.reset(st);
-        int port = SandeshHttp::Init(evm_.get(), "sandesh_http_test", 0,
-            boost::bind(&CallbackFn, this, _1));
+        int port;
+        bool success(SandeshHttp::Init(evm_.get(), "sandesh_http_test", 0,
+            boost::bind(&CallbackFn, this, _1), &port));
+        ASSERT_TRUE(success);
         host_url_ << "http://localhost:";
         host_url_ << port << "/";
         LOG(DEBUG, "Serving " << host_url_.str());
