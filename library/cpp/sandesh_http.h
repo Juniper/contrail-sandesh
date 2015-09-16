@@ -26,8 +26,8 @@ public:
     typedef boost::function<int32_t(SandeshRequest *)> RequestCallbackFn;
 
     static void Response(Sandesh *snh, std::string context);
-    static int Init(EventManager *evm, const std::string module,
-        short port, RequestCallbackFn reqcb);
+    static bool Init(EventManager *evm, const std::string module,
+        short port, RequestCallbackFn reqcb, int *hport);
     static void Uninit(void);
 
     class HtmlInfo {
