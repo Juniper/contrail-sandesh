@@ -352,11 +352,13 @@ SandeshHttp::Response(Sandesh *snh, std::string context) {
 //   module : Name of module
 //   port : Port number for HTTP Server (e.g. 8080)
 //
-int
+bool
 SandeshHttp::Init(EventManager *evm, const string module,
-    short port, RequestCallbackFn reqcb) {
-
-    if (hServ_) return hServ_->GetPort();
+    short port, RequestCallbackFn reqcb, int *hport) {
+    if (hServ_) {
+        *hport = hServ_->GetPort();
+        return true;
+    }
     ostringstream index_ss;
    
     SandeshTraceBufferPtr httpbuf(SandeshTraceBufferCreate("httpbuf", 100));
@@ -402,10 +404,17 @@ SandeshHttp::Init(EventManager *evm, const string module,
             boost::bind(&HttpSandeshRequestCallback, hServ_, _1, _2));
     }
 
-    assert(hServ_->Initialize(port));
-    SANDESH_LOG(DEBUG, "Sandesh Http Server Port " << hServ_->GetPort());
-
-    return hServ_->GetPort();
+    bool success(hServ_->Initialize(port));
+    if (success) {
+        int lport(hServ_->GetPort());
+        SANDESH_LOG(DEBUG, "Sandesh Http Server Port: " << lport);
+        *hport = lport;
+        return true;
+    } else {
+        SANDESH_LOG(ERROR, "Failed to initialize Sandesh Http Server Port: "
+            << port);
+        return false;
+    }
 }
 
 // Function to shut down HTTP Server 
