@@ -26,6 +26,7 @@ SandeshMessageTestGenFiles  = env.SandeshGenCpp('sandesh_message_test.sandesh')
 SandeshTraceTestGenFiles = env.SandeshGenCpp('sandesh_trace_test.sandesh')
 SandeshHttpTestGenFiles = env.SandeshGenCpp('sandesh_http_test.sandesh')
 SandeshPerfTestGenFiles = env.SandeshGenCpp('sandesh_perf_test.sandesh')
+SandeshSendQueueTestGenFiles = env.SandeshGenCpp('sandesh_send_queue_test.sandesh')
 
 SandeshRWTestGenSrcs = env.ExtractCpp(SandeshRWTestGenFiles)
 SandeshMessageTestGenSrcs = env.ExtractCpp(SandeshMessageTestGenFiles)
@@ -33,6 +34,7 @@ SandeshTraceTestGenSrcs = env.ExtractCpp(SandeshTraceTestGenFiles)
 SandeshTraceTestGenObjs = env.Object(SandeshTraceTestGenSrcs)
 SandeshHttpTestGenSrcs = env.ExtractCpp(SandeshHttpTestGenFiles)
 SandeshPerfTestGenSrcs = env.ExtractCpp(SandeshPerfTestGenFiles)
+SandeshSendQueueTestGenSrcs = env.ExtractCpp(SandeshSendQueueTestGenFiles)
 
 SandeshLibPath = ['#/build/lib',
                   Dir(env['TOP']).abspath + '/base',
@@ -78,6 +80,12 @@ if sys.platform != 'darwin':
 
 if sys.platform.startswith('freebsd'):
     env.Append(LIBS = ['z', 'lzma', 'iconv'])
+
+sandesh_send_queue_test = env.UnitTest('sandesh_send_queue_test',
+                                       SandeshSendQueueTestGenSrcs +
+                                       ['sandesh_send_queue_test.cc'],
+                                      )
+env.Alias('src/sandesh:sandesh_send_queue_test', sandesh_send_queue_test)
 
 sandesh_perf_test = env.UnitTest('sandesh_perf_test',
                                  SandeshPerfTestGenSrcs + 
@@ -155,6 +163,7 @@ test_suite = [sandesh_message_test,
               sandesh_client_test,
               sandesh_statistics_test,
               sandesh_request_test,
+              sandesh_send_queue_test,
            ]
 
 test = env.TestSuite('sandesh-test', test_suite)

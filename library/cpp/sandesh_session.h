@@ -223,8 +223,9 @@ private:
     static const int kSessionKeepaliveInterval = 3; // in seconds
     static const int kSessionKeepaliveProbes = 5; // count
     static const int kSessionTcpUserTimeout = 30000; // ms
+    static const int kQueueSize = 200 * 1024 * 1024; // 200 MB
 
-    bool SendMsg(Sandesh *sandesh);
+    bool SendMsg(SandeshElement element);
     bool SendBuffer(boost::shared_ptr<TMemoryBuffer> sbuffer);
     bool SessionSendReady();
 

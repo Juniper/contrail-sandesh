@@ -469,7 +469,9 @@ bool Sandesh::Enqueue(SandeshQueue *queue) {
         Release();
         return false;
     }
-    if (!queue->Enqueue(this)) {
+    //Frame an elemet object and enqueue it
+    SandeshElement elem(this);
+    if (!queue->Enqueue(elem)) {
         // XXX Change when WorkQueue implements bounded queues
         return true;
     }
@@ -839,4 +841,19 @@ bool SandeshSystem::HandleTest(SandeshLevel::type level,
         return true;
     }
     return false;
+}
+
+template<>
+size_t Sandesh::SandeshQueue::AtomicIncrementQueueCount(
+    SandeshElement *element)
+ {
+        size_t sandesh_size = element->GetSize();
+        return count_.fetch_and_add(sandesh_size) + sandesh_size;
+}
+
+template<>
+size_t Sandesh::SandeshQueue::AtomicDecrementQueueCount(
+    SandeshElement *element) {
+        size_t sandesh_size = element->GetSize();
+        return count_.fetch_and_add((size_t)(0-sandesh_size)) - sandesh_size;
 }
