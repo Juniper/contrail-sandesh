@@ -9,7 +9,7 @@
 import datetime
 import sys
 import traceback
-
+import collections
 
 def UTCTimestampUsec():
     epoch = datetime.datetime.utcfromtimestamp(0)
@@ -42,3 +42,14 @@ def import_class(import_str):
         raise ImportError('Class %s cannot be found (%s)' %
                           (class_str,
                            traceback.format_exception(*sys.exc_info())))
+
+class deque(collections.deque):
+    def __init__(self, iterable=(), maxlen=None):
+        super(deque, self).__init__(iterable, maxlen)
+        self._maxlen = maxlen
+    @property
+    def maxlen(self):
+        return self._maxlen
+
+# end class deque
+

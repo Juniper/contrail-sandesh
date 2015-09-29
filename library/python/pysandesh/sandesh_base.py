@@ -755,7 +755,7 @@ class SandeshAsync(Sandesh):
         if (self.__class__.rate_limit_buffer.maxlen != \
                 SandeshSystem.get_sandesh_send_rate_limit()):
             temp_buffer = copy.deepcopy(self.__class__.rate_limit_buffer)
-            self.__class__.rate_limit_buffer = collections.deque(temp_buffer, \
+            self.__class__.rate_limit_buffer = util.deque(temp_buffer, \
                 maxlen=SandeshSystem.get_sandesh_send_rate_limit())
             del temp_buffer
         cur_time=int(time.time())
