@@ -39,6 +39,7 @@ sandesh = env.Program(target = 'sandesh',
                                 'generate/t_xsd_generator.cc',
                                 'generate/t_c_generator.cc',
                                 'generate/t_py_generator.cc',
+                                'generate/t_doc_generator.cc',
                                 'parse/parse.cc',
                                ])
 env.Install(env['TOP_BIN'], sandesh)
