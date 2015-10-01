@@ -271,12 +271,11 @@ Program:
   HeaderList DefinitionList
     {
       pdebug("Program -> Headers DefinitionList");
-      /*
-      TODO(dreiss): Decide whether full-program doctext is worth the trouble.
-      if ($1 != NULL) {
-        g_program->set_doc($1);
+      if((g_program_doctext_candidate != NULL) && (g_program_doctext_status != ALREADY_PROCESSED))
+      {
+        g_program->set_doc(g_program_doctext_candidate);
+        g_program_doctext_status = ALREADY_PROCESSED;
       }
-      */
       clear_doctext();
     }
 
