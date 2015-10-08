@@ -60,7 +60,6 @@ class t_doc_generator : public t_generator {
   void generate_program_toc_rows(t_program* tprog,
          std::vector<t_program*>& finished);
   void generate_index();
-  void generate_css();
 
   /**
    * Program-level generation functions
@@ -149,7 +148,7 @@ void t_doc_generator::generate_program() {
   f_out_ << "<html xmlns=\"http://www.w3.org/1999/xhtml\">" << endl;
   f_out_ << "<head>" << endl;
   f_out_ << "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=utf-8\" />" << endl;
-  f_out_ << "<link href=\"style.css\" rel=\"stylesheet\" type=\"text/css\"/>"
+  f_out_ << "<link href=\"/doc-style.css\" rel=\"stylesheet\" type=\"text/css\"/>"
    << endl;
   f_out_ << "<title>Documentation for module: " << program_->get_name()
    << "</title></head><body>" << endl << "<h1>Documentation for module: "
@@ -229,30 +228,6 @@ void t_doc_generator::generate_index() {
   generate_program_toc_rows(program_, programs);
   f_out_ << "</table>" << endl;
   f_out_ << "</body></html>" << endl;
-  f_out_.close();
-}
-
-void t_doc_generator::generate_css() {
-  string css_fname = get_out_dir() + "style.css";
-  f_out_.open(css_fname.c_str());
-  f_out_ << "/* Auto-generated CSS for generated Thrift docs */" << endl;
-  f_out_ <<
-    "body { font-family: Tahoma, sans-serif; }" << endl;
-  f_out_ <<
-    "pre { background-color: #dddddd; padding: 6px; }" << endl;
-  f_out_ <<
-    "h3,h4 { padding-top: 0px; margin-top: 0px; }" << endl;
-  f_out_ <<
-    "div.definition { border: 1px solid gray; margin: 10px; padding: 10px; }" << endl;
-  f_out_ <<
-    "div.extends { margin: -0.5em 0 1em 5em }" << endl;
-  f_out_ <<
-    "table { border: 1px solid grey; border-collapse: collapse; }" << endl;
-  f_out_ <<
-    "td { border: 1px solid grey; padding: 1px 6px; vertical-align: top; }" << endl;
-  f_out_ <<
-    "th { border: 1px solid black; background-color: #bbbbbb;" << endl <<
-    "     text-align: left; padding: 1px 6px; }" << endl;
   f_out_.close();
 }
 
