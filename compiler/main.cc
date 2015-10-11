@@ -89,6 +89,7 @@ t_type* g_type_sandesh_trace;
 t_type* g_type_sandesh_trace_object;
 t_type* g_type_sandesh_buffer;
 t_type* g_type_sandesh_uve;
+t_type* g_type_sandesh_dynamic_uve;
 t_type* g_type_sandesh_alarm;
 t_type* g_type_sandesh_object;
 t_type* g_type_sandesh_flow;
@@ -1386,6 +1387,7 @@ int main(int argc, char** argv) {
   g_type_sandesh_trace_object = new t_base_type("traceobject", t_base_type::TYPE_SANDESH_TRACE_OBJECT);
   g_type_sandesh_buffer   = new t_base_type("buffer",   t_base_type::TYPE_SANDESH_BUFFER);
   g_type_sandesh_uve      = new t_base_type("uve",      t_base_type::TYPE_SANDESH_UVE);
+  g_type_sandesh_dynamic_uve = new t_base_type("dynamicuve", t_base_type::TYPE_SANDESH_DYNAMIC_UVE);
   g_type_sandesh_alarm    = new t_base_type("alarm",    t_base_type::TYPE_SANDESH_ALARM);
   g_type_sandesh_object   = new t_base_type("object",   t_base_type::TYPE_SANDESH_OBJECT);
   g_type_sandesh_flow     = new t_base_type("flow",     t_base_type::TYPE_SANDESH_FLOW);
@@ -1429,6 +1431,7 @@ int main(int argc, char** argv) {
   delete g_type_sandesh_trace_object;
   delete g_type_sandesh_buffer;
   delete g_type_sandesh_uve;
+  delete g_type_sandesh_dynamic_uve;
   delete g_type_sandesh_alarm;
   delete g_type_sandesh_object;
   delete g_type_sandesh_flow;

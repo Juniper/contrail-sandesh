@@ -16,6 +16,7 @@ setup(
                 'pysandesh.gen_py.sandesh_alarm',
                 'pysandesh.gen_py.sandesh_ctrl',
                 'pysandesh.gen_py.sandesh_uve',
+                'pysandesh.gen_py.sandesh_dynamic_uve',
                 'pysandesh.gen_py.sandesh_uve.io',
                 'pysandesh.gen_py.sandesh_trace',
                 'pysandesh.gen_py.process_info',

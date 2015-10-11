@@ -170,6 +170,7 @@ const int struct_is_union = 1;
  %token tok_flow
  %token tok_buffer
  %token tok_uve
+ %token tok_dynamic_uve
  %token tok_trace_object
  %token tok_alarm
 
@@ -894,6 +895,11 @@ SandeshType:
   tok_uve
     {
       $$ = g_type_sandesh_uve;
+    }
+|
+  tok_dynamic_uve
+    {
+      $$ = g_type_sandesh_dynamic_uve;
     }
 |
   tok_object

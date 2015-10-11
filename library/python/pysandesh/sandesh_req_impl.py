@@ -82,7 +82,7 @@ class SandeshReqImpl(object):
                     resp.ip = collector[0]
                     resp.port = int(collector[1])
                 resp.status = client.connection().state()
-        resp.response(sandesh_req.context())
+        resp.response(sandesh_req.context(), sandesh=self._sandesh)
     # end collector_info_handle_request
 
     def sandesh_logging_params_set_handle_request(self, sandesh_req):
@@ -103,7 +103,8 @@ class SandeshReqImpl(object):
             category=self._sandesh.logging_category(
             ),
             log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()])
-        sandesh_logging_resp.response(sandesh_req.context())
+        sandesh_logging_resp.response(sandesh_req.context(),
+                                      sandesh=self._sandesh)
     # end sandesh_logging_params_set_handle_request
 
     def sandesh_logging_params_status_handle_request(self, sandesh_req):
@@ -113,7 +114,8 @@ class SandeshReqImpl(object):
             category=self._sandesh.logging_category(
             ),
             log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()])
-        sandesh_logging_resp.response(sandesh_req.context())
+        sandesh_logging_resp.response(sandesh_req.context(),
+                                      sandesh=self._sandesh)
     # end sandesh_logging_params_status_handle_request
 
     def sandesh_uve_cache_req_handle_request(self, sandesh_req):
@@ -130,7 +132,7 @@ class SandeshReqImpl(object):
                 count = uve_type_map.sync_uve(None, 0, sandesh_req.context(),
                             True, self._sandesh)
         uve_cache_res = SandeshUVECacheResp(count)
-        uve_cache_res.response(sandesh_req.context())
+        uve_cache_res.response(sandesh_req.context(), sandesh=self._sandesh)
     # end sandesh_uve_cache_req_handle_request
 
     def sandesh_uve_types_req_handle_request(self, sandesh_req):
@@ -139,11 +141,11 @@ class SandeshReqImpl(object):
         for uve_type_key, uve_type_map in uve_global_map.iteritems():
             if uve_type_map.sandesh_type() is SandeshType.UVE:
                 uve_type_info = SandeshUVETypeInfo(
-                    uve_type_map.uve_data_type(),
+                    uve_type_map.uve_data_type_name(),
                     uve_type_map.uve_type_seqnum())
                 uve_type_info_list.append(uve_type_info)
         uve_types_res = SandeshUVETypesResp(uve_type_info_list)
-        uve_types_res.response(sandesh_req.context())
+        uve_types_res.response(sandesh_req.context(), sandesh=self._sandesh)
     # end sandesh_uve_types_req_handle_request
 
     def sandesh_alarm_cache_req_handle_request(self, sandesh_req):
@@ -161,7 +163,7 @@ class SandeshReqImpl(object):
                     count += type_map.sync_uve(sandesh_req.table, 0,
                                 sandesh_req.context(), True, self._sandesh)
         alarm_cache_res = SandeshAlarmCacheResponse(count)
-        alarm_cache_res.response(sandesh_req.context())
+        alarm_cache_res.response(sandesh_req.context(), sandesh=self._sandesh)
     # end sandesh_alarm_cache_req_handle_request
 
     def sandesh_alarm_types_req_handle_request(self, sandesh_req):
@@ -171,7 +173,7 @@ class SandeshReqImpl(object):
         for alarm_type in alarm_type_list:
             alarm_type_info_list.append(SandeshAlarmTypeInfo(alarm_type))
         alarm_types_res = SandeshAlarmTypesResponse(alarm_type_info_list)
-        alarm_types_res.response(sandesh_req.context())
+        alarm_types_res.response(sandesh_req.context(), sandesh=self._sandesh)
     # end sandesh_alarm_types_req_handle_request
 
     def sandesh_alarm_ack_request_handler(self, sandesh_req):
@@ -191,7 +193,7 @@ class SandeshReqImpl(object):
                 response_code = SandeshAlarmAckResponseCode.UNKNOWN_ERROR
                 err_msg = SandeshAlarmAckResponseError[response_code]
         ack_response = SandeshAlarmAckResponse(status, err_msg)
-        ack_response.response(sandesh_req.context())
+        ack_response.response(sandesh_req.context(), sandesh=self._sandesh)
     # end sandesh_alarm_ack_request_handler
 
     def sandesh_msg_stats_handle_request(self, sandesh_req):
@@ -215,14 +217,14 @@ class SandeshReqImpl(object):
                 squeue.num_enqueues() - squeue.num_dequeues()
             gen_stats.send_queue_stats = send_queue_stats
         stats_resp = SandeshMessageStatsResp(gen_stats)
-        stats_resp.response(sandesh_req.context())
+        stats_resp.response(sandesh_req.context(), sandesh=self._sandesh)
     # end sandesh_msg_stats_handle_request
 
     def sandesh_trace_buffer_list_request_handle_request(self, sandesh_req):
         tbuf_info_list = [SandeshTraceBufInfo(trace_buf_name=tbuf)
                           for tbuf in self._sandesh.trace_buffer_list_get()]
         tbuf_info_resp = SandeshTraceBufferListResponse(tbuf_info_list)
-        tbuf_info_resp.response(sandesh_req.context())
+        tbuf_info_resp.response(sandesh_req.context(), sandesh=self._sandesh)
     # end sandesh_trace_buffer_list_request_handle_request
 
     def sandesh_trace_enable_disable_handle_request(self, sandesh_req):
@@ -241,7 +243,8 @@ class SandeshReqImpl(object):
         else:
             status = 'Sandesh Trace Disabled'
         trace_en_dis_resp = SandeshTraceEnableDisableRes(status)
-        trace_en_dis_resp.response(sandesh_req.context())
+        trace_en_dis_resp.response(sandesh_req.context(),
+                                   sandesh=self._sandesh)
     # end sandesh_trace_enable_disable_handle_request
 
     def sandesh_trace_buf_status_handle_request(self, sandesh_req):
@@ -255,7 +258,8 @@ class SandeshReqImpl(object):
                 trace_buf_status.enable_disable = 'Disabled'
             trace_buf_status_list.append(trace_buf_status)
         trace_buf_status_resp = SandeshTraceBufStatusRes(trace_buf_status_list)
-        trace_buf_status_resp.response(sandesh_req.context())
+        trace_buf_status_resp.response(sandesh_req.context(),
+                                       sandesh=self._sandesh)
     # end sandesh_trace_buf_status_handle_request
 
     def sandesh_trace_buffer_enable_disable_handle_request(self, sandesh_req):
@@ -283,7 +287,8 @@ class SandeshReqImpl(object):
         else:
             status = 'Invalid Trace buffer'
         trace_buf_en_dis_resp = SandeshTraceBufferEnableDisableRes(status)
-        trace_buf_en_dis_resp.response(sandesh_req.context())
+        trace_buf_en_dis_resp.response(sandesh_req.context(),
+                                       sandesh=self._sandesh)
     # end sandesh_trace_buffer_enable_disable_handle_request
 
     def sandesh_trace_request_handle_request(self, sandesh_req):
@@ -313,14 +318,14 @@ class SandeshReqImpl(object):
         # Return the send queue processing state
         send_queue_resp = SandeshSendQueueResponse(
             enable=self._sandesh.is_send_queue_enabled())
-        send_queue_resp.response(sandesh_req.context())
+        send_queue_resp.response(sandesh_req.context(), sandesh=self._sandesh)
     # end sandesh_send_queue_set_handle_request
 
     def sandesh_send_queue_status_handle_request(self, sandesh_req):
         # Return the send queue processing state
         send_queue_resp = SandeshSendQueueResponse(
             enable=self._sandesh.is_send_queue_enabled())
-        send_queue_resp.response(sandesh_req.context())
+        send_queue_resp.response(sandesh_req.context(), sandesh=self._sandesh)
     # end sandesh_send_queue_status_handle_request
 
 # end class SandeshReqImpl

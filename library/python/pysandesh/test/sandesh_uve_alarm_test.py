@@ -20,6 +20,7 @@ from pysandesh.sandesh_base import *
 from pysandesh.sandesh_client import SandeshClient
 from pysandesh.util import UTCTimestampUsec
 from pysandesh.gen_py.sandesh_alarm.ttypes import *
+from pysandesh.gen_py.sandesh_dynamic_uve.ttypes import *
 from gen_py.sandesh_alarm_base.ttypes import *
 from gen_py.uve_alarm_test.ttypes import *
 
@@ -71,8 +72,8 @@ class SandeshUVEAlarmTest(unittest.TestCase):
             uve_test = SandeshUVETest(data=uve_data[i], sandesh=self.sandesh)
             uve_test.send(sandesh=self.sandesh)
 
-        expected_data1 = [{'seqnum': i+1, 'data': uve_data[i]} \
-                          for i in range(len(uve_data))]
+        expected_data = [{'seqnum': i+1, 'data': uve_data[i]} \
+                         for i in range(len(uve_data))]
 
         # send UVE with different key
         uve_test_data = SandeshUVEData(name='uve1')
@@ -80,22 +81,139 @@ class SandeshUVEAlarmTest(unittest.TestCase):
                                   sandesh=self.sandesh)
         uve_test.send(sandesh=self.sandesh)
 
-        expected_data2 = [{'seqnum': 6, 'data': uve_test_data}]
+        expected_data.extend([{'seqnum': 6, 'data': uve_test_data}])
 
-        # verify uve sync
-        self.sandesh._uve_type_maps.sync_all_uve_types({}, self.sandesh)
-
-        uve_data1 = SandeshUVEData(name='uve1')
-        uve_data1._table = 'CollectorInfo'
-        uve_data2 = SandeshUVEData(name='uve2')
-        uve_data3 = SandeshUVEData(name='uve1', xyz=345)
-        expected_data3 = [
-            {'seqnum': 6, 'data': uve_data1},
-            {'seqnum': 5, 'data': uve_data2},
-            {'seqnum': 2, 'data': uve_data3}
+        # send dynamic UVEs
+        dynamic_uve_data = [
+            # add uve
+            {
+                'type' : 'Config',
+                'table' : 'CollectorInfo',
+                'name' : 'node1',
+                'elements' : {'log_level' : 'SYS_INFO'},
+                'expected_elements' : {'log_level' : 'SYS_INFO'},
+                'seqnum' : 1
+            },
+            # update uve
+            {
+                'type' : 'Config',
+                'table' : 'CollectorInfo',
+                'name' : 'node1',
+                'elements' : {'log_local' : 'True'},
+                'expected_elements' : {'log_level' : 'SYS_INFO',
+                                       'log_local' : 'True'},
+                'seqnum' : 2
+            },
+            # add another uve
+            {
+                'type' : 'Config',
+                'table' : 'ControlInfo',
+                'name' : 'node1',
+                'elements' : {'log_category' : 'Redis'},
+                'expected_elements' : {'log_category' : 'Redis'},
+                'seqnum' : 3
+            },
+            # delete uve
+            {
+                'type' : 'Config',
+                'table' : 'ControlInfo',
+                'name' : 'node1',
+                'deleted' : True,
+                'seqnum' : 4
+            },
+            # add deleted uve
+            {
+                'type' : 'Config',
+                'table' : 'ControlInfo',
+                'name' : 'node1',
+                'elements' : {'log_level' : 'SYS_DEBUG',
+                              'log_file' : '/var/log/control.log'},
+                'expected_elements' : {'log_level' : 'SYS_DEBUG',
+                                       'log_file' : '/var/log/control.log'},
+                'seqnum' : 5
+            },
+            #  add another uve - different type
+            {
+                'type' : 'ConfigTest',
+                'table' : 'CollectorInfo',
+                'name' : 'node2',
+                'elements' : {'param1' : 'val1', 'param2' : 'val2'},
+                'expected_elements' : {'param1' : 'val1', 'param2' : 'val2'},
+                'seqnum' : 1
+            }
         ]
 
-        expected_data = expected_data1 + expected_data2 + expected_data3
+        for uve in dynamic_uve_data:
+            uve_type, uve_data_type = \
+                self.sandesh.get_sandesh_dynamic_uve_type(uve['type'])
+            elts = None
+            if uve.get('elements'):
+                elts = [DynamicElement(attr,val) \
+                    for attr, val in uve['elements'].iteritems()]
+            uve_data = uve_data_type(name=uve['name'], elements=elts,
+                                     deleted=uve.get('deleted'))
+            dynamic_uve = uve_type(data=uve_data, table=uve['table'],
+                                   sandesh=self.sandesh)
+            dynamic_uve.send(sandesh=self.sandesh)
+            if uve.get('expected_elements') :
+                elts = [DynamicElement(attr,val) \
+                    for attr, val in uve['expected_elements'].iteritems()]
+                uve_data = uve_data_type(name=uve['name'], elements=elts,
+                                         deleted=uve.get('deleted'))
+                uve_data._table = uve['table']
+            expected_data.extend([{'seqnum': uve['seqnum'], 'data': uve_data}])
+
+        # sync UVEs
+        self.sandesh._uve_type_maps.sync_all_uve_types({}, self.sandesh)
+
+        sync_uve_data = [
+            {'data': SandeshUVEData(name='uve1'), 'table': 'CollectorInfo',
+             'seqnum': 6},
+            {'data': SandeshUVEData(name='uve2'), 'table': 'OpserverInfo',
+             'seqnum': 5},
+            {'data': SandeshUVEData(name='uve1', xyz=345),
+             'table':'OpserverInfo', 'seqnum': 2}
+        ]
+        for uve_data in sync_uve_data:
+            uve_data['data']._table = uve_data['table']
+            expected_data.extend([{'seqnum': uve_data['seqnum'],
+                                   'data': uve_data['data']}])
+        sync_dynamic_uve_data = [
+            {
+                'type' : 'ConfigTest',
+                'table' : 'CollectorInfo',
+                'name' : 'node2',
+                'elements' : {'param1' : 'val1', 'param2' : 'val2'},
+                'seqnum' : 1
+            },
+            {
+                'type' : 'Config',
+                'table' : 'ControlInfo',
+                'name' : 'node1',
+                'elements' : {'log_level' : 'SYS_DEBUG',
+                              'log_file' : '/var/log/control.log'},
+                'seqnum' : 5
+            },
+            {
+                'type' : 'Config',
+                'table' : 'CollectorInfo',
+                'name' : 'node1',
+                'elements' : {'log_level' : 'SYS_INFO',
+                              'log_local' : 'True'},
+                'seqnum' : 2
+            }
+        ]
+        for uve in sync_dynamic_uve_data:
+            uve_type, uve_data_type = \
+                self.sandesh.get_sandesh_dynamic_uve_type(uve['type'])
+            elts = None
+            if uve.get('elements'):
+                elts = [DynamicElement(attr,val) \
+                    for attr, val in uve['elements'].iteritems()]
+            uve_data = uve_data_type(name=uve['name'], elements=elts,
+                                     deleted=uve.get('deleted'))
+            uve_data._table = uve['table']
+            expected_data.extend([{'seqnum': uve['seqnum'], 'data': uve_data}])
 
         # verify the result
         args_list = self.sandesh._client.send_uve_sandesh.call_args_list
