@@ -1,0 +1,25 @@
+/*
+ * Copyright (c) 2015 Juniper Networks, Inc. All rights reserved.
+ */
+
+/*
+ *  sandesh_dynamic_uve.sandesh
+ *
+ *  Sandesh Dynamic UVE definition
+ */
+
+
+struct DynamicElement {
+    1: string attribute
+    2: string value
+}
+
+struct DynamicObject {
+    1: string  name (key="")
+    2: list<DynamicElement> elements
+    3: optional bool deleted
+}
+
+dynamicuve sandesh DynamicObjectUVE {
+    1: DynamicObject  data
+}

@@ -89,7 +89,7 @@ class Sandesh(object):
         from sandesh_stats import SandeshMessageStatistics
         self._msg_stats = SandeshMessageStatistics()
         self._trace = trace.Trace()
-        self._sandesh_request_dict = {}
+        self._sandesh_request_map = {}
         self._alarm_ack_callback = alarm_ack_callback
         self._uve_type_maps = SandeshUVETypeMaps(self._logger)
         if sandesh_req_uve_pkg_list is None:
@@ -446,31 +446,30 @@ class Sandesh(object):
 
     def get_sandesh_request_object(self, request):
         try:
-            req_module = self._sandesh_request_dict[request]
+            req_type = self._sandesh_request_map[request]
         except KeyError:
             self._logger.error('Invalid Sandesh Request "%s"' % (request))
             return None
         else:
-            if req_module:
-                try:
-                    imp_module = importlib.import_module(req_module)
-                except ImportError:
-                    self._logger.error(
-                        'Failed to import Module "%s"' % (req_module))
-                else:
-                    try:
-                        sandesh_request = getattr(imp_module, request)()
-                        return sandesh_request
-                    except AttributeError:
-                        self._logger.error(
-                            'Failed to create Sandesh Request "%s"' %
-                            (request))
-                        return None
-            else:
-                self._logger.error(
-                    'Sandesh Request "%s" not implemented' % (request))
-                return None
+            return req_type()
     # end get_sandesh_request_object
+
+    def get_sandesh_dynamic_uve_type(self, uve_data_type_name):
+        uve_type_map = self._uve_type_maps.get_uve_type_map(
+                            uve_data_type_name+'UVE')
+        if uve_type_map is not None:
+            uve_type = uve_type_map.uve_type()
+            uve_data_type = uve_type_map.uve_data_type()
+        else:
+            from pysandesh.gen_py.sandesh_dynamic_uve.ttypes import \
+                DynamicObjectUVE, DynamicObject
+            uve_type = type(uve_data_type_name+'UVE', (DynamicObjectUVE,), {})
+            uve_data_type = type(uve_data_type_name, (DynamicObject,), {})
+            # Register Dynamic UVE
+            SandeshUVEPerTypeMap(self, SandeshType.UVE, uve_type,
+                                 uve_data_type)
+        return uve_type, uve_data_type
+    # end get_sandesh_dynamic_uve_type
 
     def trace_enable(self):
         self._trace.TraceOn()
@@ -596,7 +595,7 @@ class Sandesh(object):
             else:
                 # Add sandesh requests to the dictionary.
                 for req in sandesh_req_list:
-                    self._sandesh_request_dict[req] = mod
+                    self._sandesh_request_map[req.__name__] = req
     # end _add_sandesh_request
 
     def _get_sandesh_uve_list(self, imp_module):
@@ -611,19 +610,6 @@ class Sandesh(object):
             return sandesh_uve_list
     # end _get_sandesh_uve_list
 
-    def _get_sandesh_uve_data_list(self, imp_module):
-        try:
-            sandesh_uve_data_list = getattr(imp_module,
-                                            '_SANDESH_UVE_DATA_LIST')
-        except AttributeError:
-            self._logger.error(
-                '"%s" module does not have sandesh UVE data list' %
-                (imp_module.__name__))
-            return None
-        else:
-            return sandesh_uve_data_list
-    # end _get_sandesh_uve_data_list
-
     def _add_sandesh_uve(self, mod):
         try:
             imp_module = importlib.import_module(mod)
@@ -631,20 +617,12 @@ class Sandesh(object):
             self._logger.error('Failed to import Module "%s"' % (mod))
         else:
             sandesh_uve_list = self._get_sandesh_uve_list(imp_module)
-            sandesh_uve_data_list = self._get_sandesh_uve_data_list(imp_module)
-            if sandesh_uve_list is None or sandesh_uve_data_list is None:
+            if not sandesh_uve_list:
                 return
-            if len(sandesh_uve_list) != len(sandesh_uve_data_list):
-                self._logger.error(
-                    '"%s" module sandesh UVE and UVE data list do not match'
-                    % (mod))
-                return
-            sandesh_uve_info_list = zip(sandesh_uve_list,
-                                        sandesh_uve_data_list)
             # Register sandesh UVEs
-            for uve_type_name, uve_data_type_name in sandesh_uve_info_list:
+            for uve_type, uve_data_type in sandesh_uve_list:
                 SandeshUVEPerTypeMap(self, SandeshType.UVE,
-                                     uve_type_name, uve_data_type_name, mod)
+                    uve_type, uve_data_type)
     # end _add_sandesh_uve
 
     def _get_sandesh_alarm_list(self, imp_module):
@@ -659,19 +637,6 @@ class Sandesh(object):
             return sandesh_alarm_list
     # end _get_sandesh_alarm_list
 
-    def _get_sandesh_alarm_data_list(self, imp_module):
-        try:
-            sandesh_alarm_data_list = getattr(imp_module,
-                                              '_SANDESH_ALARM_DATA_LIST')
-        except AttributeError:
-            self._logger.error(
-                '"%s" module does not have sandesh Alarm data list' %
-                (imp_module.__name__))
-            return None
-        else:
-            return sandesh_alarm_data_list
-    # end _get_sandesh_alarm_data_list
-
     def _add_sandesh_alarm(self, mod):
         try:
             imp_module = importlib.import_module(mod)
@@ -679,22 +644,12 @@ class Sandesh(object):
             self._logger.error('Failed to import Module "%s"' % (mod))
         else:
             sandesh_alarm_list = self._get_sandesh_alarm_list(imp_module)
-            sandesh_alarm_data_list = self._get_sandesh_alarm_data_list(
-                imp_module)
-            if sandesh_alarm_list is None or sandesh_alarm_data_list is None:
+            if not sandesh_alarm_list:
                 return
-            if len(sandesh_alarm_list) != len(sandesh_alarm_data_list):
-                self._logger.error(
-                    '"%s" module sandesh Alarm and Alarm data list do not '
-                    'match' % (mod))
-                return
-            sandesh_alarm_info_list = zip(sandesh_alarm_list,
-                                          sandesh_alarm_data_list)
             # Register sandesh Alarms
-            for (alarm_type_name, alarm_data_type_name) in (
-                    sandesh_alarm_info_list):
-                SandeshUVEPerTypeMap(self, SandeshType.ALARM, alarm_type_name,
-                                     alarm_data_type_name, mod)
+            for alarm_type, alarm_data_type in sandesh_alarm_list:
+                SandeshUVEPerTypeMap(self, SandeshType.ALARM, alarm_type,
+                    alarm_data_type)
     # end _add_sandesh_alarm
 
     def _init_logger(self, module, logger_class=None,
@@ -929,6 +884,38 @@ class SandeshUVE(Sandesh):
     # end send
 
 # end class SandeshUVE
+
+
+class SandeshDynamicUVE(SandeshUVE):
+
+    def __init__(self):
+        SandeshUVE.__init__(self)
+    # end __init__
+
+    def update_uve(self, cache_data):
+        if self.data.deleted is not None:
+            cache_data.deleted = self.data.deleted
+        if self.data.elements is not None:
+            if cache_data.elements is None:
+                cache_data.elements = self.data.elements
+            else:
+                from pysandesh.gen_py.sandesh_dynamic_uve.ttypes import \
+                    DynamicElement
+                cache_elt_dict = dict([elt.attribute, elt.value] \
+                    for elt in cache_data.elements)
+                elt_dict = dict([elt.attribute, elt.value] \
+                    for elt in self.data.elements)
+                cache_elt_dict.update(elt_dict)
+                cache_data.elements = [DynamicElement(attr, val) \
+                    for attr, val in cache_elt_dict.iteritems()]
+                # since type(elements) is a list, overwrite the
+                # self.data.elements with cache_data.elements.
+                # we shouldn't send partial list.
+                self.data.elements = cache_data.elements
+        return cache_data
+    # end update_uve
+
+# end class SandeshDynamicUVE
 
 
 class SandeshAlarm(SandeshUVE):

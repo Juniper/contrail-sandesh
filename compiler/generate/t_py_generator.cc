@@ -33,6 +33,7 @@
 
 #ifdef SANDESH
 #include <cassert>
+#include "boost/tuple/tuple.hpp"
 #endif
 using namespace std;
 
@@ -163,9 +164,7 @@ class t_py_generator : public t_generator {
   void generate_py_sandesh_response(std::ofstream& out, t_sandesh* tsandesh);
   void generate_py_sandesh_uve(std::ofstream& out, t_sandesh* tsandesh);
   void generate_py_sandesh_uve_list(std::ofstream& out);
-  void generate_py_sandesh_uve_data_list(std::ofstream& out);
   void generate_py_sandesh_alarm_list(std::ofstream& out);
-  void generate_py_sandesh_alarm_data_list(std::ofstream& out);
   void generate_py_sandesh_trace(std::ofstream& out, t_sandesh* tsandesh);
   void generate_py_sandesh_sizeof(std::ofstream& out, t_sandesh* tsandesh);
 #endif
@@ -344,22 +343,12 @@ class t_py_generator : public t_generator {
   /**
    * Sandesh UVE List
    */
-  std::vector<std::string> sandesh_uve_list_;
-
-  /**
-   * Sandesh UVE Data List
-   */
-  std::vector<std::string> sandesh_uve_data_list_;
+  std::vector<boost::tuple<std::string, std::string> > sandesh_uve_list_;
 
   /**
    * Sandesh Alarm List
    */
-  std::vector<std::string> sandesh_alarm_list_;
-
-  /**
-   * Sandesh Alarm Data List
-   */
-  std::vector<std::string> sandesh_alarm_data_list_;
+  std::vector<boost::tuple<std::string, std::string> > sandesh_alarm_list_;
 #endif
 
   /**
@@ -574,9 +563,7 @@ void t_py_generator::close_generator() {
 #ifdef SANDESH
   generate_py_sandesh_request_list(f_types_);
   generate_py_sandesh_uve_list(f_types_);
-  generate_py_sandesh_uve_data_list(f_types_);
   generate_py_sandesh_alarm_list(f_types_);
-  generate_py_sandesh_alarm_data_list(f_types_);
 #endif
   // Close types file
   f_types_.close();
@@ -1212,7 +1199,7 @@ void t_py_generator::generate_py_struct_writer(ofstream& out,
 
 #ifdef SANDESH
   indent(out) <<
-    "if oprot.writeStructBegin('" << name << "') < 0: return -1" << endl;
+    "if oprot.writeStructBegin(self.__class__.__name__) < 0: return -1" << endl;
 #else
   indent(out) <<
     "oprot.writeStructBegin('" << name << "')" << endl;
@@ -1335,6 +1322,8 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
     base_class = "sandesh_base.SandeshResponse";
   } else if (sandesh_type->is_sandesh_uve()) {
     base_class = "sandesh_base.SandeshUVE";
+  } else if (sandesh_type->is_sandesh_dynamic_uve()) {
+    base_class = "sandesh_base.SandeshDynamicUVE";
   } else if (sandesh_type->is_sandesh_alarm()) {
     base_class = "sandesh_base.SandeshAlarm";
   } else if (sandesh_type->is_sandesh_trace() ||
@@ -1444,6 +1433,7 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
         "', level=SandeshLevel.SYS_INFO";
     }
     if (sandesh_type->is_sandesh_uve() ||
+        sandesh_type->is_sandesh_dynamic_uve() ||
         sandesh_type->is_sandesh_alarm()) {
       out << ", table=None";
     }
@@ -1495,6 +1485,7 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
       indent(out) << "self._level = level" << endl;
     }
     if (sandesh_type->is_sandesh_uve() ||
+        sandesh_type->is_sandesh_dynamic_uve() ||
         sandesh_type->is_sandesh_alarm()) {
       indent(out) << "if table is not None:" << endl;
       indent_up();
@@ -1702,7 +1693,6 @@ void t_py_generator::generate_py_sandesh_reader(ofstream& out,
 
 void t_py_generator::generate_py_sandesh_writer(ofstream& out,
                                                 t_sandesh* tsandesh) {
-  string name = tsandesh->get_name();
   const vector<t_field*>& fields = tsandesh->get_sorted_members();
   vector<t_field*>::const_iterator f_iter;
 
@@ -1723,7 +1713,7 @@ void t_py_generator::generate_py_sandesh_writer(ofstream& out,
   indent_down();
 
   indent(out) <<
-    "if oprot.writeSandeshBegin('" << name << "') < 0: return -1" << endl;
+    "if oprot.writeSandeshBegin(self.__class__.__name__) < 0: return -1" << endl;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
     // Write field header
     indent(out) <<
@@ -1923,7 +1913,7 @@ void t_py_generator::generate_py_sandesh_request_list(ofstream& out) {
   out << "_SANDESH_REQUEST_LIST = [" << endl;
   std::vector<std::string>::const_iterator it;
   for (it = sandesh_req_list_.begin(); it != sandesh_req_list_.end(); ++it) {
-    indent(out) << "'" << *it << "'," << endl;
+    indent(out) << *it << "," << endl;
   }
   out << "]" << endl;
 }
@@ -2195,8 +2185,8 @@ void t_py_generator::generate_py_sandesh_logger(ofstream &out,
           << "self._level])" << endl;
         indent(out) << log_str << ".write(']: ')" << endl;
       }
-      indent(out) << log_str << ".write('" << tsandesh->get_name() <<
-        ": ')                                                                                                                                                                         " << endl;
+      indent(out) << log_str << ".write(self.__class__.__name__ + " <<
+        "': ')" << endl;
     }
     indent(out) << 
       "if self." << (*f_iter)->get_name() << " is not None:" << endl;
@@ -2363,33 +2353,21 @@ void t_py_generator::generate_py_sandesh_uve(std::ofstream& out,
   const t_base_type *sandesh_type = (t_base_type *)tsandesh->get_type();
   if (sandesh_type->is_sandesh_uve()) {
     // Update sandesh UVE list
-    sandesh_uve_list_.push_back(tsandesh->get_name());
-    // Update sandesh UVE data list
-    sandesh_uve_data_list_.push_back(ts->get_name());
+    sandesh_uve_list_.push_back(boost::make_tuple(tsandesh->get_name(),
+                                                  ts->get_name()));
   } else if (sandesh_type->is_sandesh_alarm()) {
     // Update sandesh Alarm list
-    sandesh_alarm_list_.push_back(tsandesh->get_name());
-    // Update sandesh Alarm data list
-    sandesh_alarm_data_list_.push_back(ts->get_name());
+    sandesh_alarm_list_.push_back(boost::make_tuple(tsandesh->get_name(),
+                                                    ts->get_name()));
   }
 }
 
 void t_py_generator::generate_py_sandesh_uve_list(ofstream& out) {
   out << endl << endl;
   out << "_SANDESH_UVE_LIST = [" << endl;
-  std::vector<std::string>::const_iterator it;
+  std::vector<boost::tuple<std::string, std::string> >::const_iterator it;
   for (it = sandesh_uve_list_.begin(); it != sandesh_uve_list_.end(); ++it) {
-    indent(out) << "'" << *it << "'," << endl;
-  }
-  out << "]" << endl;
-}
-
-void t_py_generator::generate_py_sandesh_uve_data_list(ofstream& out) {
-  out << endl << endl;
-  out << "_SANDESH_UVE_DATA_LIST = [" << endl;
-  std::vector<std::string>::const_iterator it;
-  for (it = sandesh_uve_data_list_.begin(); it != sandesh_uve_data_list_.end(); ++it) {
-    indent(out) << "'" << *it << "'," << endl;
+    indent(out) << "(" << it->get<0>() << ", " << it->get<1>() << ")," << endl;
   }
   out << "]" << endl;
 }
@@ -2397,21 +2375,10 @@ void t_py_generator::generate_py_sandesh_uve_data_list(ofstream& out) {
 void t_py_generator::generate_py_sandesh_alarm_list(ofstream& out) {
   out << endl << endl;
   out << "_SANDESH_ALARM_LIST = [" << endl;
-  std::vector<std::string>::const_iterator it;
+  std::vector<boost::tuple<std::string, std::string> >::const_iterator it;
   for (it = sandesh_alarm_list_.begin(); it != sandesh_alarm_list_.end();
        ++it) {
-    indent(out) << "'" << *it << "'," << endl;
-  }
-  out << "]" << endl;
-}
-
-void t_py_generator::generate_py_sandesh_alarm_data_list(ofstream& out) {
-  out << endl << endl;
-  out << "_SANDESH_ALARM_DATA_LIST = [" << endl;
-  std::vector<std::string>::const_iterator it;
-  for (it = sandesh_alarm_data_list_.begin();
-       it != sandesh_alarm_data_list_.end(); ++it) {
-    indent(out) << "'" << *it << "'," << endl;
+    indent(out) << "(" << it->get<0>() << ", " << it->get<1>() << ")," << endl;
   }
   out << "]" << endl;
 }
@@ -4097,6 +4064,8 @@ string t_py_generator::type_to_enum(t_type* type) {
     case t_base_type::TYPE_SANDESH_BUFFER:
       return "TTytpe.STRING";
     case t_base_type::TYPE_SANDESH_UVE:
+      return "TTytpe.STRING";
+    case t_base_type::TYPE_SANDESH_DYNAMIC_UVE:
       return "TTytpe.STRING";
     case t_base_type::TYPE_SANDESH_ALARM:
       return "TTytpe.STRING";

@@ -16,11 +16,11 @@ class SandeshUVETypeMaps(object):
         self._logger = logger
         self._uve_global_map = {}
         self._uve_data_type_map = {}
-    #end __init__
+    # end __init__
 
     def get_uve_global_map(self):
         return self._uve_global_map
-    #end get_uve_global_map
+    # end get_uve_global_map
 
     def get_uve_type_name(self, uve_data_type_name):
         try:
@@ -31,7 +31,7 @@ class SandeshUVETypeMaps(object):
             return None
         else:
             return uve_name
-    #end get_uve_type_name
+    # end get_uve_type_name
 
     def add_uve_data_type_mapping(self, uve_data_type_name, uve_type_name):
         try:
@@ -42,39 +42,26 @@ class SandeshUVETypeMaps(object):
             self._logger.error('UVE data type "%s" to UVE "%s" already added' %
                 (uve_data_type_name, uve_type_name))
             assert 0
-    #end add_uve_data_type_mapping
+    # end add_uve_data_type_mapping
 
-    def register_uve_type_map(self, uve_type_key, uve_type_map):
+    def register_uve_type_map(self, uve_type_name, uve_type_map):
         try:
-            uve_map = self._uve_global_map[uve_type_key]
+            uve_map = self._uve_global_map[uve_type_name]
         except KeyError:
-            self._uve_global_map[uve_type_key] = uve_type_map
+            self._uve_global_map[uve_type_name] = uve_type_map
         else:
-            self._logger.error('UVE type "%s" already added' % (uve_type_key))
+            self._logger.error('UVE type "%s" already added' % (uve_type_name))
             assert 0
-    #end register_uve_type_map
+    # end register_uve_type_map
 
-    def get_uve_type_map(self, uve_type_key):
+    def get_uve_type_map(self, uve_type_name):
         try:
-            uve_map = self._uve_global_map[uve_type_key]
+            uve_type_map = self._uve_global_map[uve_type_name]
         except KeyError:
-            self._logger.error('UVE type "%s" not present in the '
-                               'UVE global map' % (uve_type_key))
             return None
         else:
-            return uve_map
-    #end get_uve_type_map
-
-    def update_uve_type_map(self, uve_type_key, uve_type_map):
-        try:
-            uve_map = self._uve_global_map[uve_type_key]
-        except KeyError:
-            self._logger.error('UVE type "%s" not present in the '
-                               'UVE global map' % (uve_type_key))
-            assert 0
-        else:
-            self._uve_global_map[uve_type_key] = uve_type_map
-    #end update_uve_type_map
+            return uve_type_map
+    # end get_uve_type_map
 
     def sync_all_uve_types(self, inmap, sandesh_instance):
         for uve_type, uve_type_map in self._uve_global_map.iteritems():
@@ -83,8 +70,9 @@ class SandeshUVETypeMaps(object):
             except KeyError:
                 uve_type_map.sync_uve(None, 0, '', False, sandesh_instance)
             else:
-                uve_type_map.sync_uve(None, in_seqno, '', False, sandesh_instance)
-    #end sync_all_uve_types
+                uve_type_map.sync_uve(None, in_seqno, '', False,
+                                      sandesh_instance)
+    # end sync_all_uve_types
 
     def get_object_types(self, sandesh_type):
         object_types = set()
@@ -96,7 +84,7 @@ class SandeshUVETypeMaps(object):
         return list(object_types)
     # end get_object_types
 
-#end class SandeshUVETypeMaps
+# end class SandeshUVETypeMaps
 
 class SandeshUVEPerTypeMap(object):
 
@@ -105,79 +93,81 @@ class SandeshUVEPerTypeMap(object):
             self.data = data
             self.seqno = seqno
             self.update_count = 0
-        #end __init__
+        # end __init__
 
-    #end class UVEMapEntry
+    # end class UVEMapEntry
 
-    def __init__(self, sandesh, sandesh_type,
-                 uve_type_name, uve_data_type_name, uve_module):
+    def __init__(self, sandesh, sandesh_type, uve_type, uve_data_type):
         self._sandesh = sandesh
         self._logger = self._sandesh.logger()
         self._sandesh_type = sandesh_type # UVE or ALARM
-        self._uve_type = uve_type_name
-        self._uve_data_type = uve_data_type_name
-        self._uve_module = uve_module
+        self._uve_type = uve_type
+        self._uve_data_type = uve_data_type
         self._uve_map = {}
-        sandesh._uve_type_maps.register_uve_type_map(uve_type_name, self)
-        sandesh._uve_type_maps.add_uve_data_type_mapping(uve_data_type_name,
-            uve_type_name)
-    #end __init__
+        sandesh._uve_type_maps.register_uve_type_map(uve_type.__name__, self)
+        sandesh._uve_type_maps.add_uve_data_type_mapping(
+            uve_data_type.__name__, uve_type.__name__)
+    # end __init__
 
     def sandesh_type(self):
         return self._sandesh_type
     # end sandesh_type
 
+    def uve_type(self):
+        return self._uve_type
+    # end uve_type
+
+    def uve_type_name(self):
+        return self._uve_type.__name__
+    # end uve_type_name
+
     def uve_data_type(self):
         return self._uve_data_type
-    #end uve_data_type
+    # end uve_data_type
+
+    def uve_data_type_name(self):
+        return self._uve_data_type.__name__
+    # end uve_data_type_name
 
     def get_object_types(self):
-        object_types = []
-        for object_type, _ in self._uve_map.iteritems():
-            object_types.append(object_type)
-        return object_types
+        return self._uve_map.keys()
     # end get_object_types
 
     def uve_type_seqnum(self):
-        seqnum = 0
-        try:
-            imp_module = importlib.import_module(self._uve_module)
-        except ImportError:
-            self._logger.error('Failed to import Module "%s"' %
-                               (self._uve_module))
-        else:
-            seqnum = getattr(imp_module, self._uve_type).lseqnum()
-        return seqnum
-    #end uve_type_seqnum
+        return self._uve_type.lseqnum()
+    # end uve_type_seqnum
 
     def update_uve(self, uve_sandesh):
         uve_name = uve_sandesh.data.name
         uve_table = uve_sandesh.data._table
         if uve_table is None or uve_table is '':
             self._logger.error('UVE update failed. Table None or "" for '
-                               '<%s:%s>' % (self._uve_type, uve_name))
+                '<%s:%s>' % (self._uve_type.__name__, uve_name))
             return False
         if self._uve_map.get(uve_table) is None:
             self._uve_map[uve_table] = {}
         try:
             uve_entry = self._uve_map[uve_table][uve_name]
         except KeyError:
-            self._logger.debug('Add uve <%s, %s> in the [%s:%s] map' \
-                % (uve_name, uve_sandesh.seqnum(), uve_table, self._uve_type))
+            self._logger.debug('Add uve <%s, %s> in the [%s:%s] map' %
+                (uve_name, uve_sandesh.seqnum(), uve_table,
+                 self._uve_type.__name__))
             self._uve_map[uve_table][uve_name] = \
-                SandeshUVEPerTypeMap.UVEMapEntry( \
+                SandeshUVEPerTypeMap.UVEMapEntry(
                     copy.deepcopy(uve_sandesh.data), uve_sandesh.seqnum())
         else:
             if uve_entry.data.deleted is True:
                 if uve_sandesh.data.deleted is not True:
-                    # The uve entry in the cache has been marked for deletion and
-                    # a new uve entry with the same key has been created. Replace the
-                    # deleted uve entry in the cache with this new entry.
-                    self._logger.debug('Re-add uve <%s, %s> in the [%s:%s] map' \
+                    # The uve entry in the cache has been marked for deletion
+                    # and a new uve entry with the same key has been created.
+                    # Replace the deleted uve entry in the cache with this
+                    # new entry.
+                    self._logger.debug('Re-add uve <%s,%s> in [%s:%s] map' \
                         % (uve_name, uve_sandesh.seqnum(), uve_table,
-                           self._uve_type))
+                           self._uve_type.__name__))
                     self._uve_map[uve_table][uve_name] = \
-                        SandeshUVEPerTypeMap.UVEMapEntry(uve_sandesh.data, uve_sandesh.seqnum())
+                        SandeshUVEPerTypeMap.UVEMapEntry(uve_sandesh.data,
+                            uve_sandesh.seqnum())
                 else:
                     # Duplicate uve delete. Do we need to update the seqnum here?
                     self._logger.error('Duplicate uve delete <%s>' % (uve_name))
@@ -186,66 +176,39 @@ class SandeshUVEPerTypeMap(object):
                 uve_entry.seqno = uve_sandesh.seqnum()
                 uve_entry.update_count = uve_entry.update_count + 1
                 self._uve_map[uve_table][uve_name] = uve_entry
-        # Now, update the uve_global_map
-        self._sandesh._uve_type_maps.update_uve_type_map(self._uve_type, self)
         return True
-    #end update_uve
+    # end update_uve
 
     def sync_uve(self, table, seqno, ctx, more, sandesh_instance):
         count = 0
-        try:
-            imp_module = importlib.import_module(self._uve_module)
-        except ImportError:
-            self._logger.error('Failed to import Module "%s"' %
-                               (self._uve_module))
-        else:
-            for uve_table, uve_map in self._uve_map.iteritems():
-                if table is not None and uve_table != table:
-                    continue
-                for uve_name, uve_entry in uve_map.iteritems():
-                    if seqno == 0 or seqno < uve_entry.seqno:
-                        try:
-                            uve_type = getattr(imp_module, self._uve_type)
-                        except AttributeError:
-                            self._logger.error('Failed to create sandesh UVE "%s"' \
-                                % (self._uve_type))
-                            break
-                        else:
-                            sandesh_uve = uve_type(sandesh=sandesh_instance)
-                            sandesh_uve.data = uve_entry.data
-                            self._logger.debug('send sync_uve <%s: %s> in the '
-                                '[%s:%s] map' % (uve_entry.data.name,
-                                uve_entry.seqno, uve_table, self._uve_type))
-                            sandesh_uve.send(True, uve_entry.seqno, ctx,
-                                             more, sandesh_instance)
-                            count += 1
+        for uve_table, uve_map in self._uve_map.iteritems():
+            if table is not None and uve_table != table:
+                continue
+            for uve_name, uve_entry in uve_map.iteritems():
+                if seqno == 0 or seqno < uve_entry.seqno:
+                    sandesh_uve = self._uve_type(sandesh=sandesh_instance)
+                    sandesh_uve.data = uve_entry.data
+                    self._logger.debug('send sync_uve <%s: %s> in the '
+                        '[%s:%s] map' % (uve_entry.data.name,
+                        uve_entry.seqno, uve_table, self._uve_type.__name__))
+                    sandesh_uve.send(True, uve_entry.seqno, ctx,
+                        more, sandesh_instance)
+                    count += 1
         return count
-    #end sync_uve
+    # end sync_uve
 
     def send_uve(self, table, name, ctx, more, sandesh_instance):
-        try:
-            imp_module = importlib.import_module(self._uve_module)
-        except ImportError:
-            self._logger.error('Failed to import Module "%s"' %
-                               (self._uve_module))
-        else:
-            for uve_table, uve_map in self._uve_map.iteritems():
-                if table is not None and uve_table != table:
-                    continue
-                uve_entry = uve_map.get(name)
-                if uve_entry:
-                    try:
-                        uve_type = getattr(imp_module, self._uve_type)
-                    except AttributeError:
-                        self._logger.error('Failed to create sandesh UVE "%s"' \
-                            % (self._uve_type))
-                    else:
-                        sandesh_uve = uve_type(sandesh_instance)
-                        sandesh_uve.data = uve_entry.data
-                        sandesh_uve.send(True, uve_entry.seqno, ctx, more,
-                            sandesh_instance)
-                    return True
+        for uve_table, uve_map in self._uve_map.iteritems():
+            if table is not None and uve_table != table:
+                continue
+            uve_entry = uve_map.get(name)
+            if uve_entry:
+                sandesh_uve = self._uve_type(sandesh_instance)
+                sandesh_uve.data = uve_entry.data
+                sandesh_uve.send(True, uve_entry.seqno, ctx, more,
+                    sandesh_instance)
+                return True
         return False
-    #end send_uve
+    # end send_uve
 
-#end class SandeshUVEPerTypeMap
+# end class SandeshUVEPerTypeMap

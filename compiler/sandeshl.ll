@@ -186,6 +186,7 @@ format_str    (%([1-9]$)?([+-]?[ -#0])?([1-9]+)?(\.[1-9]+)?(hh|h|l|ll|L|z|j|t)?(
 "flowlog"            { return tok_flow;                 } 
 "buffer"             { return tok_buffer;               }
 "uve"                { return tok_uve;                  }
+"dynamicuve"         { return tok_dynamic_uve;          }
 "alarm"              { return tok_alarm;                }
 "sandesh"            { return tok_sandesh;              }
 "staticfunction"     { return tok_staticfunction;       }

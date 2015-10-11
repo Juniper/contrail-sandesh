@@ -172,6 +172,8 @@ class t_scope {
               break;
             case t_base_type::TYPE_SANDESH_UVE:
               break;
+            case t_base_type::TYPE_SANDESH_DYNAMIC_UVE:
+              break;
             case t_base_type::TYPE_SANDESH_OBJECT:
               break;
             case t_base_type::TYPE_SANDESH_FLOW:
