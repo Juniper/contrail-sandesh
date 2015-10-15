@@ -510,8 +510,8 @@ string t_py_generator::render_sandesh_includes() {
       "from pysandesh.sandesh_http import SandeshHttp\n"
       "from pysandesh.sandesh_uve import SandeshUVETypeMaps\n"
       "from pysandesh.util import UTCTimestampUsec, UTCTimestampUsecToString\n"
-      "from pysandesh.gen_py.sandesh.constants import *\n"
-      "import collections\n";
+      "from pysandesh import util\n"
+      "from pysandesh.gen_py.sandesh.constants import *\n";
   }
   return sandesh_includes;
 }
@@ -1407,7 +1407,7 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
   }
 
   if (sandesh_type->is_sandesh_system()) {
-    indent(out) << "rate_limit_buffer = collections.deque(maxlen=sandesh_base."
+    indent(out) << "rate_limit_buffer = util.deque(maxlen=sandesh_base."
                    "SandeshSystem._DEFAULT_SEND_RATELIMIT)" << endl << endl;
     indent(out) << "do_rate_limit_drop_log = True" << endl << endl;
   }
