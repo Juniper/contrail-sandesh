@@ -31,10 +31,10 @@ class SandeshConfigLogger(sandesh_base_logger.SandeshBaseLogger):
     [1] https://docs.python.org/2/library/logging.config.html
     """
 
-    def __init__(self, generator, logger_config_file=None):
-        super(SandeshConfigLogger, self).__init__(generator)
+    def __init__(self, logger_name, logger_config_file=None):
+        super(SandeshConfigLogger, self).__init__(logger_name)
         logging.config.fileConfig(logger_config_file)
-        self._logger = logging.getLogger(generator)
+        self._logger = logging.getLogger(logger_name)
 
 
 class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
@@ -43,14 +43,14 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
     _DEFAULT_LOG_FILE = '<stdout>'
     _DEFAULT_SYSLOG_FACILITY = 'LOG_LOCAL0'
 
-    def __init__(self, generator, logger_config_file=None):
-        assert generator, 'SandeshLogger init requires generator name'
+    def __init__(self, logger_name, logger_config_file=None):
+        assert logger_name, 'SandeshLogger init requires logger name'
 
-        super(SandeshLogger, self).__init__(generator)
+        super(SandeshLogger, self).__init__(logger_name)
 
-        self._generator = generator
+        self._logger_name = logger_name
 
-        self._logger = logging.getLogger(self._generator)
+        self._logger = logging.getLogger(self._logger_name)
         self._logger.setLevel(
             sandesh_base_logger.SandeshBaseLogger.get_py_logger_level(
                 SandeshLevel.SYS_INFO))
@@ -154,6 +154,9 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
                                  syslog_facility,
                                  logging.handlers.SysLogHandler.LOG_LOCAL0)
             )
+            log_format = logging.Formatter(
+                '%(name)s[%(process)d]: %(message)s')
+            self._logging_syslog_handler.setFormatter(log_format)
             self._logger.addHandler(self._logging_syslog_handler)
 
         super(SandeshLogger, self).set_logging_syslog(enable_syslog,
