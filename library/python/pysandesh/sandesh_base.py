@@ -858,7 +858,7 @@ class SandeshUVE(Sandesh):
             uve_type_map = sandesh._uve_type_maps.get_uve_type_map(
                 self.__class__.__name__)
             if uve_type_map is None:
-                sandesh._logger.error('sandesh uve <%s> not registered: %s'\
+                sandesh._logger.error('sandesh uve <%s> not registered'\
                     % (self.__class__.__name__))
                 sandesh.drop_tx_sandesh(self,
                     SandeshTxDropReason.ValidationFailed)

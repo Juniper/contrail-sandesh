@@ -162,7 +162,7 @@ class t_py_generator : public t_generator {
   void generate_py_sandesh_async(std::ofstream& out, t_sandesh* tsandesh);
   void generate_py_sandesh_request(std::ofstream& out, t_sandesh* tsandesh);
   void generate_py_sandesh_response(std::ofstream& out, t_sandesh* tsandesh);
-  void generate_py_sandesh_uve(std::ofstream& out, t_sandesh* tsandesh);
+  void generate_py_sandesh_uve(std::ofstream& out, t_sandesh* tsandesh, bool update);
   void generate_py_sandesh_uve_list(std::ofstream& out);
   void generate_py_sandesh_alarm_list(std::ofstream& out);
   void generate_py_sandesh_trace(std::ofstream& out, t_sandesh* tsandesh);
@@ -1507,7 +1507,9 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
     generate_py_sandesh_response(out, tsandesh);
   } else if (sandesh_type->is_sandesh_uve() ||
              sandesh_type->is_sandesh_alarm()) {
-    generate_py_sandesh_uve(out, tsandesh);
+    generate_py_sandesh_uve(out, tsandesh, true);
+  } else if (sandesh_type->is_sandesh_dynamic_uve()) {
+    generate_py_sandesh_uve(out, tsandesh, false);
   } else if (sandesh_type->is_sandesh_trace() ||
              sandesh_type->is_sandesh_trace_object()) {
     generate_py_sandesh_trace(out, tsandesh);
@@ -2324,31 +2326,33 @@ void t_py_generator::generate_py_sandesh_response(std::ofstream& out,
 }
 
 void t_py_generator::generate_py_sandesh_uve(std::ofstream& out,
-                                             t_sandesh* tsandesh) {
+                                             t_sandesh* tsandesh,
+                                             bool update) {
   const vector<t_field*>& fields = tsandesh->get_members();
   vector<t_field*>::const_iterator f_iter = fields.begin();
   assert((*f_iter)->get_name() == "data");
-
-  out << indent() << "def update_uve(self, tdata):" << endl;
-  indent_up();
   t_type* t = get_true_type((*f_iter)->get_type());
-  assert(t->is_struct());
   t_struct* ts = (t_struct*)t;
-  const vector<t_field*>& sfields = ts->get_members();
-  vector<t_field*>::const_iterator s_iter;
+  if (update) {
+      out << indent() << "def update_uve(self, tdata):" << endl;
+      indent_up();
+      assert(t->is_struct());
+      const vector<t_field*>& sfields = ts->get_members();
+      vector<t_field*>::const_iterator s_iter;
 
-  for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
-    out << indent() << "if self.data." << (*s_iter)->get_name() << " is not None:" << endl;
-    indent_up();
-    out << indent() << "tdata." << (*s_iter)->get_name() << " = self.data." <<
-        (*s_iter)->get_name() << endl;
-    indent_down();
+      for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
+        out << indent() << "if self.data." << (*s_iter)->get_name() << " is not None:" << endl;
+        indent_up();
+        out << indent() << "tdata." << (*s_iter)->get_name() << " = self.data." <<
+            (*s_iter)->get_name() << endl;
+        indent_down();
+      }
+      out << indent() << "return tdata" << endl;
+      f_iter++;
+      assert(f_iter == fields.end());
+      indent_down();
+      out << endl;
   }
-  out << indent() << "return tdata" << endl;
-  f_iter++;
-  assert(f_iter == fields.end());
-  indent_down();
-  out << endl;
 
   const t_base_type *sandesh_type = (t_base_type *)tsandesh->get_type();
   if (sandesh_type->is_sandesh_uve()) {

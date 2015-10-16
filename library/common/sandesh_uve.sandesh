@@ -211,7 +211,7 @@ struct ModuleClientState {
     2: optional bool                       deleted
     3: optional SandeshClientInfo          client_info
     4: optional SandeshGeneratorStats      msg_stats
-    5: optional u64                        sm_queue_count (tags="")
+    5: optional u64                        sm_queue_count
     6: optional SandeshStateMachineStats   sm_stats
     7: optional SandeshSessionStats        session_stats
     8: optional io.SocketIOStats           session_rx_socket_stats
