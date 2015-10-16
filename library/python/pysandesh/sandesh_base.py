@@ -454,23 +454,6 @@ class Sandesh(object):
             return req_type()
     # end get_sandesh_request_object
 
-    def get_sandesh_dynamic_uve_type(self, uve_data_type_name):
-        uve_type_map = self._uve_type_maps.get_uve_type_map(
-                            uve_data_type_name+'UVE')
-        if uve_type_map is not None:
-            uve_type = uve_type_map.uve_type()
-            uve_data_type = uve_type_map.uve_data_type()
-        else:
-            from pysandesh.gen_py.sandesh_dynamic_uve.ttypes import \
-                DynamicObjectUVE, DynamicObject
-            uve_type = type(uve_data_type_name+'UVE', (DynamicObjectUVE,), {})
-            uve_data_type = type(uve_data_type_name, (DynamicObject,), {})
-            # Register Dynamic UVE
-            SandeshUVEPerTypeMap(self, SandeshType.UVE, uve_type,
-                                 uve_data_type)
-        return uve_type, uve_data_type
-    # end get_sandesh_dynamic_uve_type
-
     def trace_enable(self):
         self._trace.TraceOn()
     # end trace_enable
@@ -858,8 +841,8 @@ class SandeshUVE(Sandesh):
             uve_type_map = sandesh._uve_type_maps.get_uve_type_map(
                 self.__class__.__name__)
             if uve_type_map is None:
-                sandesh._logger.error('sandesh uve <%s> not registered: %s'\
-                    % (self.__class__.__name__))
+                sandesh._logger.error('sandesh uve <%s> not registered %s'\
+                    % (self.__class__.__name__, str(sandesh._uve_type_maps._uve_global_map)))
                 sandesh.drop_tx_sandesh(self,
                     SandeshTxDropReason.ValidationFailed)
                 return -1

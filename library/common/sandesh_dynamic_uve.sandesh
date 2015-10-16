@@ -14,12 +14,3 @@ struct DynamicElement {
     2: string value
 }
 
-struct DynamicObject {
-    1: string  name (key="")
-    2: list<DynamicElement> elements
-    3: optional bool deleted
-}
-
-dynamicuve sandesh DynamicObjectUVE {
-    1: DynamicObject  data
-}

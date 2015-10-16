@@ -45,6 +45,7 @@ gen_test_pkg += env.SandeshGenPy('uve_alarm_test.sandesh')
 gen_test_pkg += env.SandeshGenPy('#tools/sandesh/library/common/sandesh_alarm_base.sandesh')
 gen_test_pkg += env.SandeshGenPy('#controller/src/base/test/connection_info_test.sandesh')
 gen_test_pkg += env.SandeshGenPy('#controller/src/base/sandesh/process_info.sandesh', 'gen_py/connection_info_test/', False)
+gen_test_pkg += env.SandeshGenPy('#tools/sandesh/library/common/sandesh_dynamic_uve.sandesh', 'gen_py/uve_alarm_test/', False)
 env.Depends(test_modules_rules, gen_test_pkg)
 
 venv = env.setup_venv('pysandesh_test', 'pysandesh_test')
