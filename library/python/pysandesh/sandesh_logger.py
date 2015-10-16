@@ -154,6 +154,9 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
                                  syslog_facility,
                                  logging.handlers.SysLogHandler.LOG_LOCAL0)
             )
+            log_format = logging.Formatter(
+                '%(name)s[%(process)d]: %(message)s')
+            self._logging_syslog_handler.setFormatter(log_format)
             self._logger.addHandler(self._logging_syslog_handler)
 
         super(SandeshLogger, self).set_logging_syslog(enable_syslog,
