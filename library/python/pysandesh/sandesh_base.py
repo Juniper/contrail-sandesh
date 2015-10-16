@@ -630,10 +630,8 @@ class Sandesh(object):
                 module, logger_class,
                 logger_config_file=logger_config_file))
         else:
-            generator = '%s:%s:%s:%s' % (self._source, module, self._node_type,
-                                         self._instance_id)
             self._sandesh_logger = sand_logger.SandeshLogger(
-                generator, logger_config_file=logger_config_file)
+                module, logger_config_file=logger_config_file)
         self._logger = self._sandesh_logger.logger()
     # end _init_logger
 
