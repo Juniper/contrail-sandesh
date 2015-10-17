@@ -87,7 +87,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
         dynamic_uve_data = [
             # add uve
             {
-                'type' : 'Config',
+                'type' : (ConfigUVE, Config),
                 'table' : 'CollectorInfo',
                 'name' : 'node1',
                 'elements' : {'log_level' : 'SYS_INFO'},
@@ -96,7 +96,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
             },
             # update uve
             {
-                'type' : 'Config',
+                'type' : (ConfigUVE, Config),
                 'table' : 'CollectorInfo',
                 'name' : 'node1',
                 'elements' : {'log_local' : 'True'},
@@ -106,7 +106,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
             },
             # add another uve
             {
-                'type' : 'Config',
+                'type' : (ConfigUVE, Config),
                 'table' : 'ControlInfo',
                 'name' : 'node1',
                 'elements' : {'log_category' : 'Redis'},
@@ -115,7 +115,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
             },
             # delete uve
             {
-                'type' : 'Config',
+                'type' : (ConfigUVE, Config),
                 'table' : 'ControlInfo',
                 'name' : 'node1',
                 'deleted' : True,
@@ -123,7 +123,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
             },
             # add deleted uve
             {
-                'type' : 'Config',
+                'type' : (ConfigUVE, Config),
                 'table' : 'ControlInfo',
                 'name' : 'node1',
                 'elements' : {'log_level' : 'SYS_DEBUG',
@@ -134,7 +134,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
             },
             #  add another uve - different type
             {
-                'type' : 'ConfigTest',
+                'type' : (ConfigTestUVE, ConfigTest),
                 'table' : 'CollectorInfo',
                 'name' : 'node2',
                 'elements' : {'param1' : 'val1', 'param2' : 'val2'},
@@ -144,8 +144,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
         ]
 
         for uve in dynamic_uve_data:
-            uve_type, uve_data_type = \
-                self.sandesh.get_sandesh_dynamic_uve_type(uve['type'])
+            uve_type, uve_data_type = uve['type']
             elts = None
             if uve.get('elements'):
                 elts = [DynamicElement(attr,val) \
@@ -180,14 +179,14 @@ class SandeshUVEAlarmTest(unittest.TestCase):
                                    'data': uve_data['data']}])
         sync_dynamic_uve_data = [
             {
-                'type' : 'ConfigTest',
+                'type' : (ConfigTestUVE, ConfigTest),
                 'table' : 'CollectorInfo',
                 'name' : 'node2',
                 'elements' : {'param1' : 'val1', 'param2' : 'val2'},
                 'seqnum' : 1
             },
             {
-                'type' : 'Config',
+                'type' : (ConfigUVE, Config),
                 'table' : 'ControlInfo',
                 'name' : 'node1',
                 'elements' : {'log_level' : 'SYS_DEBUG',
@@ -195,7 +194,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
                 'seqnum' : 5
             },
             {
-                'type' : 'Config',
+                'type' : (ConfigUVE, Config),
                 'table' : 'CollectorInfo',
                 'name' : 'node1',
                 'elements' : {'log_level' : 'SYS_INFO',
@@ -204,8 +203,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
             }
         ]
         for uve in sync_dynamic_uve_data:
-            uve_type, uve_data_type = \
-                self.sandesh.get_sandesh_dynamic_uve_type(uve['type'])
+            uve_type, uve_data_type = uve['type']
             elts = None
             if uve.get('elements'):
                 elts = [DynamicElement(attr,val) \

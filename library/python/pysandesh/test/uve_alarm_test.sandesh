@@ -7,6 +7,7 @@
  *
  * Sandesh definitions for uve/alarm test
  */
+include "sandesh/library/common/sandesh_dynamic_uve.sandesh"
 
 struct SandeshUVEData {
     1: string name (key="OpserverInfo")
@@ -16,4 +17,24 @@ struct SandeshUVEData {
 
 uve sandesh SandeshUVETest {
     1: SandeshUVEData data
+}
+
+struct Config {
+    1: string  name (key="")
+    2: list<sandesh_dynamic_uve.DynamicElement> elements
+    3: optional bool deleted
+}
+
+dynamicuve sandesh ConfigUVE {
+    1: Config data
+}
+
+struct ConfigTest {
+    1: string  name (key="")
+    2: list<sandesh_dynamic_uve.DynamicElement> elements
+    3: optional bool deleted
+}
+
+dynamicuve sandesh ConfigTestUVE {
+    1: ConfigTest data
 }
