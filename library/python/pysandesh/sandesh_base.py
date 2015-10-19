@@ -879,6 +879,8 @@ class SandeshDynamicUVE(SandeshUVE):
         if self.data.elements is not None:
             if cache_data.elements is None:
                 cache_data.elements = self.data.elements
+            elif self.data.elements == []:
+                cache_data.elements = []
             else:
                 from pysandesh.gen_py.sandesh_dynamic_uve.ttypes import \
                     DynamicElement

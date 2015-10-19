@@ -140,13 +140,23 @@ class SandeshUVEAlarmTest(unittest.TestCase):
                 'elements' : {'param1' : 'val1', 'param2' : 'val2'},
                 'expected_elements' : {'param1' : 'val1', 'param2' : 'val2'},
                 'seqnum' : 1
-            }
+            },
+            # delete uve, set elements to []
+            {
+                'type' : (ConfigTestUVE, ConfigTest),
+                'table' : 'CollectorInfo',
+                'name' : 'node2',
+                'deleted' : True,
+                'elements' : {},
+                'expected_elements' : {},
+                'seqnum' : 2
+            },
         ]
 
         for uve in dynamic_uve_data:
             uve_type, uve_data_type = uve['type']
             elts = None
-            if uve.get('elements'):
+            if uve.get('elements') is not None:
                 elts = [DynamicElement(attr,val) \
                     for attr, val in uve['elements'].iteritems()]
             uve_data = uve_data_type(name=uve['name'], elements=elts,
@@ -154,12 +164,13 @@ class SandeshUVEAlarmTest(unittest.TestCase):
             dynamic_uve = uve_type(data=uve_data, table=uve['table'],
                                    sandesh=self.sandesh)
             dynamic_uve.send(sandesh=self.sandesh)
-            if uve.get('expected_elements') :
+            if uve.get('expected_elements') is not None:
                 elts = [DynamicElement(attr,val) \
                     for attr, val in uve['expected_elements'].iteritems()]
                 uve_data = uve_data_type(name=uve['name'], elements=elts,
                                          deleted=uve.get('deleted'))
                 uve_data._table = uve['table']
+            print uve_data.__dict__
             expected_data.extend([{'seqnum': uve['seqnum'], 'data': uve_data}])
 
         # sync UVEs
@@ -182,8 +193,9 @@ class SandeshUVEAlarmTest(unittest.TestCase):
                 'type' : (ConfigTestUVE, ConfigTest),
                 'table' : 'CollectorInfo',
                 'name' : 'node2',
-                'elements' : {'param1' : 'val1', 'param2' : 'val2'},
-                'seqnum' : 1
+                'deleted' : True,
+                'elements' : {},
+                'seqnum' : 2
             },
             {
                 'type' : (ConfigUVE, Config),
@@ -205,7 +217,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
         for uve in sync_dynamic_uve_data:
             uve_type, uve_data_type = uve['type']
             elts = None
-            if uve.get('elements'):
+            if uve.get('elements') is not None:
                 elts = [DynamicElement(attr,val) \
                     for attr, val in uve['elements'].iteritems()]
             uve_data = uve_data_type(name=uve['name'], elements=elts,
