@@ -317,13 +317,16 @@ protected:
     virtual bool Dispatch(SandeshConnection * sconn = NULL);
     virtual bool SendEnqueue();
 
-    bool HandleTest();
+    static bool HandleTest(SandeshLevel::type level, const
+        std::string& category);
 
     static bool IsUnitTest() {
         return role_ == SandeshRole::Invalid || role_ == SandeshRole::Test;
     }
     static SandeshCallback response_callback_;
     static SandeshClient *client_;
+    static bool IsLevelCategoryLoggingAllowed(SandeshLevel::type level,
+                                              const std::string &category);
 
 private:
     friend class SandeshTracePerfTest;
@@ -344,8 +347,7 @@ private:
             unsigned short http_port,
             SandeshContext *client_context = NULL);
 
-    bool IsLevelUT();
-    bool IsLevelCategoryLoggingAllowed() const;
+    static bool IsLevelUT(SandeshLevel::type level);
 
     static SandeshRole::type role_;
     static std::string module_;

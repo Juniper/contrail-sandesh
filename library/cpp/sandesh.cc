@@ -563,13 +563,10 @@ int32_t Sandesh::ReceiveBinaryMsg(u_int8_t *buf, u_int32_t buf_len,
     return xfer;
 }
 
-bool Sandesh::HandleTest() {
+bool Sandesh::HandleTest(SandeshLevel::type level,
+                         const std::string& category) {
     // Handle unit test scenario
-    if (IsUnitTest() || IsLevelUT()) {
-        if (IsLevelCategoryLoggingAllowed()) {
-            ForcedLog();
-        }
-        Release();
+    if (IsUnitTest() || IsLevelUT(level)) {
         return true;
     }
     return false;
@@ -600,10 +597,6 @@ bool Sandesh::SendEnqueue() {
 }
 
 bool Sandesh::Dispatch(SandeshConnection * sconn) {
-    // Handle unit test
-    if (HandleTest()) {
-        return true;
-    }
     // Sandesh client does not have a connection
     if (sconn) {
         return sconn->SendSandesh(this);
@@ -639,10 +632,6 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
         SandeshHttp::Response(this, context());
         return true;
     }
-    // Handle unit test
-    if (HandleTest()) {
-        return true;
-    }
     if (client_) {
         if (!client_->SendSandeshUVE(this)) {
             SANDESH_LOG(ERROR, "SandeshUVE : Send FAILED: " << ToString());
@@ -676,15 +665,16 @@ bool SandeshRequest::Enqueue(SandeshRxQueue *queue) {
     return true;
 }
 
-bool Sandesh::IsLevelUT() {
-    return level_ >= SandeshLevel::UT_START &&
-            level_ <= SandeshLevel::UT_END;
+bool Sandesh::IsLevelUT(SandeshLevel::type level) {
+    return level >= SandeshLevel::UT_START &&
+            level <= SandeshLevel::UT_END;
 }
 
-bool Sandesh::IsLevelCategoryLoggingAllowed() const {
-    bool level_allowed = logging_level_ >= level_;
+bool Sandesh::IsLevelCategoryLoggingAllowed(SandeshLevel::type level,
+    const std::string &category) {
+    bool level_allowed = logging_level_ >= level;
     bool category_allowed = !logging_category_.empty() ?
-            logging_category_ == category_ : true;
+            logging_category_ == category : true;
     return level_allowed && category_allowed;
 }
 
@@ -692,7 +682,8 @@ bool Sandesh::IsLoggingAllowed() const {
     if (type_ == SandeshType::FLOW) {
         return enable_flow_log_;
     } else {
-        return IsLocalLoggingEnabled() && IsLevelCategoryLoggingAllowed();
+        return IsLocalLoggingEnabled() &&
+            IsLevelCategoryLoggingAllowed(level_, category_);
     }
 }
 
