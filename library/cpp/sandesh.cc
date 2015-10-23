@@ -583,18 +583,6 @@ int32_t Sandesh::ReceiveBinaryMsg(u_int8_t *buf, u_int32_t buf_len,
     return xfer;
 }
 
-bool Sandesh::HandleTest() {
-    // Handle unit test scenario
-    if (IsUnitTest() || IsLevelUT(level_)) {
-        if (IsLevelCategoryLoggingAllowed(level_, category_)) {
-            ForcedLog();
-        }
-        Release();
-        return true;
-    }
-    return false;
-}
-
 bool Sandesh::SendEnqueue() {
     if (!client_) {
         if (IsLoggingDroppedAllowed()) {
@@ -621,10 +609,6 @@ bool Sandesh::SendEnqueue() {
 }
 
 bool Sandesh::Dispatch(SandeshConnection * sconn) {
-    // Handle unit test
-    if (HandleTest()) {
-        return true;
-    }
     // Sandesh client does not have a connection
     if (sconn) {
         return sconn->SendSandesh(this);
@@ -658,10 +642,6 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
     assert(sconn == NULL);
     if (0 == context().find("http%")) {
         SandeshHttp::Response(this, context());
-        return true;
-    }
-    // Handle unit test
-    if (HandleTest()) {
         return true;
     }
     if (client_) {
@@ -834,8 +814,8 @@ void Sandesh::set_module_context(const std::string &module_name,
     }
 }
 
-bool SandeshSystem::HandleTest(SandeshLevel::type level,
-                                      const std::string& category) {
+bool Sandesh::HandleTest(SandeshLevel::type level,
+                         const std::string& category) {
     // Handle unit test scenario
     if (IsUnitTest() || IsLevelUT(level)) {
         return true;

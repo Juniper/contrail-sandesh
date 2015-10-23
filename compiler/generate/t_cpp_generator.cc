@@ -1246,6 +1246,20 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
              generate_sandesh_async_creator(tsandesh, true, false, false, "", "", true, false, false) <<
              " {" << endl;
     indent_up();
+    out << indent() << "if (HandleTest(level, category)) {" << endl;
+    indent_up();
+    if (!is_flow) {
+        out << indent() << "if (IsLevelCategoryLoggingAllowed(level, category))"
+            " {" << endl;
+        indent_up();
+        out << indent() << "std::string drop_reason = \"\";" << endl;
+        out << indent() << "DropLog" <<
+            generate_sandesh_async_creator(tsandesh, false, false, false, "",
+                                           "", false, false, true) << "; " << endl;
+        scope_down(out);
+    }
+    out << indent() << "return;" << endl;
+    scope_down(out);
     out << indent() << "if (level >= SendingLevel()) {" << endl;
     indent_up();
     out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
@@ -1259,11 +1273,7 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     }
     out << indent() << "return;" << endl;
     scope_down(out);
-
-        //Adjust the buffer size if its capacity is different from configured size
     if (is_system) {
-        out << indent() << "if (!HandleTest(level, category)) {" << endl;
-        indent_up();
         out << indent() << "if (!IsRatelimitPass()) {" << endl;
         indent_up();
         out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
@@ -1281,22 +1291,6 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
                                           "", false, false, true) <<
            "; " << endl;
         out << indent() << "do_rate_limit_drop_log_ = false;" << endl;
-        scope_down(out);
-        out << indent() << "return;" << endl;
-        scope_down(out);
-        indent_down();
-        indent(out) << "} else {" << endl;
-        indent_up();
-        out << indent() << "if (IsLevelCategoryLoggingAllowed(level,category))"
-            " {" << endl;
-        indent_up();
-        out << indent() << "std::stringstream ratelimit_val;" << endl;
-        out << indent() << " ratelimit_val << Sandesh::get_send_rate_limit();"
-            << endl;
-        out << indent() << "std::string drop_reason = \"\";" << endl;
-        out << indent() << "DropLog" <<
-           generate_sandesh_async_creator(tsandesh, false, false, false, "",
-                                          "", false, false, true) << "; " << endl;
         scope_down(out);
         out << indent() << "return;" << endl;
         scope_down(out);

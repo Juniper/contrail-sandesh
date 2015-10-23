@@ -330,7 +330,8 @@ protected:
     virtual bool Dispatch(SandeshConnection * sconn = NULL);
     virtual bool SendEnqueue();
 
-    bool HandleTest();
+    static bool HandleTest(SandeshLevel::type level, const
+        std::string& category);
 
     static bool IsUnitTest() {
         return role_ == SandeshRole::Invalid || role_ == SandeshRole::Test;
@@ -491,8 +492,6 @@ class SandeshSystem : public Sandesh {
 protected:
     SandeshSystem(const std::string& name, uint32_t seqno) :
         Sandesh(SandeshType::SYSTEM, name, seqno) {}
-    static bool HandleTest(SandeshLevel::type level, const
-        std::string& category);
 };
 
 class SandeshObject : public Sandesh {
