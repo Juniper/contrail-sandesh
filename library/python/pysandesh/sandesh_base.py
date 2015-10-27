@@ -881,7 +881,14 @@ class SandeshDynamicUVE(SandeshUVE):
                 cache_data.elements = self.data.elements
             elif self.data.elements == []:
                 cache_data.elements = []
+            elif self.data.elements == {}:
+                cache_data.elements = {}
+            elif isinstance(cache_data.elements, dict):
+                cache_data.elements.update(self.data.elements)
+                self.data.elements = copy.deepcopy(cache_data.elements)
             else:
+                # TODO: Remove this code.
+                #       Going forward, "elements" should be a dict  
                 from pysandesh.gen_py.sandesh_dynamic_uve.ttypes import \
                     DynamicElement
                 cache_elt_dict = dict([elt.attribute, elt.value] \
