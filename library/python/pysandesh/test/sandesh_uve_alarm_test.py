@@ -20,7 +20,6 @@ from pysandesh.sandesh_base import *
 from pysandesh.sandesh_client import SandeshClient
 from pysandesh.util import UTCTimestampUsec
 from pysandesh.gen_py.sandesh_alarm.ttypes import *
-from pysandesh.gen_py.sandesh_dynamic_uve.ttypes import *
 from gen_py.sandesh_alarm_base.ttypes import *
 from gen_py.uve_alarm_test.ttypes import *
 
@@ -155,20 +154,16 @@ class SandeshUVEAlarmTest(unittest.TestCase):
 
         for uve in dynamic_uve_data:
             uve_type, uve_data_type = uve['type']
-            elts = None
-            if uve.get('elements') is not None:
-                elts = [DynamicElement(attr,val) \
-                    for attr, val in uve['elements'].iteritems()]
+            elts = uve.get('elements')
             uve_data = uve_data_type(name=uve['name'], elements=elts,
                                      deleted=uve.get('deleted'))
             dynamic_uve = uve_type(data=uve_data, table=uve['table'],
                                    sandesh=self.sandesh)
             dynamic_uve.send(sandesh=self.sandesh)
-            if uve.get('expected_elements') is not None:
-                elts = [DynamicElement(attr,val) \
-                    for attr, val in uve['expected_elements'].iteritems()]
-                uve_data = uve_data_type(name=uve['name'], elements=elts,
-                                         deleted=uve.get('deleted'))
+            elts_exp = uve.get('expected_elements')
+            if elts_exp is not None:
+                uve_data = uve_data_type(name=uve['name'], elements=elts_exp,
+                        deleted=uve.get('deleted'))
                 uve_data._table = uve['table']
             print uve_data.__dict__
             expected_data.extend([{'seqnum': uve['seqnum'], 'data': uve_data}])
@@ -216,10 +211,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
         ]
         for uve in sync_dynamic_uve_data:
             uve_type, uve_data_type = uve['type']
-            elts = None
-            if uve.get('elements') is not None:
-                elts = [DynamicElement(attr,val) \
-                    for attr, val in uve['elements'].iteritems()]
+            elts = uve.get('elements')
             uve_data = uve_data_type(name=uve['name'], elements=elts,
                                      deleted=uve.get('deleted'))
             uve_data._table = uve['table']
