@@ -130,9 +130,9 @@ sandesh_state_machine_test = env.UnitTest('sandesh_state_machine_test',
 env.Alias('src/sandesh:sandesh_state_machine_test', sandesh_state_machine_test)
 
 sandesh_client_test = env.UnitTest('sandesh_client_test',
-                                          ['sandesh_client_test.cc'] +
-                                           sandesh_test_common_obj 
-                                          )
+                                   ['sandesh_client_test.cc'] +
+                                   sandesh_test_common_obj,
+                                   platform_exclude=[('Ubuntu','14.04')])
 env.Alias('src/sandesh:sandesh_client_test', sandesh_client_test)
 
 test_suite = [sandesh_message_test,
