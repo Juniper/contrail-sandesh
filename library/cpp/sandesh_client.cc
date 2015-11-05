@@ -48,7 +48,7 @@ const std::vector<Sandesh::QueueWaterMarkInfo>
                                                (50000, SandeshLevel::SYS_ERR, true, false)
                                                (10000, SandeshLevel::SYS_DEBUG, true, false)
                                                (75000, SandeshLevel::SYS_ERR, false, false)
-                                               (10000, SandeshLevel::SYS_DEBUG, false, false)
+                                               (30000, SandeshLevel::SYS_DEBUG, false, false)
                                                (2500, SandeshLevel::INVALID, false, false);
 
 SandeshClient::SandeshClient(EventManager *evm,
