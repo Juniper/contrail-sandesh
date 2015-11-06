@@ -243,6 +243,21 @@ protected:
             break;
         }
 
+        case 6:
+        {
+            EXPECT_STREQ("SandeshAsyncTest-Client", header.get_Module().c_str());
+            EXPECT_STREQ("localhost", header.get_Source().c_str());
+            EXPECT_EQ(1, header.get_SequenceNum());
+            EXPECT_EQ(ObjectLogOptionalTest::sversionsig(), header.get_VersionSig());
+            EXPECT_EQ(SandeshType::OBJECT, header.get_Type());
+            EXPECT_EQ(0, header.get_Hints());
+            EXPECT_EQ(SandeshLevel::SYS_INFO, header.get_Level());
+            EXPECT_EQ("", header.get_Category());
+            const char *expect = "<ObjectLogOptionalTest type=\"sandesh\"><f1 type=\"i32\" identifier=\"1\">200</f1><f3 type=\"i32\" identifier=\"2\">100</f3><file type=\"string\" identifier=\"-32768\">tools/sandesh/library/cpp/test/sandesh_message_test.cc</file><line type=\"i32\" identifier=\"-32767\">317</line></ObjectLogOptionalTest>";
+            EXPECT_STREQ(expect, message.c_str());
+	    break;
+	}
+
         default:
             EXPECT_EQ(0, 1);
             break;
@@ -298,6 +313,11 @@ TEST_F(SandeshAsyncTest, Async) {
     s3.f2 = 1;
     ObjectLogInnerAnnTest::Send("ObjectLogInnerAnnTest", SandeshLevel::SYS_INFO, "Test", 0, s3); // case 5
 
+    // Check for optional field
+    ObjectLogOptionalTest *smh = OBJECT_LOG_OPTIONAL_TEST_CREATE(200);
+    smh->set_f3(100);
+    OBJECT_LOG_OPTIONAL_TEST_SEND_DIRECT(smh); // case 6
+
     // Wait server is done receiving msgs
     TASK_UTIL_EXPECT_TRUE(asyncserver_done);
 
@@ -313,6 +333,8 @@ TEST_F(SandeshAsyncTest, Async) {
         it = type_stats.find("ObjectLogAnnTest");
         EXPECT_EQ(1, it->second->stats.messages_sent);
         it = type_stats.find("ObjectLogInnerAnnTest");
+        EXPECT_EQ(1, it->second->stats.messages_sent);
+        it = type_stats.find("ObjectLogOptionalTest");
         EXPECT_EQ(1, it->second->stats.messages_sent);
     }
 }
