@@ -24,6 +24,11 @@ objectlog sandesh ObjectLogTest {
     2: i32 f2,
 }
 
+objectlog sandesh ObjectLogOptionalTest {
+    1: i32 f1,
+    2: optional i32 f3
+}
+
 struct SAT3_struct {
     1: string f1 (key="ObjectVNTable")
     2: i32 f2 (format="%x")
