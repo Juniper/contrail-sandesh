@@ -76,6 +76,14 @@ class SandeshMsgTest(unittest.TestCase):
         self.assertNotEqual(-1, self._reader.read_msg(self._session.write_buf))
     # end test_objectlog_msg
 
+    def test_objectlog_optional_msg(self):
+        objectlog_msg = ObjectLogTest(StructObject(), None, 1)
+        self._expected_type = SandeshType.OBJECT
+        self._expected_hints = 0
+        self.assertNotEqual(-1, self._writer.send_msg(objectlog_msg, False))
+        self.assertNotEqual(-1, self._reader.read_msg(self._session.write_buf))
+    # end test_objectlog_optional_msg
+
     def test_objectlog_msg_key_hint(self):
         objectlog_msg = ObjectLogAnnTest(StructKeyHint("VM1"))
         self._expected_type = SandeshType.OBJECT
