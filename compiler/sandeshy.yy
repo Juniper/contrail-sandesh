@@ -841,7 +841,8 @@ Sandesh:
       $5->set_type($1);
 
       if (($1 != g_type_sandesh_request) &&
-          ($1 != g_type_sandesh_response)) {
+          ($1 != g_type_sandesh_response) &&
+	  ($1 != g_type_sandesh_object)) {
           if ($5->exist_opt_field()) {
               yyerror("optional field not supported in sandesh");
               exit(1);
