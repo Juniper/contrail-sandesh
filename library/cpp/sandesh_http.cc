@@ -113,10 +113,6 @@ HttpSendXML(const std::string& context, const u_int8_t * buf, uint32_t len,
     // Calculate current state;
     if (!client_ctx.empty()) {
         state = HXMLIncomplete;
-        if (client_ctx.compare(resp_name)) {
-            SANDESH_LOG(DEBUG, __func__ << " Response Mismatch . Expected " <<
-                    client_ctx << " , Got " << resp_name);
-        }
     } else {
         state = HXMLNew;
         client_ctx = resp_name;
