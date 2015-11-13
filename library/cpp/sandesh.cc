@@ -377,11 +377,10 @@ log4cplus::LogLevel SandeshLevelTolog4Level(
 }
 
 void Sandesh::SetLoggingLevel(SandeshLevel::type level) {
-    if (logging_level_ != level) {
-        log4cplus::LogLevel log4_old_level(
-            SandeshLevelTolog4Level(logging_level_));
-        log4cplus::LogLevel log4_new_level(
-            SandeshLevelTolog4Level(level));
+    log4cplus::LogLevel log4_new_level(SandeshLevelTolog4Level(level));
+    log4cplus::LogLevel log4_old_level(logger_.getLogLevel());
+    if (logging_level_ != level ||
+        log4_old_level != log4_new_level) {
         const log4cplus::LogLevelManager &log4level_manager(
             log4cplus::getLogLevelManager());
         SANDESH_LOG(INFO, "SANDESH: Logging: LEVEL: " << "[ " <<
