@@ -42,7 +42,7 @@ using namespace contrail::sandesh::transport;
 Sandesh::SandeshRole::type Sandesh::role_ = SandeshRole::Invalid;
 bool Sandesh::enable_local_log_ = false;
 bool Sandesh::enable_flow_log_ = false;
-uint32_t Sandesh::http_port_ = 0;
+int Sandesh::http_port_ = 0;
 bool Sandesh::enable_trace_print_ = false;
 bool Sandesh::send_queue_enabled_ = true;
 bool Sandesh::connect_to_collector_ = false;
@@ -109,7 +109,7 @@ extern int PullSandeshGenStatsReq;
 extern int PullSandeshUVE;
 extern int PullSandeshTraceReq;
 
-void Sandesh::Initialize(SandeshRole::type role,
+bool Sandesh::Initialize(SandeshRole::type role,
                          const std::string &module,
                          const std::string &source,
                          const std::string &node_type,
@@ -122,7 +122,7 @@ void Sandesh::Initialize(SandeshRole::type role,
     PullSandeshTraceReq = 1;
 
     if (role_ != SandeshRole::Invalid || role == SandeshRole::Invalid) {
-        return;
+        return true;
     }
 
     SANDESH_LOG(INFO, "SANDESH: ROLE             : " << SandeshRoleToString(role));
@@ -141,9 +141,15 @@ void Sandesh::Initialize(SandeshRole::type role,
     event_manager_  = evm;
 
     InitReceive(Task::kTaskInstanceAny);
-    http_port_ = SandeshHttp::Init(evm, module, http_port, &SandeshHttpCallback);
-
+    bool success(SandeshHttp::Init(evm, module, http_port,
+        &SandeshHttpCallback, &http_port_));
+    if (!success) {
+        SANDESH_LOG(ERROR, "SANDESH: HTTP INIT FAILED (PORT " <<
+            http_port << ")");
+        return false;
+    }
     RecordPort("http", module_, http_port_);
+    return true;
 }
 
 void Sandesh::RecordPort(const std::string& name, const std::string& module,
@@ -240,15 +246,15 @@ bool Sandesh::InitClient(EventManager *evm,
     return true;
 }
 
-void Sandesh::InitGenerator(const std::string &module,
+bool Sandesh::InitGenerator(const std::string &module,
                             const std::string &source, 
                             const std::string &node_type,
                             const std::string &instance_id,
                             EventManager *evm,
                             unsigned short http_port,
                             SandeshContext *client_context) {
-    Initialize(SandeshRole::Generator, module, source, node_type, instance_id,
-               evm, http_port, client_context);
+    return Initialize(SandeshRole::Generator, module, source, node_type,
+                      instance_id, evm, http_port, client_context);
 }
 
 bool Sandesh::InitGenerator(const std::string &module,
@@ -260,13 +266,16 @@ bool Sandesh::InitGenerator(const std::string &module,
                             CollectorSubFn csf,
                             const std::vector<std::string> &collectors,
                             SandeshContext *client_context) {
-    Initialize(SandeshRole::Generator, module, source, node_type, instance_id,
-               evm, http_port, client_context);
+    bool success(Initialize(SandeshRole::Generator, module, source, node_type,
+                            instance_id, evm, http_port, client_context));
+    if (!success) {
+        return false;
+    }
     return InitClient(evm, collectors, csf);
 }
 
 // Collector
-void Sandesh::InitCollector(const std::string &module,
+bool Sandesh::InitCollector(const std::string &module,
                             const std::string &source,
                             const std::string &node_type,
                             const std::string &instance_id,
@@ -274,20 +283,23 @@ void Sandesh::InitCollector(const std::string &module,
                             const std::string &collector_ip, int collector_port,
                             unsigned short http_port,
                             SandeshContext *client_context) {
-    Initialize(SandeshRole::Collector, module, source, node_type, instance_id,
-               evm, http_port, client_context);
-    ConnectToCollector(collector_ip, collector_port);
+    bool success(Initialize(SandeshRole::Collector, module, source, node_type,
+                            instance_id, evm, http_port, client_context));
+    if (!success) {
+        return false;
+    }
+    return ConnectToCollector(collector_ip, collector_port);
 }
 
-void Sandesh::InitGeneratorTest(const std::string &module,
+bool Sandesh::InitGeneratorTest(const std::string &module,
                                 const std::string &source,
                                 const std::string &node_type,
                                 const std::string &instance_id,
                                 EventManager *evm,
                                 unsigned short http_port, 
                                 SandeshContext *client_context) {
-    Initialize(SandeshRole::Test, module, source, node_type, instance_id, evm,
-               http_port, client_context);
+    return Initialize(SandeshRole::Test, module, source, node_type,
+                      instance_id, evm, http_port, client_context);
 }
 
 static void WaitForIdle() {

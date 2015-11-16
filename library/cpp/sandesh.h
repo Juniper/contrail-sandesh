@@ -151,7 +151,7 @@ public:
             CollectorSubFn csf,
             const std::vector<std::string> &collectors,
             SandeshContext *client_context = NULL);
-    static void InitGenerator(const std::string &module,
+    static bool InitGenerator(const std::string &module,
             const std::string &source, 
             const std::string &node_type,
             const std::string &instance_id,
@@ -161,7 +161,7 @@ public:
     static void RecordPort(const std::string& name, const std::string& module,
             unsigned short port);
     // Collector
-    static void InitCollector(const std::string &module,
+    static bool InitCollector(const std::string &module,
             const std::string &source, 
             const std::string &node_type,
             const std::string &instance_id,
@@ -170,7 +170,7 @@ public:
             unsigned short http_port,
             SandeshContext *client_context = NULL);
     // Test
-    static void InitGeneratorTest(const std::string &module,
+    static bool InitGeneratorTest(const std::string &module,
             const std::string &source,
             const std::string &node_type,
             const std::string &instance_id, 
@@ -259,7 +259,7 @@ public:
     static void set_node_type(std::string &node_type) { node_type_ = node_type; }
     static std::string node_type() { return node_type_; }
     static SandeshRole::type role() { return role_; }
-    static uint32_t http_port() { return http_port_; }
+    static int http_port() { return http_port_; }
     static SandeshRxQueue* recv_queue() { return recv_queue_.get(); }
     static SandeshContext* client_context() { return client_context_; }
     static void set_client_context(SandeshContext *context) { client_context_ = context; }
@@ -339,7 +339,7 @@ private:
                            const std::vector<std::string> &collectors,
                            CollectorSubFn csf);
     static bool ProcessRecv(SandeshRequest *);
-    static void Initialize(SandeshRole::type role, const std::string &module,
+    static bool Initialize(SandeshRole::type role, const std::string &module,
             const std::string &source, 
             const std::string &node_type,
             const std::string &instance_id,
@@ -354,7 +354,7 @@ private:
     static std::string source_;
     static std::string node_type_;
     static std::string instance_id_;
-    static uint32_t http_port_;
+    static int http_port_;
     static std::auto_ptr<SandeshRxQueue> recv_queue_;
     static int recv_task_id_;
     static SandeshContext *client_context_;
