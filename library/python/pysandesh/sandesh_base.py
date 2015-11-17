@@ -879,29 +879,14 @@ class SandeshDynamicUVE(SandeshUVE):
         if self.data.elements is not None:
             if cache_data.elements is None:
                 cache_data.elements = self.data.elements
-            elif self.data.elements == []:
-                cache_data.elements = []
             elif self.data.elements == {}:
                 cache_data.elements = {}
-            elif isinstance(cache_data.elements, dict):
-                cache_data.elements.update(self.data.elements)
-                self.data.elements = copy.deepcopy(cache_data.elements)
             else:
-                # TODO: Remove this code.
-                #       Going forward, "elements" should be a dict  
-                from pysandesh.gen_py.sandesh_dynamic_uve.ttypes import \
-                    DynamicElement
-                cache_elt_dict = dict([elt.attribute, elt.value] \
-                    for elt in cache_data.elements)
-                elt_dict = dict([elt.attribute, elt.value] \
-                    for elt in self.data.elements)
-                cache_elt_dict.update(elt_dict)
-                cache_data.elements = [DynamicElement(attr, val) \
-                    for attr, val in cache_elt_dict.iteritems()]
-                # since type(elements) is a list, overwrite the
-                # self.data.elements with cache_data.elements.
-                # we shouldn't send partial list.
-                self.data.elements = cache_data.elements
+                cache_data.elements.update(self.data.elements)
+                # type(elements) is map. We shouldn't send partial map,
+                # therefore, overwrite the self.data.elements with
+                # cache_data.elements
+                self.data.elements = copy.deepcopy(cache_data.elements)
         return cache_data
     # end update_uve
 
