@@ -113,7 +113,7 @@ class t_cpp_generator : public t_oop_generator {
   void generate_sandesh_request      (std::ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_default_ctor (std::ofstream& out, t_sandesh* tsandesh, bool is_request);
   void generate_sandesh_loggers      (std::ofstream& out, t_sandesh* tsandesh);
-  void generate_logger_field         (std::ofstream& out, t_field *tfield, string prefix, bool log_value_only, bool no_name_log);
+  void generate_logger_field         (std::ofstream& out, t_field *tfield, string prefix, bool log_value_only, bool no_name_log, bool for_sandesh = false);
   void generate_logger_struct        (std::ofstream& out, t_struct *tstruct, string prefix, string name);
   void generate_logger_container     (std::ofstream& out, t_type* ttype, string name, bool log_value_only);
   void generate_logger_map_element   (std::ofstream& out, t_map* tmap, string iter, bool log_value_only);
@@ -139,8 +139,10 @@ class t_cpp_generator : public t_oop_generator {
                                                const vector<t_field*>& fields);
   std::string generate_sandesh_async_creator(t_sandesh *tsandesh, bool signature, bool expand_autogen, bool skip_autogen, 
                                              std::string prefix, std::string suffix, bool category_level_file_line_first,
-                                             bool autogen_category_level, bool drop_log_reason);
+                                             bool autogen_category_level, bool drop_log_reason, bool use_sandesh_object = false);
+void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, bool use_sandesh);
   void generate_sandesh_async_creators(ofstream &out, t_sandesh *tsandesh);
+  void generate_sandesh_direct_send(ofstream &out, t_sandesh *tsandesh);
   void generate_sandesh_uve_creator(std::ofstream& out, t_sandesh* tsandesh);
   std::string generate_sandesh_trace_creator(t_sandesh *tsandesh, bool signature, bool expand_autogen, bool skip_autogen, 
                                              std::string prefix, std::string suffix);
@@ -372,7 +374,7 @@ class t_cpp_generator : public t_oop_generator {
     };
   };
   void generate_sandesh_logger(std::ofstream& out, t_sandesh* tsandesh,
-    sandesh_logger::type ltype);
+    sandesh_logger::type ltype, bool use_sandesh = false);
 #endif
 
   /**
@@ -1079,6 +1081,10 @@ std::string t_cpp_generator::generate_sandesh_no_static_const_string_function(t_
 		if ((*m_iter)->get_auto_generated() && trace) {
 		    continue;
 		}
+		if(((t_base_type *)tsandesh->get_type())->is_sandesh_object() &&
+		    ((*m_iter)->get_req() == t_field::T_OPTIONAL)) {
+		    continue;
+		}
 		if (!init_function) {
 		    result += "(";
 		    init_function = true;
@@ -1092,7 +1098,7 @@ std::string t_cpp_generator::generate_sandesh_no_static_const_string_function(t_
                         result += declare_field(*m_iter, true, false, false, false, true);
 		    } else {
                         bool use_const = !(t->is_base_type() || t->is_enum());
-		        result += declare_field(*m_iter, false, false, use_const,!t->is_base_type(), true);
+			result += declare_field(*m_iter, false, false, use_const,!t->is_base_type(), true);
 		    }
 		} else {
 			result += (*m_iter)->get_name();
@@ -1123,7 +1129,7 @@ std::string t_cpp_generator::generate_sandesh_no_static_const_string_function(t_
 std::string t_cpp_generator::generate_sandesh_async_creator(t_sandesh* tsandesh, bool signature,
         bool expand_autogen, bool skip_autogen, std::string prefix, std::string suffix,
         bool category_level_file_line_first, bool autogen_category_level, bool
-        drop_log_reason)
+        drop_log_reason, bool use_sandesh_object)
         {
     string result = "";
     string temp = "";
@@ -1171,12 +1177,28 @@ std::string t_cpp_generator::generate_sandesh_async_creator(t_sandesh* tsandesh,
             }
         }
     }
+    if(use_sandesh_object) {
+        if (!init_function) {
+            result += "(snh";
+            init_function = true;
+	} else {
+	    if(signature) {
+		result += ", " + tsandesh->get_name() + " *snh";
+	    } else {
+		result += ", snh";
+	    }
+	}
+    } else {
     for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
         temp = "";
         t_type* t = get_true_type((*m_iter)->get_type());
         if (t->is_static_const_string()) {
             continue;
         }
+	bool is_optional = (*m_iter)->get_req() == t_field::T_OPTIONAL;
+	if(is_optional) {
+	    continue;
+	}
         bool skip = (*m_iter)->get_auto_generated() &&
                     ((*m_iter)->get_name() == "file" || (*m_iter)->get_name() == "line") &&
                     category_level_file_line_first;
@@ -1229,6 +1251,7 @@ std::string t_cpp_generator::generate_sandesh_async_creator(t_sandesh* tsandesh,
             }
         }
     }
+    }
     if (!init_function) {
         result += "(";
     }
@@ -1236,15 +1259,59 @@ std::string t_cpp_generator::generate_sandesh_async_creator(t_sandesh* tsandesh,
     return result;
 }
 
-void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *tsandesh) {
-    std::string creator_func_name = "Send";
-    std::string macro_func_name = "Log";
+void t_cpp_generator::generate_sandesh_direct_send(ofstream &out, t_sandesh *tsandesh) {
+    std::string creator_func_name = "Create";
+
+    out << indent() << "static " << tsandesh->get_name() << "* " 
+	<< creator_func_name << " (std::string file = \"\", int32_t line = 0) {" << endl;
+    indent_up();
+    out << indent() << tsandesh->get_name() <<
+          " * snh = new " << tsandesh->get_name() << "(lseqnum_++, file, line);"
+	  << endl;
+    out << indent() << "return snh;" << endl;
+    indent_down();
+    indent(out) << "}" << endl << endl;
+
+    // Generate creator macro
+    string creator_name = tsandesh->get_name() + creator_func_name;
+    string creator_name_usc = underscore(creator_name);
+    string creator_name_uc = uppercase(creator_name_usc);
+    out << indent() << "#define " << creator_name_uc <<
+            "() \\" << endl;
+    indent_up();
+    out << indent() << tsandesh->get_name() << "::" << creator_func_name <<
+            "(__FILE__, __LINE__)" << endl;
+    indent_down();
+    indent(out) << endl << endl;
+
+    // Generate sender
+    generate_sandesh_async_creator_helper(out, tsandesh, true);
+
+    // Generate DropLog
+    bool is_flow = ((t_base_type *)tsandesh->get_type())->is_sandesh_flow();
+    if (!is_flow) {
+        out << indent() << "static void DropLog(const std::string& drop_reason,"
+	    "std::string category, SandeshLevel::type level, " <<
+             tsandesh->get_name() << " *snh) {" << endl;
+        indent_up();
+        generate_sandesh_logger(out, tsandesh, sandesh_logger::DROP_LOG, true);
+        indent_down();
+        indent(out) << "}" << endl << endl;
+    }
+}
+
+
+void t_cpp_generator::generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, bool use_sandesh) {
+    std::string sender_func_name = "Send";
+    std::string logger_func_name = "Log";
     bool is_flow = ((t_base_type *)tsandesh->get_type())->is_sandesh_flow();
     bool is_system = ((t_base_type *)tsandesh->get_type())->is_sandesh_system();
-    // Generate creator
-    out << indent() << "static void " << creator_func_name <<
-             generate_sandesh_async_creator(tsandesh, true, false, false, "", "", true, false, false) <<
-             " {" << endl;
+    const vector<t_field*>& members = tsandesh->get_members();
+    vector<t_field*>::const_iterator m_iter;
+    // Generate sender
+    out << indent() << "static void " << sender_func_name;
+    out << generate_sandesh_async_creator(tsandesh, true, false, false, "", "", true, false, false, use_sandesh);
+    out << " {" << endl;
     indent_up();
     out << indent() << "if (HandleTest(level, category)) {" << endl;
     indent_up();
@@ -1253,10 +1320,17 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
             " {" << endl;
         indent_up();
         out << indent() << "std::string drop_reason = \"\";" << endl;
-        out << indent() << "DropLog" <<
-            generate_sandesh_async_creator(tsandesh, false, false, false, "",
+        out << indent() << "DropLog"; 
+	if(use_sandesh) {
+	    out << "(drop_reason, category, level, snh);" << endl;
+	} else {
+            out << generate_sandesh_async_creator(tsandesh, false, false, false, "",
                                            "", false, false, true) << "; " << endl;
+	}
         scope_down(out);
+    }
+    if(use_sandesh) {
+	out << indent() << "snh->Release();" << endl;
     }
     out << indent() << "return;" << endl;
     scope_down(out);
@@ -1267,9 +1341,14 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     if (!is_flow) {
         out << indent() << "std::string drop_reason = \"SANDESH: Queue Drop:"
             " \";" << endl;
-        out << indent() << "DropLog" <<
-            generate_sandesh_async_creator(tsandesh, false, false, false, "", "", false, false, true) <<
-            "; " << endl;
+        out << indent() << "DropLog";
+	if(use_sandesh) {
+	    out << "(drop_reason, category, level, snh);" << endl;
+	    out << indent() << "snh->Release();" << endl;
+	} else {
+            out << generate_sandesh_async_creator(tsandesh, false, false, false, "",
+                                           "", false, false, true) << "; " << endl;
+	}
     }
     out << indent() << "return;" << endl;
     scope_down(out);
@@ -1286,20 +1365,35 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
         out << indent() << "std::string drop_reason = \"SANDESH: Ratelimit"
             " Drop (\" + ratelimit_val.str() + std::string(\" messages"
              "/second): \") ;" << endl;
-        out << indent() << "DropLog" <<
-           generate_sandesh_async_creator(tsandesh, false, false, false, "",
-                                          "", false, false, true) <<
-           "; " << endl;
+        out << indent() << "DropLog";
+	if(use_sandesh) {
+	    out << "(drop_reason, category, level";
+	    for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+		if((*m_iter)->get_req() != t_field::T_OPTIONAL) {
+		    out << ", " << "snh->get_" << (*m_iter)->get_name() << "()";
+		}
+	    }
+	    out << ");" << endl;
+	    out << indent() << "snh->Release();" << endl;
+	} else {
+            out << generate_sandesh_async_creator(tsandesh, false, false, false, "",
+                                           "", false, false, true) << "; " << endl;
+	}
         out << indent() << "do_rate_limit_drop_log_ = false;" << endl;
         scope_down(out);
+	if(use_sandesh) {
+	    out << indent() << "snh->Release();" << endl;
+	}
         out << indent() << "return;" << endl;
         scope_down(out);
     }
 
-    out << indent() << tsandesh->get_name() <<
-          " * snh = new " << tsandesh->get_name() <<
-          generate_sandesh_no_static_const_string_function(tsandesh, false, false, false, false) <<
-          ";" << endl;
+    if (!use_sandesh) {
+	out << indent() << tsandesh->get_name() <<
+		" * snh = new " << tsandesh->get_name() <<
+		generate_sandesh_no_static_const_string_function(tsandesh,
+			    false, false, false, false) << ";" << endl;
+    }
     out << indent() << "snh->set_level(level);" << endl;
     out << indent() << "snh->set_category(category);" << endl;
     out << indent() << "snh->Dispatch();" << endl;
@@ -1307,32 +1401,45 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     indent(out) << "}" << endl << endl;
 
     // Generate creator macro
-    string creator_name = tsandesh->get_name() + macro_func_name;
+    string creator_name = tsandesh->get_name() + logger_func_name;
+    if(use_sandesh) {
+	creator_name += "Sandesh";
+    }
     string creator_name_usc = underscore(creator_name);
     string creator_name_uc = uppercase(creator_name_usc);
-    out << indent() << "#define " << creator_name_uc <<
-            generate_sandesh_async_creator(tsandesh, false, false, true, "_", "", false, false, false) <<
-            "\\" << endl;
+    out << indent() << "#define " << creator_name_uc;
+    out << generate_sandesh_async_creator(tsandesh, false, false, true, "_", "", false, false, false, use_sandesh);
+    out << "\\" << endl;
     indent_up();
-    out << indent() << tsandesh->get_name() << "::" << creator_func_name <<
-            generate_sandesh_async_creator(tsandesh, false, true, false, "(_", ")", true, false, false) <<
-            endl;
+    out << indent() << tsandesh->get_name() << "::" << sender_func_name;
+    out << generate_sandesh_async_creator(tsandesh, false, true, false, "(_", ")", true, false, false, use_sandesh) << endl;
     indent_down();
     indent(out) << endl << endl;
 
     // Generate creator macro (legacy)
-    creator_name = tsandesh->get_name() + creator_func_name;
+    creator_name = tsandesh->get_name() + sender_func_name;
+    if(use_sandesh) {
+	creator_name += "Sandesh";
+    }
     creator_name_usc = underscore(creator_name);
     creator_name_uc = uppercase(creator_name_usc);
-    out << indent() << "#define " << creator_name_uc <<
-            generate_sandesh_async_creator(tsandesh, false, false, true, "_", "", false, true, false) <<
-            "\\" << endl;
+    out << indent() << "#define " << creator_name_uc;
+    out << generate_sandesh_async_creator(tsandesh, false, false, true, "_", "", false, true, false, use_sandesh);
+    out << "\\" << endl;
     indent_up();
-    out << indent() << tsandesh->get_name() << "::" << creator_func_name <<
-            generate_sandesh_async_creator(tsandesh, false, true, false, "(_", ")", true, true, false) <<
-            endl;
+    out << indent() << tsandesh->get_name() << "::" << sender_func_name;
+    out << generate_sandesh_async_creator(tsandesh, false, true, false, "(_", ")", true, true, false, use_sandesh) << endl;
     indent_down();
     indent(out) << endl << endl;
+
+}
+
+void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *tsandesh) {
+    bool is_flow = ((t_base_type *)tsandesh->get_type())->is_sandesh_flow();
+    bool is_system = ((t_base_type *)tsandesh->get_type())->is_sandesh_system();
+
+    // generate send and log functions
+    generate_sandesh_async_creator_helper(out, tsandesh, false);
 
     // Generate DropLog
     if (!is_flow) {
@@ -1432,6 +1539,10 @@ void t_cpp_generator::generate_sandesh_member_init_list(ofstream& out,
         if (t->is_static_const_string()) {
             continue;
         }
+	if(((t_base_type *)tsandesh->get_type())->is_sandesh_object() &&
+		((*m_iter)->get_req() == t_field::T_OPTIONAL)) {
+	    continue;
+	}
         string dval;
         if (t->is_enum()) {
             dval += "(" + type_name(t) + ")";
@@ -1821,9 +1932,12 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
             " std::string ctx = \"\", bool more = false);" << endl;
 
     } else if (((t_base_type *)t)->is_sandesh_system() ||
-               ((t_base_type *)t)->is_sandesh_object() ||
                ((t_base_type *)t)->is_sandesh_flow()) {
         generate_sandesh_async_creators(out, tsandesh);
+
+    } else if (((t_base_type *)t)->is_sandesh_object()) { 
+        generate_sandesh_async_creators(out, tsandesh);
+        generate_sandesh_direct_send(out, tsandesh);
 
     } else if (is_trace) {
         // Sandesh trace 
@@ -1910,6 +2024,17 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
         } else {
             generate_sandesh_hints(out, tsandesh);
         }
+        scope_down(out);
+    }
+
+    // Create emplty constructor since objectlogs can have optional fields
+    if (((t_base_type *)t)->is_sandesh_object()) {
+        out << endl << indent() << "explicit " << tsandesh->get_name() 
+	    << "(uint32_t seqno," " std::string file, int32_t line) : ";
+	generate_sandesh_base_init(out, tsandesh, false);
+	out << ", file(file), line(line) {" << endl;
+	indent_up();
+        generate_sandesh_hints(out, tsandesh);
         scope_down(out);
     }
 
@@ -3348,11 +3473,15 @@ void t_cpp_generator::generate_logger_field(ofstream& out,
                                             t_field *tfield,
                                             string prefix,
                                             bool log_value_only,
-                                            bool no_name_log) {
+                                            bool no_name_log,
+					    bool for_sandesh) {
     t_type* type = get_true_type(tfield->get_type());
     string name = tfield->get_name();
     // Handle optional elements
     if (tfield->get_req() == t_field::T_OPTIONAL) {
+	if(for_sandesh) {
+	    return;
+	}
         out << indent() << "if (__isset." << name << ") {" <<
                 endl;
         indent_up();
@@ -3568,7 +3697,8 @@ void t_cpp_generator::generate_logger_struct(ofstream& out,
  */
 void t_cpp_generator::generate_sandesh_logger(ofstream& out,
                                               t_sandesh* tsandesh,
-                                              sandesh_logger::type ltype) {
+                                              sandesh_logger::type ltype,
+					      bool use_sandesh) {
     switch (ltype) {
     case sandesh_logger::BUFFER:
         indent(out) << "std::string " << tsandesh->get_name() <<
@@ -3650,7 +3780,11 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
                 out << indent() << "Xbuf << \"" << tsandesh->get_name() << ": \";" << endl;
             }
         }
-        generate_logger_field(out, *f_iter, prefix, log_value_only, false);
+	if (use_sandesh) {
+	    out << indent() << "Xbuf << snh->ToString();" << endl;
+	    break;
+	}
+        generate_logger_field(out, *f_iter, prefix, log_value_only, false, true);
     }
     if (init) {
         if (ltype == sandesh_logger::BUFFER) {

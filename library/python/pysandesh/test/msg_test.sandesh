@@ -25,7 +25,7 @@ struct StructObject {
 objectlog sandesh ObjectLogTest {
     1: StructObject object;
     2: list<StructObject> list_obj1;
-    3: u64 u64_1;
+    3: optional u64 u64_1;
 } 
 
 struct StructKeyHint {
