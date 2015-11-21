@@ -7,6 +7,17 @@
  *
  */
 
+struct AlarmOperand {
+    1: optional string name
+    2: string json_value
+}
+
+struct AlarmRule {
+    1: string oper
+    2: AlarmOperand operand1
+    3: optional AlarmOperand operand2
+}
+
 struct AlarmElement {
     1: string rule
     2: string value
@@ -14,7 +25,8 @@ struct AlarmElement {
 
 struct UVEAlarmInfo {
     1: string type
-    2: list<AlarmElement> description
+    2: optional list<AlarmElement> description
+    7: optional list<AlarmRule> rules
     3: bool ack
     4: u64 timestamp
     5: byte severity
@@ -23,7 +35,7 @@ struct UVEAlarmInfo {
 
 struct UVEAlarms {
     1: string name (key="none")
-    2: list<UVEAlarmInfo> alarms
+    2: list<UVEAlarmInfo> alarms (aggtype="union")
     3: optional bool deleted
 }
 
