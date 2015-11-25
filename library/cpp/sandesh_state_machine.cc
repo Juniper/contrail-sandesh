@@ -637,7 +637,7 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
         // Extract the header and message type
         int ret = SandeshReader::ExtractMsgHeader(msg, ctrl_header,
             ctrl_message_type, ctrl_xml_offset);
-        if (ret) {
+        if (ret || header != ctrl_header) {
             SM_LOG(ERROR, "OnMessage control in state: " << StateName() <<
                 " session " << session->ToString() << ": Extract FAILED ("
                 << ret << ")");
@@ -647,7 +647,6 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
             delete xmessage;
             return;
         } 
-        assert(header == ctrl_header);
         assert(message_type == ctrl_message_type);
         SM_LOG(DEBUG, "OnMessage control in state: " << StateName() <<
                 " session " << session->ToString());
