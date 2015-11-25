@@ -224,12 +224,18 @@ protected:
 const std::string FakeMessageBegin = "<sandesh length=\"";
 const std::string FakeMessageEnd = "</sandesh>";
 
-static void CreateFakeMessage(uint8_t *data, size_t length) {
+static void CreateFakeMessage(uint8_t *data, size_t length, int error = 0) {
     std::stringstream ss;
     size_t offset = 0;
     char prev = ss.fill('0');
     ss.width(10);
-    ss << length;
+    if (error == 1) {
+	ss << (length/2);
+    } else if (error == 2) {
+	ss << ("\xff\xff\xff\xff");
+    } else {
+	ss << (length);
+    }
     ss.fill(prev);
     memcpy(data + offset, FakeMessageBegin.c_str(), FakeMessageBegin.size());
     offset += FakeMessageBegin.size();
@@ -284,6 +290,28 @@ TEST_F(SandeshReaderUnitTest, StreamRead) {
     }
     EXPECT_EQ(ARRAYLEN(sizes), i);
     EXPECT_EQ(buf_list.size(), session_->release_count());
+}
+
+TEST_F(SandeshReaderUnitTest, ReadWrongFormatLengthMsg) {
+    uint8_t stream[4096];
+    int size = 100;
+    uint8_t *data = stream;
+    CreateFakeMessage(data, size, 2);
+    mutable_buffer buf = mutable_buffer(data, size);
+    session_->Read(buf);
+
+    EXPECT_EQ(1, session_->GetStats().num_recv_fail);
+}
+
+TEST_F(SandeshReaderUnitTest, ReadShortLengthMsg) {
+    uint8_t stream[4096];
+    int size = 100;
+    uint8_t *data = stream;
+    CreateFakeMessage(data, size, 1);
+    mutable_buffer buf = mutable_buffer(data, size);
+    session_->Read(buf);
+
+    EXPECT_EQ(1, session_->GetStats().num_recv_fail);
 }
 
 typedef struct SendMsgInfo_ {

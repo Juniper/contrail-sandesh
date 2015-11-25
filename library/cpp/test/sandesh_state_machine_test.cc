@@ -21,6 +21,7 @@
 #include <sandesh/sandesh.h>
 #include <sandesh/sandesh_server.h>
 #include <sandesh/sandesh_session.h>
+#include <sandesh/sandesh_statistics.h>
 #include "sandesh_connection.h"
 #include "sandesh_state_machine.h"
 #include "sandesh_test_common.h"
@@ -274,11 +275,38 @@ protected:
         if (!session) session = server_->session();
         sm_->OnSessionEvent(session, TcpSession::CLOSE);
     }
+    static void CreateMalformedMsg(char *data, size_t &length, int error = 0) {
+	const char *data1;
+       if(error == 0) {
+	    data1 = (char *)"<SandeshHeader><Namespace type=\"string\" identifier=\"1\">Test</Namespace><Timestamp type=\"i128\" identifier=\"2\">123456</Timestamp><Type type=\"i32\" identifier=\"8\">2</Type><Hints type=\"i32\" identifier=\"9\">2</Hints></SandeshHeader><FakeSandesh type=\"sandesh\"><str1 type=\"string\" identifier=\"1\">TEST</str1></FakeSandesh>";
+       } else if(error == 1) {
+	    data1 = (char *)"<SandeshHeader><Namespace type=\"string\" identifier=\"1\">Test</Namespace><Timestamp type=\"i64\" identifier=\"2\">123456</Timestamp><Type type=\"i32\" identifier=\"8\">2</Type><Hints type=\"i32\" identifier=\"9\">2</Hints><open><</SandeshHeader><FakeSandesh type=\"sandesh\"><str1 type=\"string\" identifier=\"1\">TEST</str1><Open></Close></FakeSandesh>";
+       }
+	memset(data, 0, length);
+	memcpy(data, data1, strlen(data1));
+	length = strlen(data1);
+    }
     void EvSandeshMessageRecv(SandeshSessionMock *session = NULL) {
         session = GetSession(session);
         uint8_t msg[1024];
         contrail::sandesh::test::CreateFakeMessage(msg, sizeof(msg));
         string xml((const char *)msg, sizeof(msg));
+        sm_->OnSandeshMessage(session, xml);
+    }
+    void EvInvalidTypeSandeshMessageRecv(SandeshSessionMock *session = NULL) {
+        session = GetSession(session);
+        char msg[1024];
+	size_t length = 1024;
+        CreateMalformedMsg(msg, length);
+        string xml((const char *)msg, length);
+        sm_->OnSandeshMessage(session, xml);
+    }
+    void EvMalformedXmlSandeshMessageRecv(SandeshSessionMock *session = NULL) {
+        session = GetSession(session);
+        char msg[1024];
+	size_t length = 1024;
+        CreateMalformedMsg(msg, length, 1);
+        string xml((const char *)msg, length);
         sm_->OnSandeshMessage(session, xml);
     }
     SandeshLevel::type MessageDropLevel() const {
@@ -349,6 +377,52 @@ TEST_F(SandeshServerStateMachineTest, Matrix) {
             RunToState(j->second);
         }
     }
+}
+
+TEST_F(SandeshServerStateMachineTest, ReadInvalidTypeMessage) {
+    GetToState(ssm::SERVER_INIT);
+    EvTcpPassiveOpen();
+    // Enqueue 1 message with type i128
+    EvInvalidTypeSandeshMessageRecv();
+
+    SandeshStateMachineStats sm_stats;
+    SandeshGeneratorStats msg_stats;
+    int error = 0;
+    if(sm_->GetStatistics(sm_stats, msg_stats)) {
+	std::vector<SandeshMessageTypeStats> mtype_stats;
+	mtype_stats = msg_stats.get_type_stats();
+	for(int i =0; i < mtype_stats.size(); i++) {
+	    SandeshMessageTypeStats stat = mtype_stats[i];
+	    if(stat.stats.messages_received_dropped_control_msg_failed) {
+		error = 1;
+		break;
+	    }
+	}
+    }
+    EXPECT_EQ(1, error);
+}
+
+TEST_F(SandeshServerStateMachineTest, ReadMalformedXmlMessage) {
+    // Also verify that we can proceed after this event
+    GetToState(ssm::SERVER_INIT);
+    EvTcpPassiveOpen();
+    // Enqueue 1 message with type i128
+    EvMalformedXmlSandeshMessageRecv();
+    SandeshStateMachineStats sm_stats;
+    SandeshGeneratorStats msg_stats;
+    int error = 0;
+    if(sm_->GetStatistics(sm_stats, msg_stats)) {
+	std::vector<SandeshMessageTypeStats> mtype_stats;
+	mtype_stats = msg_stats.get_type_stats();
+	for(int i =0; i < mtype_stats.size(); i++) {
+	    SandeshMessageTypeStats stat = mtype_stats[i];
+	    if(stat.stats.messages_received_dropped_decoding_failed) {
+		error = 1;
+		break;
+	    }
+	}
+    }
+    EXPECT_EQ(1, error);
 }
 
 TEST_F(SandeshServerStateMachineTest, WaterMark) {

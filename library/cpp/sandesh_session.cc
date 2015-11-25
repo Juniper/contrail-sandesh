@@ -520,6 +520,10 @@ bool SandeshReader::ExtractMsgLength(size_t &msg_length, int *result) {
     string length = string(st, end);
 
     stringToInteger(length.c_str(), msg_length);
+    if (msg_length == 0) {
+	*result = -3;
+	return false;
+    }
     return true;
 }
 
