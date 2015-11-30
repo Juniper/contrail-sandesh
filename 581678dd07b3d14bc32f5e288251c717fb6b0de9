@@ -1,0 +1,10 @@
+Verified+2: Zuul <zuul@lists.opencontrail.org>
+Code-Review-1: Vinay Vithal Mahuli <vmahuli@juniper.net>
+Code-Review+2: Megh Bhatt <meghb@juniper.net>
+Code-Review+2: Raj Reddy <rajreddy@juniper.net>
+Approved+1: Ashish Ranjan <aranjan@juniper.net>
+Submitted-by: Zuul <zuul@lists.opencontrail.org>
+Submitted-at: Sun, 29 Nov 2015 19:20:14 -0800
+Reviewed-on: https://review.opencontrail.org/15434
+Project: Juniper/contrail-sandesh
+Branch: refs/heads/R2.21.x
