@@ -28,6 +28,7 @@
 #include <sandesh/sandesh.h>
 #include "sandesh_rw_test_types.h"
 
+using namespace boost::asio::ip;
 using namespace contrail::sandesh::protocol;
 using namespace contrail::sandesh::transport;
 
@@ -97,6 +98,12 @@ protected:
         wstruct_test_.set_xmlTest1("abc");
         wstruct_test_.set_xmlTest2("ab]");
         wstruct_test_.set_xmlTest3("abc]]");
+        wstruct_test_.set_ipaddrv4Test(address::from_string("10.10.1.1"));
+        wstruct_test_.set_ipaddrv6Test(address::from_string("2001:db8::2:1"));
+        std::vector<address> ipaddrs;
+        ipaddrs.push_back(address::from_string("192.168.1.10"));
+        ipaddrs.push_back(address::from_string("2001:dc8::1:2"));
+        wstruct_test_.set_ipaddrListTest(ipaddrs);
         // Write the struct
         wxfer = wstruct_test_.write(prot);
         // Verify Default values

@@ -81,6 +81,7 @@ t_type* g_type_u16;
 t_type* g_type_u32;
 t_type* g_type_u64;
 t_type* g_type_ipv4;
+t_type* g_type_ipaddr;
 t_type* g_type_static_const_string;
 t_type* g_type_sandesh_system;
 t_type* g_type_sandesh_request;
@@ -823,6 +824,11 @@ void validate_const_rec(std::string name, t_type* type, t_const_value* value) {
         throw "type error: const \"" + name + "\" was declared as uuid_t";
       }
       break;
+    case t_base_type::TYPE_IPADDR:
+      if (value->get_type() != t_const_value::CV_STRING) {
+        throw "type error: const \"" + name + "\" was declared as ipaddr";
+      }
+      break;
 #endif
     case t_base_type::TYPE_BOOL:
       if (value->get_type() != t_const_value::CV_INTEGER) {
@@ -1377,6 +1383,7 @@ int main(int argc, char** argv) {
   g_type_u32    = new t_base_type("u32", t_base_type::TYPE_U32);
   g_type_u64    = new t_base_type("u64", t_base_type::TYPE_U64);
   g_type_ipv4    = new t_base_type("ipv4", t_base_type::TYPE_IPV4);
+  g_type_ipaddr  = new t_base_type("ipaddr", t_base_type::TYPE_IPADDR);
   g_type_xml    = new t_base_type("xml", t_base_type::TYPE_XML);
   g_type_uuid_t    = new t_base_type("uuid_t", t_base_type::TYPE_UUID);
   g_type_static_const_string = new t_base_type("static const string", t_base_type::TYPE_STATIC_CONST_STRING);
@@ -1423,6 +1430,7 @@ int main(int argc, char** argv) {
   delete g_type_u32;
   delete g_type_u64;
   delete g_type_ipv4;
+  delete g_type_ipaddr;
   delete g_type_static_const_string;
   delete g_type_sandesh_system;
   delete g_type_sandesh_request;

@@ -62,6 +62,7 @@ class t_base_type : public t_type {
     TYPE_XML,
     TYPE_IPV4,
     TYPE_UUID,
+    TYPE_IPADDR,
 #endif
     TYPE_DOUBLE
   };
@@ -93,6 +94,11 @@ class t_base_type : public t_type {
   bool is_uuid() const {
     return base_ == TYPE_UUID;
   }
+
+  bool is_ipaddr() const {
+    return base_ == TYPE_IPADDR;
+  }
+
   bool is_static_const_string() const {
     return base_ == TYPE_STATIC_CONST_STRING;
   }
@@ -216,6 +222,7 @@ class t_base_type : public t_type {
       case TYPE_U32    : return       "u32"; break;
       case TYPE_U64    : return       "u64"; break;
       case TYPE_IPV4   : return       "ipv4"; break;
+      case TYPE_IPADDR : return       "ipaddr"; break;
       case TYPE_XML    : return       "xml"; break;
       case TYPE_UUID   : return       "uuid_t"; break;
       case TYPE_STATIC_CONST_STRING :

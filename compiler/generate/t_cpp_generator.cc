@@ -914,6 +914,10 @@ string t_cpp_generator::render_const_value(ofstream& out, string name, t_type* t
     case t_base_type::TYPE_IPV4:
       render << value->get_integer();
       break;
+    case t_base_type::TYPE_IPADDR:
+      render << "boost::asio::ip::address::from_string(\"" <<
+        value->get_string() << "\")";
+      break;
 #endif
     default:
       throw "compiler error: no const of base type " + t_base_type::t_base_name(tbase);
@@ -1551,6 +1555,8 @@ void t_cpp_generator::generate_sandesh_member_init_list(ofstream& out,
             dval += "\"\"";
         } else if (t->is_uuid()) {
             dval += "boost::uuids::nil_uuid()";
+        } else if (t->is_ipaddr()) {
+            dval += "";
         } else {
             dval += "0";
         }
@@ -2213,6 +2219,8 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
           dval += "\"\"";
         } else if (t->is_uuid()) {
             dval += "boost::uuids::nil_uuid()";
+        } else if (t->is_ipaddr()) {
+            dval += "";
         } else {
             dval += "0";
         }
@@ -6293,6 +6301,9 @@ void t_cpp_generator::generate_deserialize_field(ofstream& out,
     case t_base_type::TYPE_IPV4:
       out << "readIPV4(" << name << ")) < 0) {" << endl;
       break;
+    case t_base_type::TYPE_IPADDR:
+      out << "readIPADDR(" << name << ")) < 0) {" << endl;
+      break;
 #endif
     case t_base_type::TYPE_DOUBLE:
       out << "readDouble(" << name << ")) < 0) {" << endl;
@@ -6660,6 +6671,9 @@ void t_cpp_generator::generate_serialize_field(ofstream& out,
       case t_base_type::TYPE_IPV4:
         out << "writeIPV4(" << name << ")) < 0) {" << endl;
         break;
+      case t_base_type::TYPE_IPADDR:
+        out << "writeIPADDR(" << name << ")) < 0) {" << endl;
+        break;
 #endif
       case t_base_type::TYPE_DOUBLE:
         out << "writeDouble(" << name << ")) < 0) {" << endl;
@@ -7001,6 +7015,8 @@ string t_cpp_generator::type_name(t_type* ttype, bool in_typedef, bool arg) {
     if (((t_base_type*)ttype)->get_base() == t_base_type::TYPE_STRING
 #ifdef SANDESH
         || ((t_base_type*)ttype)->get_base() == t_base_type::TYPE_XML
+        || ((t_base_type*)ttype)->get_base() == t_base_type::TYPE_UUID
+        || ((t_base_type*)ttype)->get_base() == t_base_type::TYPE_IPADDR
 #endif
        ) {
       return "const " + bname + "&";
@@ -7106,6 +7122,8 @@ string t_cpp_generator::base_type_name(t_base_type::t_base tbase) {
     return "uint64_t";
   case t_base_type::TYPE_IPV4:
     return "uint32_t";
+  case t_base_type::TYPE_IPADDR:
+    return "boost::asio::ip::address";
   case t_base_type::TYPE_UUID:
     return "boost::uuids::uuid";
 #endif
@@ -7176,6 +7194,11 @@ string t_cpp_generator::declare_field(t_field* tfield, bool init, bool pointer, 
       case t_base_type::TYPE_DOUBLE:
         result += " = (double)0";
         break;
+#ifdef SANDESH
+      case t_base_type::TYPE_IPADDR:
+        result += " = boost::asio::ip::address()";
+        break;
+#endif
       default:
         throw "compiler error: no C++ initializer for base type " + t_base_type::t_base_name(tbase);
       }
@@ -7340,6 +7363,8 @@ string t_cpp_generator::type_to_enum(t_type* type) {
       return "::contrail::sandesh::protocol::T_U64";
     case t_base_type::TYPE_IPV4:
       return "::contrail::sandesh::protocol::T_IPV4";
+    case t_base_type::TYPE_IPADDR:
+      return "::contrail::sandesh::protocol::T_IPADDR";
     case t_base_type::TYPE_STATIC_CONST_STRING:
     case t_base_type::TYPE_SANDESH_SYSTEM:
     case t_base_type::TYPE_SANDESH_REQUEST:

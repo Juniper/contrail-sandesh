@@ -59,6 +59,7 @@ static const std::string kTypeNameU16("u16");
 static const std::string kTypeNameU32("u32");
 static const std::string kTypeNameU64("u64");
 static const std::string kTypeNameIPV4("ipv4");
+static const std::string kTypeNameIPADDR("ipaddr");
 static const std::string kTypeNameDouble("double");
 static const std::string kTypeNameStruct("struct");
 static const std::string kTypeNameString("string");
@@ -89,6 +90,7 @@ const std::string& TXMLProtocol::fieldTypeName(TType type) {
     case T_U32    : return kTypeNameU32    ;
     case T_U64    : return kTypeNameU64    ;
     case T_IPV4   : return kTypeNameIPV4   ;
+    case T_IPADDR : return kTypeNameIPADDR ;
     case T_DOUBLE : return kTypeNameDouble ;
     case T_STRING : return kTypeNameString ;
     case T_STRUCT : return kTypeNameStruct ;
@@ -131,7 +133,14 @@ TType TXMLProtocol::getTypeIDForTypeName(const std::string &name) {
         result = T_I64;
         break;
       case 'p':
-        result = T_IPV4;
+        switch (name[2]) {
+        case 'a':
+          result = T_IPADDR;
+          break;
+        case 'v':
+          result = T_IPV4;
+          break;
+        }
         break;
       }
       break;
@@ -614,6 +623,10 @@ int32_t TXMLProtocol::writeIPV4(const uint32_t ip4) {
   return writePlain(integerToString(ip4));
 }
 
+int32_t TXMLProtocol::writeIPADDR(const boost::asio::ip::address& ipaddress) {
+  return writePlain(ipaddress.to_string());
+}
+
 int32_t TXMLProtocol::writeDouble(const double dub) {
   return writePlain(integerToString(dub));
 }
@@ -1094,6 +1107,16 @@ int32_t TXMLProtocol::readU64(uint64_t& u64) {
 
 int32_t TXMLProtocol::readIPV4(uint32_t& ip4) {
   return readXMLInteger(ip4);
+}
+
+int32_t TXMLProtocol::readIPADDR(boost::asio::ip::address& ipaddress) {
+  int32_t ret;
+  std::string str;
+  if ((ret = readXMLString(str)) < 0) {
+    return ret;
+  }
+  ipaddress = boost::asio::ip::address::from_string(str);
+  return ret;
 }
 
 int32_t TXMLProtocol::readDouble(double& dub) {

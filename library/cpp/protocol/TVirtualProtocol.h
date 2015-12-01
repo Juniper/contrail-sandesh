@@ -224,7 +224,14 @@ class TProtocolDefaults : public TProtocol {
     assert(false);
     return -1;
   }
-  
+
+  int32_t readIPADDR(boost::asio::ip::address& ipaddress) {
+    (void) ipaddress;
+    LOG(ERROR, __func__ << ": This protocol does not support reading (yet).");
+    assert(false);
+    return -1;
+  }
+
   int32_t readDouble(double& dub) {
     (void) dub;
     LOG(ERROR, __func__ << ": This protocol does not support reading (yet).");
@@ -447,6 +454,13 @@ class TProtocolDefaults : public TProtocol {
     return -1;
   }
 
+  int32_t writeIPADDR(const boost::asio::ip::address& ipaddress) {
+    (void) ipaddress;
+    LOG(ERROR, __func__ << ": This protocol does not support writing (yet).");
+    assert(false);
+    return -1;
+  }
+
   int32_t writeDouble(const double dub) {
     (void) dub;
     LOG(ERROR, __func__ << ": This protocol does not support writing (yet).");
@@ -619,6 +633,10 @@ class TVirtualProtocol : public Super_ {
     return static_cast<Protocol_*>(this)->writeIPV4(ip4);
   }
 
+  virtual int32_t writeIPADDR_virt(const boost::asio::ip::address& ipaddress) {
+    return static_cast<Protocol_*>(this)->writeIPADDR(ipaddress);
+  }
+
   virtual int32_t writeDouble_virt(const double dub) {
     return static_cast<Protocol_*>(this)->writeDouble(dub);
   }
@@ -755,6 +773,10 @@ class TVirtualProtocol : public Super_ {
 
   virtual int32_t readIPV4_virt(uint32_t& ip4) {
     return static_cast<Protocol_*>(this)->readIPV4(ip4);
+  }
+
+  virtual int32_t readIPADDR_virt(boost::asio::ip::address& ipaddress) {
+    return static_cast<Protocol_*>(this)->readIPADDR(ipaddress);
   }
 
   virtual int32_t readDouble_virt(double& dub) {
