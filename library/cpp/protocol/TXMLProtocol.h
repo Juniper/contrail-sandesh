@@ -144,6 +144,8 @@ class TXMLProtocol : public TVirtualProtocol<TXMLProtocol> {
   int32_t writeU64(const uint64_t u64);
 
   int32_t writeIPV4(const uint32_t ip4);
+
+  int32_t writeIPADDR(const boost::asio::ip::address& ipaddress);
   
   int32_t writeDouble(const double dub);
 
@@ -219,6 +221,8 @@ class TXMLProtocol : public TVirtualProtocol<TXMLProtocol> {
   int32_t readU64(uint64_t& u64);
 
   int32_t readIPV4(uint32_t& ip4);
+
+  int32_t readIPADDR(boost::asio::ip::address& ipaddress);
 
   int32_t readDouble(double& dub);
 

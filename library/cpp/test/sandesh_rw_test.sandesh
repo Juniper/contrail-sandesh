@@ -30,6 +30,9 @@ struct SandeshStructTest {
     15: uuid_t                       uuidTest;
     16: list<uuid_t>                 uuidListTest;
     17: uuid_t                       uuidDefaultTest = "00010203-0405-0607-0423-023434265323";
+    18: ipaddr                       ipaddrv4Test
+    19: ipaddr                       ipaddrv6Test
+    20: list<ipaddr>                 ipaddrListTest
 }
 
 struct SandeshLogTest {

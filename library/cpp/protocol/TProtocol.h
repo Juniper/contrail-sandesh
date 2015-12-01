@@ -27,6 +27,7 @@
 #include <boost/static_assert.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/string_generator.hpp>
+#include <boost/asio/ip/address.hpp>
 
 namespace contrail { namespace sandesh { namespace protocol {
 
@@ -159,6 +160,7 @@ enum TType {
   T_XML        = 21,
   T_IPV4       = 22,
   T_UUID       = 23,
+  T_IPADDR     = 24
 };
 
 /**
@@ -225,6 +227,11 @@ int32_t skip(Protocol_& prot, TType type) {
     {
       uint32_t ip4;
       return prot.readIPV4(ip4);
+    }
+  case T_IPADDR:
+    {
+      boost::asio::ip::address ipaddress;
+      return prot.readIPADDR(ipaddress);
     }
   case T_DOUBLE:
     {
@@ -475,6 +482,8 @@ class TProtocol {
 
   virtual int32_t writeIPV4_virt(const uint32_t ip4) = 0;
 
+  virtual int32_t writeIPADDR_virt(const boost::asio::ip::address& ipaddress) = 0;
+
   virtual int32_t writeDouble_virt(const double dub) = 0;
 
   virtual int32_t writeString_virt(const std::string& str) = 0;
@@ -596,6 +605,10 @@ class TProtocol {
     return writeIPV4_virt(ip4);
   }
 
+  int32_t writeIPADDR(const boost::asio::ip::address& ipaddress) {
+    return writeIPADDR_virt(ipaddress);
+  }
+
   int32_t writeDouble(const double dub) {
     return writeDouble_virt(dub);
   }
@@ -679,6 +692,8 @@ class TProtocol {
   virtual int32_t readU64_virt(uint64_t& u64) = 0;
 
   virtual int32_t readIPV4_virt(uint32_t& ip4) = 0;
+
+  virtual int32_t readIPADDR_virt(boost::asio::ip::address& ipaddress) = 0;
 
   virtual int32_t readDouble_virt(double& dub) = 0;
 
@@ -792,6 +807,10 @@ class TProtocol {
 
   int32_t readIPV4(uint32_t& ip4) {
     return readIPV4_virt(ip4);
+  }
+
+  int32_t readIPADDR(boost::asio::ip::address& ipaddress) {
+    return readIPADDR_virt(ipaddress);
   }
 
   int32_t readDouble(double& dub) {

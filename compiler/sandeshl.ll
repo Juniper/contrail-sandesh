@@ -155,6 +155,7 @@ format_str    (%([1-9]$)?([+-]?[ -#0])?([1-9]+)?(\.[1-9]+)?(hh|h|l|ll|L|z|j|t)?(
 "u32"                { return tok_u32;                  }
 "u64"                { return tok_u64;                  }
 "ipv4"               { return tok_ipv4;                 }
+"ipaddr"             { return tok_ipaddr;               }
 "double"             { return tok_double;               }
 "string"             { return tok_string;               }
 "binary"             { return tok_binary;               }

@@ -87,6 +87,7 @@ extern t_type* g_type_u16;
 extern t_type* g_type_u32;
 extern t_type* g_type_u64;
 extern t_type* g_type_ipv4;
+extern t_type* g_type_ipaddr;
 extern t_type* g_type_xml;
 extern t_type* g_type_uuid_t;
 
