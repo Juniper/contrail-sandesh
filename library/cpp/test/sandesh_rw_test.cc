@@ -98,11 +98,12 @@ protected:
         wstruct_test_.set_xmlTest1("abc");
         wstruct_test_.set_xmlTest2("ab]");
         wstruct_test_.set_xmlTest3("abc]]");
-        wstruct_test_.set_ipaddrv4Test(address::from_string("10.10.1.1"));
-        wstruct_test_.set_ipaddrv6Test(address::from_string("2001:db8::2:1"));
+        boost::system::error_code ec;
+        wstruct_test_.set_ipaddrv4Test(address::from_string("10.10.1.1", ec));
+        wstruct_test_.set_ipaddrv6Test(address::from_string("2001:db8::2:1", ec));
         std::vector<address> ipaddrs;
-        ipaddrs.push_back(address::from_string("192.168.1.10"));
-        ipaddrs.push_back(address::from_string("2001:dc8::1:2"));
+        ipaddrs.push_back(address::from_string("192.168.1.10", ec));
+        ipaddrs.push_back(address::from_string("2001:dc8::1:2", ec));
         wstruct_test_.set_ipaddrListTest(ipaddrs);
         // Write the struct
         wxfer = wstruct_test_.write(prot);

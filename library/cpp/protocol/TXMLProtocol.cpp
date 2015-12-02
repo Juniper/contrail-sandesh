@@ -1115,7 +1115,11 @@ int32_t TXMLProtocol::readIPADDR(boost::asio::ip::address& ipaddress) {
   if ((ret = readXMLString(str)) < 0) {
     return ret;
   }
-  ipaddress = boost::asio::ip::address::from_string(str);
+  boost::system::error_code ec;
+  ipaddress = boost::asio::ip::address::from_string(str, ec);
+  if (ec) {
+    return -1;
+  }
   return ret;
 }
 
