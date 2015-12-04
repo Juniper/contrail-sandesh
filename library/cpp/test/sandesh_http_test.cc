@@ -8,13 +8,6 @@
 // Unit Tests for HTTP Introspect
 //
 
-#if 0
-request sandesh SandeshHttpTestRequest {
-    1:          testId;
-    2:          magic;
-}
-#endif
-
 #include "testing/gunit.h"
 #include <boost/bind.hpp>
 #include <string>
@@ -43,11 +36,15 @@ extern "C" {
 #include "base/test/task_test_util.h"
 
 using namespace std;
+using namespace boost::asio::ip;
+using namespace boost::uuids;
 
 int currentTestId;
 int currentParam;
 string currentTestString1;
 string currentTestString2;
+address currentTestIpaddr1;
+uuid currentTestUuid1;
 
 void
 SandeshHttpTestRequest::HandleRequest() const{
@@ -119,6 +116,8 @@ SandeshHttpTestRequest::HandleRequest() const{
     case (7): {
         ASSERT_STREQ(teststring1.c_str(), currentTestString1.c_str());
         ASSERT_STREQ(teststring2.c_str(), currentTestString2.c_str());
+        ASSERT_EQ(testIpaddr1, currentTestIpaddr1);
+        ASSERT_EQ(testUuid1, currentTestUuid1);
         SandeshHttpTestResp *shtp = new SandeshHttpTestResp();
         shtp->set_testId(testId);
         shtp->set_param(param);
@@ -399,12 +398,15 @@ TEST_F(SandeshHttpTest, ValidateUrlFieldsWithSpecialChar) {
     currentTestId = 5; currentParam = 55;
     currentTestString1 = "&one<&>two&";
     currentTestString2 = "%1&2%>";
+    boost::system::error_code ec;
+    currentTestIpaddr1 = address::from_string("80.80.80.9", ec);
     CURL * cr = curl_easy_init();
     char *string1 = curl_easy_escape(cr, currentTestString1.c_str(), 0);
     char *string2 = curl_easy_escape(cr, currentTestString2.c_str(), 0);
     const string url = host_url_.str() + \
       "Snh_SandeshHttpTestRequest?testId=5&param=55&teststring1=" + \
-       string1 + "&teststring2=" + string2;
+       string1 + "&teststring2=" + string2 + "&testIpaddr1=" +
+       currentTestIpaddr1.to_string();
     curl_free(string1);
     curl_free(string2);
     curl_easy_cleanup(cr);
@@ -420,12 +422,19 @@ TEST_F(SandeshHttpTest, ValidateUrlWithTwoEmptyFields) {
     currentTestId = 6; currentParam = 66;
     currentTestString1 = "";
     currentTestString2 = "one&two";
+    boost::system::error_code ec;
+    currentTestIpaddr1 = address::from_string("2001:0:3238:df10:63::fefb", ec);
+    std::stringstream ss;
+    ss << "00010203-0405-0607-0809-0a0b0c0d0e0f";
+    ss >> currentTestUuid1;
     CURL * cr = curl_easy_init();
     char *string1 = curl_easy_escape(cr, currentTestString1.c_str(), 0);
     char *string2 = curl_easy_escape(cr, currentTestString2.c_str(), 0);
     const string url = host_url_.str() + \
       "Snh_SandeshHttpTestRequest?testId=6&param=66&teststring1=" + \
-       string1 + "&teststring2=" + string2;
+       string1 + "&teststring2=" + string2 + "&testIpaddr1=" +
+       currentTestIpaddr1.to_string() + "&testUuid1=" +
+       boost::uuids::to_string(currentTestUuid1);
     curl_free(string1);
     curl_free(string2);
     curl_easy_cleanup(cr);
@@ -441,6 +450,8 @@ TEST_F(SandeshHttpTest, ValidateUrlWithXValue) {
     currentTestId = 7; currentParam = 0;
     currentTestString1 = "";
     currentTestString2 = "";
+    currentTestIpaddr1 = address();
+    currentTestUuid1 = boost::uuids::nil_uuid();
     CURL * cr = curl_easy_init();
     char *string1 = curl_easy_escape(cr, currentTestString1.c_str(), 0);
     char *string2 = curl_easy_escape(cr, currentTestString2.c_str(), 0);

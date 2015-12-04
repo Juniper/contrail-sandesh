@@ -59,6 +59,7 @@ extern int vrouter_dbg;
 #include <sys/types.h>
 #include <sys/errno.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
 
 #define OS_LOG_ERR LOG_ERR
 
@@ -70,6 +71,14 @@ extern int vrouter_dbg;
 #endif /* __KERNEL__ */
 
 typedef unsigned char uuid_t[16];
+
+typedef struct ipaddr_s {
+    uint16_t iptype; // AF_INET or AF_INET6
+    union {
+        struct in_addr ipv4;
+        struct in6_addr ipv6;
+    };
+} ipaddr_t;
 
 static inline uint64_t os_get_value64(const uint8_t *data) {
     uint64_t value = 0;
