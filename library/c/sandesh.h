@@ -22,6 +22,8 @@ extern "C" {
 #include <linux/slab.h>
 
 #include <linux/types.h>
+#include <linux/in.h>
+#include <linux/in6.h>
 
 #define OS_LOG_ERR KERN_ERR
 #define OS_LOG_DEBUG KERN_DEBUG
@@ -37,6 +39,7 @@ extern "C" {
 #include <sys/types.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
+#include <netinet/in.h>
 
 #define OS_LOG_ERR "KERN_ERR"
 #define OS_LOG_DEBUG "KERN_DEBUG"
@@ -70,6 +73,14 @@ extern int vrouter_dbg;
 #endif /* __KERNEL__ */
 
 typedef unsigned char uuid_t[16];
+
+typedef struct ipaddr_s {
+    uint16_t iptype; // AF_INET or AF_INET6
+    union {
+        struct in_addr ipv4;
+        struct in6_addr ipv6;
+    };
+} ipaddr_t;
 
 static inline uint64_t os_get_value64(const uint8_t *data) {
     uint64_t value = 0;

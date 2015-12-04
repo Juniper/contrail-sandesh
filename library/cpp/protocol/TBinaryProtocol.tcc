@@ -270,14 +270,14 @@ int32_t TBinaryProtocolT<Transport_>::writeIPADDR(
   int32_t ret;
   if (ipaddress.is_v4()) {
     // encode the ip version
-    if ((ret = writeByte(4)) < 0) {
+    if ((ret = writeByte(AF_INET)) < 0) {
       return ret;
     }
     this->trans_->write(ipaddress.to_v4().to_bytes().c_array(), 4);
     return ret+4;
   } else if (ipaddress.is_v6()) {
     // encode the ip version
-    if ((ret = writeByte(6)) < 0) {
+    if ((ret = writeByte(AF_INET6)) < 0) {
       return ret;
     }
     this->trans_->write(ipaddress.to_v6().to_bytes().c_array(), 16);
@@ -655,12 +655,12 @@ int32_t TBinaryProtocolT<Transport_>::readIPADDR(
   if ((ret = readByte(version)) < 0) {
     return ret;
   }
-  if (version == 4) {
+  if (version == AF_INET) {
     boost::asio::ip::address_v4::bytes_type ipv4;
     this->trans_->readAll(ipv4.c_array(), 4);
     ipaddress = boost::asio::ip::address_v4(ipv4);
     return ret+4;
-  } else if (version == 6) {
+  } else if (version == AF_INET6) {
     boost::asio::ip::address_v6::bytes_type ipv6;
     this->trans_->readAll(ipv6.c_array(), 16);
     ipaddress = boost::asio::ip::address_v6(ipv6);

@@ -501,6 +501,7 @@ string t_py_generator::render_sandesh_includes() {
   sandesh_includes += 
     "import cStringIO\n"
     "import uuid\n"
+    "import ipaddress\n"
     "from sys import getsizeof\n"
     "from itertools import chain\n";
   if (module != "sandesh") {
@@ -682,6 +683,9 @@ string t_py_generator::render_const_value(t_type* type, t_const_value* value) {
 #ifdef SANDESH
     case t_base_type::TYPE_UUID:
       out << "uuid.UUID('{" << get_escaped_string(value) <<"}')";
+      break;
+    case t_base_type::TYPE_IPADDR:
+      out << "ipaddress.ip_address('" << value->get_string() << "')";
       break;
 #endif
     default:
@@ -1826,6 +1830,28 @@ void t_py_generator::generate_py_sandesh_http_attr(ofstream& out,
       indent(out) <<
         "sandesh_req." << namel << " = str(" << 
         "bottle.request.query." << namer << ")" << endl;
+    } else if (bftype == t_base_type::TYPE_UUID) {
+      indent(out) << "try:" << endl;
+      indent_up();
+      indent(out) << "sandesh_req." << namel << " = uuid.UUID("
+        << "bottle.request.query." << namer << ")" << endl;
+      indent_down();
+      indent(out) << "except ValueError:" << endl;
+      indent_up();
+      indent(out) << "return SandeshHttp.http_error('Invalid value for "
+        << namel << ":" << namer << "')" << endl;
+      indent_down();
+    } else if (bftype == t_base_type::TYPE_IPADDR) {
+      indent(out) << "try:" << endl;
+      indent_up();
+      indent(out) << "sandesh_req." << namel << " = ipaddress.ip_address("
+        << "bottle.request.query." << namer << ")" << endl;
+      indent_down();
+      indent(out) << "except ValueError:" << endl;
+      indent_up();
+      indent(out) << "return SandeshHttp.http_error('Invalid value for "
+        << namel << ":" << namer << "')" << endl;
+      indent_down();
     } else {
       assert(bftype == t_base_type::TYPE_BOOL ||
              bftype == t_base_type::TYPE_BYTE ||
@@ -1835,8 +1861,7 @@ void t_py_generator::generate_py_sandesh_http_attr(ofstream& out,
              bftype == t_base_type::TYPE_U16 ||
              bftype == t_base_type::TYPE_U32 ||
              bftype == t_base_type::TYPE_U64 ||
-             bftype == t_base_type::TYPE_IPV4 ||
-             bftype == t_base_type::TYPE_UUID);
+             bftype == t_base_type::TYPE_IPV4);
       indent(out) <<
         "try:" << endl;
       indent_up();
@@ -2133,6 +2158,10 @@ void t_py_generator::generate_field_log(ofstream& out,
         indent(out) << "import socket, struct" << endl;
         indent(out) <<
           log_str << ".write(socket.inet_ntoa(struct.pack('!L'," << name << ")))" << endl;
+        break;
+      case t_base_type::TYPE_IPADDR:
+        indent(out) <<
+          log_str << ".write(str(" << name << "))" << endl;
         break;
       case t_base_type::TYPE_UUID:
         indent(out) <<
@@ -3359,6 +3388,9 @@ void t_py_generator::generate_deserialize_field(ofstream &out,
       case t_base_type::TYPE_IPV4:
         out << "readIPV4();";
         break;
+      case t_base_type::TYPE_IPADDR:
+        out << "readIPADDR()";
+        break;
 #endif
       case t_base_type::TYPE_DOUBLE:
         out << "readDouble();";
@@ -3660,6 +3692,9 @@ void t_py_generator::generate_serialize_field(ofstream &out,
         break;
       case t_base_type::TYPE_IPV4:
         out << "writeIPV4(" << name << ")";
+        break;
+      case t_base_type::TYPE_IPADDR:
+        out << "writeIPADDR(" << name << ")";
         break;
 #endif
       case t_base_type::TYPE_DOUBLE:
@@ -4053,6 +4088,8 @@ string t_py_generator::type_to_enum(t_type* type) {
       return "TType.U64";
     case t_base_type::TYPE_IPV4:
       return "TType.IPV4";
+    case t_base_type::TYPE_IPADDR:
+      return "TType.IPADDR";
     case t_base_type::TYPE_STATIC_CONST_STRING:
       return "TType.STRING";
     case t_base_type::TYPE_SANDESH_SYSTEM:

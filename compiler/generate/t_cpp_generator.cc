@@ -3050,7 +3050,15 @@ void t_cpp_generator::generate_sandesh_http_reader(ofstream& out,
 	            indent(out) << "std::string tmpstr(unescaped);" << endl;
 	            indent(out) << (*f_iter)->get_name() << " = boost::lexical_cast<std::string>((tmpstr));" << endl;
 	            indent(out) << "curl_free(unescaped);" << endl;
-	        } else {
+	        } else if (btype->is_uuid()) {
+                indent(out) << "std::stringstream ss;" << endl;
+                indent(out) << "ss << *it2;" << endl;
+                indent(out) << "ss >> " << (*f_iter)->get_name() << ";" << endl;
+            } else if (btype->is_ipaddr()) {
+                indent(out) << "boost::system::error_code ec;" << endl;
+                indent(out) << (*f_iter)->get_name() <<
+                    " = boost::asio::ip::address::from_string((*it2), ec);" << endl;
+            } else {
 	            assert(btype->is_integer());
 	            indent(out) << "stringToInteger((*it2), " << (*f_iter)->get_name() << ");" << endl;
 	        }

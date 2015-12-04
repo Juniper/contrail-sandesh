@@ -19,6 +19,8 @@
 
 #include "sandesh_buffer_test_types.h"
 
+using namespace boost::asio::ip;
+
 namespace {
 class SandeshPreCTest : public ::testing::Test {
 protected:
@@ -32,7 +34,7 @@ protected:
     virtual void TearDown() {
     }
 
-    u_int8_t buf_[512];
+    u_int8_t buf_[1024];
 };
 
 TEST_F(SandeshPreCTest, EncodeDecodeC2CPlus) {
@@ -68,6 +70,12 @@ TEST_F(SandeshPreCTest, EncodeDecodeC2CPlus) {
            0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
     test.set_uuidElem1(uuid_test);
     test.set_listElem3(uuid_list);
+    boost::system::error_code ec;
+    test.set_ipaddrElem1(address::from_string("11.11.11.3", ec));
+    std::vector<address> ipaddrs;
+    ipaddrs.push_back(address::from_string("2001:ab8::2", ec));
+    ipaddrs.push_back(address::from_string("192.168.12.3", ec));
+    test.set_listElem4(ipaddrs);
     // Write test to buf
     wxfer = test.WriteBinary(buf_, sizeof(buf_), &error);
     EXPECT_GT(wxfer, 0);

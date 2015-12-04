@@ -74,6 +74,8 @@ TEST_F(SandeshCTest, ReadWrite) {
     wabc.nested->inner_h = const_cast<char *>(inner_h.c_str());
     wabc.nested->inner_i = 4294967295u;
     memcpy(wabc.nested->inner_j, uuid_test, sizeof(uuid_t));
+    wabc.nested->inner_k.iptype = AF_INET;
+    inet_pton(AF_INET, "20.1.1.2", &wabc.nested->inner_k.ipv4);
     wxfer = abc_write(&wabc, &protocol, &error);
     EXPECT_GT(wxfer, 0);
 
@@ -94,6 +96,9 @@ TEST_F(SandeshCTest, ReadWrite) {
     EXPECT_EQ(wabc.nested->inner_i, rabc.nested->inner_i);
     EXPECT_EQ(0, memcmp(wabc.nested->inner_j,
         rabc.nested->inner_j, sizeof(uuid_t)));
+    EXPECT_EQ(wabc.nested->inner_k.iptype, rabc.nested->inner_k.iptype);
+    EXPECT_EQ(0, memcmp(&wabc.nested->inner_k.ipv4,
+                        &rabc.nested->inner_k.ipv4, 4));
 
     free(wabc.nested);
     wabc.nested = NULL;
@@ -107,7 +112,7 @@ TEST_F(SandeshCTest, EncodeDecode) {
     abc_sandesh wabc_sandesh;
     int error = 0, wxfer, wxfer1, rxfer;
     u_int32_t i;
-    u_int8_t buf[256];
+    u_int8_t buf[512];
     std::string inner_h("abc");
     uuid_t uuid_test =
            {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
@@ -126,6 +131,9 @@ TEST_F(SandeshCTest, EncodeDecode) {
     wabc_sandesh.elem->nested->inner_h = const_cast<char *>(inner_h.c_str());
     wabc_sandesh.elem->nested->inner_i = 4294967295u;
     memcpy(wabc_sandesh.elem->nested->inner_j, uuid_test, sizeof(uuid_t));
+    wabc_sandesh.elem->nested->inner_k.iptype = AF_INET6;
+    inet_pton(AF_INET6, "2001:abce::4",
+              &wabc_sandesh.elem->nested->inner_k.ipv6);
     wabc_sandesh.rwinfo_size = 5;
     wabc_sandesh.rwinfo = (int8_t *)calloc(1, sizeof(*wabc_sandesh.rwinfo) *
             wabc_sandesh.rwinfo_size);
@@ -214,6 +222,9 @@ TEST_F(SandeshCTest, GetEncodeLength) {
     wabc_sandesh.elem->nested->inner_h = const_cast<char *>(inner_h.c_str());
     wabc_sandesh.elem->nested->inner_i = 4294967295u;
     memcpy(wabc_sandesh.elem->nested->inner_j, uuid_test, sizeof(uuid_t));
+    wabc_sandesh.elem->nested->inner_k.iptype = AF_INET;
+    inet_pton(AF_INET, "192.168.10.1",
+              &wabc_sandesh.elem->nested->inner_k.ipv4);
     wabc_sandesh.rwinfo_size = 5;
     wabc_sandesh.rwinfo = (int8_t *)calloc(1, sizeof(*wabc_sandesh.rwinfo) *
             wabc_sandesh.rwinfo_size);
@@ -296,6 +307,18 @@ buffer_test_process (void *ptr) {
     EXPECT_STREQ(psandesh->xmlElem1, "xmlElem1");
     EXPECT_EQ(psandesh->ipv4Elem1, 4294967295u);
     EXPECT_EQ(0, memcmp(psandesh->uuidElem1, uuid_value, sizeof(uuid_t)));
+    ipaddr_t ipaddr1;
+    inet_pton(AF_INET, "11.11.11.3", &ipaddr1.ipv4);
+    EXPECT_EQ(psandesh->ipaddrElem1.iptype, AF_INET);
+    EXPECT_EQ(0, memcmp(&psandesh->ipaddrElem1.ipv4, &ipaddr1.ipv4, 4));
+    EXPECT_EQ(psandesh->listElem4_size, 2);
+    ipaddr_t lipaddr1, lipaddr2;
+    inet_pton(AF_INET6, "2001:ab8::2", &lipaddr1.ipv6);
+    EXPECT_EQ(psandesh->listElem4[0].iptype, AF_INET6);
+    EXPECT_EQ(0, memcmp(&psandesh->listElem4[0].ipv6, &lipaddr1.ipv6, 16));
+    inet_pton(AF_INET, "192.168.12.3", &lipaddr2.ipv4);
+    EXPECT_EQ(psandesh->listElem4[1].iptype, AF_INET);
+    EXPECT_EQ(0, memcmp(&psandesh->listElem4[1].ipv4, &lipaddr2.ipv4, 4));
 }
 
 void buffer_update_test_process (void *ptr) {

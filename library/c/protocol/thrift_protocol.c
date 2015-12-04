@@ -216,6 +216,13 @@ thrift_protocol_write_ipv4 (ThriftProtocol *protocol, const u_int32_t value,
 }
 
 int32_t
+thrift_protocol_write_ipaddr (ThriftProtocol *protocol, const ipaddr_t *value,
+                              int *error)
+{
+  return protocol->write_ipaddr (protocol, value, error);
+}
+
+int32_t
 thrift_protocol_write_double (ThriftProtocol *protocol,
                               const double value, int *error)
 {
@@ -419,6 +426,13 @@ thrift_protocol_read_ipv4 (ThriftProtocol *protocol, u_int32_t *value,
                           int *error)
 {
   return protocol->read_ipv4 (protocol, value, error);
+}
+
+int32_t
+thrift_protocol_read_ipaddr (ThriftProtocol *protocol, ipaddr_t *value,
+                             int *error)
+{
+  return protocol->read_ipaddr (protocol, value, error);
 }
 
 int32_t
