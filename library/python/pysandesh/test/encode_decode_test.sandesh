@@ -26,6 +26,8 @@ systemlog sandesh BasicTypesTest {
     15: xml xml_4;
     16: ipv4 ipv4_1;
     17: uuid_t uuid_1;
+    18: ipaddr ipaddr_1;
+    19: ipaddr ipaddr_2;
 }
 
 struct StructBasicTypes {
@@ -55,6 +57,7 @@ struct StructContainerTypes {
     2: list<string> lstring_1;
     3: list<StructBasicTypes> lbst_1;
     4: list<uuid_t> luuid_1;
+    5: list<ipaddr> lipaddr_1;
 }
 
 objectlog sandesh ContainerTypesTest {
