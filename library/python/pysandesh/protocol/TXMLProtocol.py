@@ -5,6 +5,7 @@
 import ctypes
 import re
 import uuid
+import netaddr
 from TProtocol import *
 from  pysandesh.sandesh_logger import SandeshLogger
 
@@ -35,6 +36,7 @@ class TXMLProtocol(TProtocolBase):
   _XML_TYPENAME_U32 = 'u32'
   _XML_TYPENAME_U64 = 'u64'
   _XML_TYPENAME_IPV4 = 'ipv4'
+  _XML_TYPENAME_IPADDR = 'ipaddr'
   _XML_TYPENAME_DOUBLE = 'double'
   _XML_TYPENAME_UUID = 'uuid_t'
   _XML_TYPENAME_STRING = 'string'
@@ -60,6 +62,7 @@ class TXMLProtocol(TProtocolBase):
       TType.U32 : self._XML_TYPENAME_U32,
       TType.U64 : self._XML_TYPENAME_U64,
       TType.IPV4 : self._XML_TYPENAME_IPV4,
+      TType.IPADDR : self._XML_TYPENAME_IPADDR,
       TType.DOUBLE : self._XML_TYPENAME_DOUBLE,
       TType.STRING : self._XML_TYPENAME_STRING,
       TType.STRUCT : self._XML_TYPENAME_STRUCT,
@@ -268,6 +271,13 @@ class TXMLProtocol(TProtocolBase):
       self._logger.error('TXML Protocol: Invalid ipv4 value %s' % str(ipv4))
       return -1
     return 0
+
+  def writeIPADDR(self, ipaddr):
+    if isinstance(ipaddr, netaddr.IPAddress):
+      self.writeBuffer(str(ipaddr))
+      return 0
+    self._logger.error('TXML Protocol: Invalid ipaddr value %s' % str(ipaddr))
+    return -1
 
   def writeDouble(self, dub):
     self.writeBuffer(str(dub))
@@ -781,6 +791,18 @@ class TXMLProtocol(TProtocolBase):
       self._logger.error('TXML Protocol: Invalid ipv4 value %s' %(ipv4_str))
       return (-1, None)
     return (length, ipv4)
+
+  def readIPADDR(self):
+    (ipaddr_str, length) = self._xml_reader.readXMLValue()
+    if ipaddr_str is None:
+      return (-1, None)
+    try:
+      ipaddr = netaddr.IPAddress(ipaddr_str)
+    except ValueError:
+      self._logger.error('TXML Protocol: Invalid ipaddr value %s' \
+                         % (ipaddr_str))
+      return (-1, None)
+    return (length, ipaddr)
 
   def readDouble(self):
     (doub_str, length) = self._xml_reader.readXMLValue()

@@ -44,6 +44,7 @@ class TType:
   XML    = 21
   IPV4   = 22
   UUID   = 23
+  IPADDR = 24
 
 
   _VALUES_TO_NAMES = ( 'STOP',
@@ -69,7 +70,8 @@ class TType:
                        'U32',
                        'XML'
                        'IPV4',
-                       'UUID')
+                       'UUID',
+                       'IPADDR')
 
 class TMessageType:
   CALL  = 1
