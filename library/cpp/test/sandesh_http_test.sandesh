@@ -24,6 +24,8 @@ response sandesh SandeshHttpTestResp {
         2: i32                          param;
         3: string                       teststring1;
         4: string                       teststring2;
+        5: ipaddr                       testIpaddr1;
+        6: uuid_t                       testUuid1;
 }
 
 request sandesh SandeshHttpTestRequest {
@@ -31,4 +33,6 @@ request sandesh SandeshHttpTestRequest {
         2: i32                          param;
         3: string                       teststring1;
         4: string                       teststring2;
+        5: ipaddr                       testIpaddr1;
+        6: uuid_t                       testUuid1;
 }

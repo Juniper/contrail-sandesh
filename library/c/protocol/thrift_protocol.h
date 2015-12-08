@@ -57,6 +57,7 @@ typedef enum {
   T_XML    = 21,
   T_IPV4   = 22,
   T_UUID   = 23,
+  T_IPADDR = 24
 } ThriftType;
 
 /**
@@ -130,6 +131,8 @@ struct _ThriftProtocol
                         int *error);
   int32_t (*write_ipv4) (struct _ThriftProtocol *protocol, const u_int32_t value,
                         int *error);
+  int32_t (*write_ipaddr) (struct _ThriftProtocol *protocol, const ipaddr_t *value,
+                           int *error);
   int32_t (*write_double) (struct _ThriftProtocol *protocol, const double value,
                            int *error);
   int32_t (*write_string) (struct _ThriftProtocol *protocol, const char *str,
@@ -175,6 +178,7 @@ struct _ThriftProtocol
   int32_t (*read_u32) (struct _ThriftProtocol *protocol, u_int32_t *value, int *error);
   int32_t (*read_u64) (struct _ThriftProtocol *protocol, u_int64_t *value, int *error);
   int32_t (*read_ipv4) (struct _ThriftProtocol *protocol, u_int32_t *value, int *error);
+  int32_t (*read_ipaddr) (struct _ThriftProtocol *protocol, ipaddr_t *value, int *error);
   int32_t (*read_double) (struct _ThriftProtocol *protocol, double *value,
                           int *error);
   int32_t (*read_string) (struct _ThriftProtocol *protocol, char **str, int *error);
@@ -272,6 +276,9 @@ int32_t thrift_protocol_write_u64 (ThriftProtocol *protocol, const u_int64_t val
 int32_t thrift_protocol_write_ipv4 (ThriftProtocol *protocol, const u_int32_t value,
                                    int *error);
 
+int32_t thrift_protocol_write_ipaddr (ThriftProtocol *protocol,
+                                      const ipaddr_t *value, int *error);
+
 int32_t thrift_protocol_write_double (ThriftProtocol *protocol,
                                       const double value, int *error);
 
@@ -364,6 +371,9 @@ int32_t thrift_protocol_read_u64 (ThriftProtocol *protocol, u_int64_t *value,
 
 int32_t thrift_protocol_read_ipv4 (ThriftProtocol *protocol, u_int32_t *value,
                                   int *error);
+
+int32_t thrift_protocol_read_ipaddr (ThriftProtocol *protocol, ipaddr_t *value,
+                                     int *error);
 
 int32_t thrift_protocol_read_double (ThriftProtocol *protocol,
                                      double *value, int *error);

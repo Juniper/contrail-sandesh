@@ -45,7 +45,9 @@ class SandeshHttpTest(unittest.TestCase):
         string2 = urllib2.quote("&1%2&")
         http_url = http_url_ + "Snh_SandeshHttpRequest?" + \
              "testID=1&teststring1=" + string1 + \
-             "&teststring2=" + string2
+             "&teststring2=" + string2 + \
+             "&testUuid1=00010203-0405-0607-0423-023434265323" + \
+             "&testIpaddr1=20.20.20.1"
         try:
             data = urllib2.urlopen(http_url)
         except urllib2.HTTPError, e:
@@ -57,6 +59,10 @@ class SandeshHttpTest(unittest.TestCase):
         self.assertEqual(self.sandesh_req_impl.sandesh_req.testID, 1)
         self.assertEqual(self.sandesh_req_impl.sandesh_req.teststring1, '<one&two>')
         self.assertEqual(self.sandesh_req_impl.sandesh_req.teststring2, '&1%2&')
+        self.assertEqual(self.sandesh_req_impl.sandesh_req.testUuid1,
+                         uuid.UUID('{00010203-0405-0607-0423-023434265323}'))
+        self.assertEqual(self.sandesh_req_impl.sandesh_req.testIpaddr1,
+                         ipaddress.IPv4Address('20.20.20.1'))
 
     def test_validate_url_with_one_empty_field(self):
         print '-------------------------------------------'
@@ -64,7 +70,8 @@ class SandeshHttpTest(unittest.TestCase):
         print '-------------------------------------------'
         http_url_ = "http://127.0.0.1:" + str(self.http_port) + '/'
         http_url = http_url_ + "Snh_SandeshHttpRequest?" + \
-                   "testID=2&teststring1=&teststring2=string"
+                   "testID=2&teststring1=&teststring2=string" + \
+                   "&testIpaddr1=2001:0:3238:DFE1:63::FEFB"
         try:
             data = urllib2.urlopen(http_url)
         except urllib2.HTTPError, e:
@@ -76,6 +83,8 @@ class SandeshHttpTest(unittest.TestCase):
         self.assertEqual(self.sandesh_req_impl.sandesh_req.testID, 2)
         self.assertEqual(self.sandesh_req_impl.sandesh_req.teststring1, None)
         self.assertEqual(self.sandesh_req_impl.sandesh_req.teststring2, 'string')
+        self.assertEqual(self.sandesh_req_impl.sandesh_req.testIpaddr1,
+                         ipaddress.IPv6Address('2001:0:3238:DFE1:63::FEFB'))
 
     def test_validate_url_with_two_empty_fields(self):
         print '--------------------------------------------'

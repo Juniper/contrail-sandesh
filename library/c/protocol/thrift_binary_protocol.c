@@ -370,6 +370,44 @@ thrift_binary_protocol_write_ipv4 (ThriftProtocol *protocol, const u_int32_t val
 }
 
 int32_t
+thrift_binary_protocol_write_ipaddr (ThriftProtocol *protocol,
+                                     const ipaddr_t *value, int *error)
+{
+  int32_t ret;
+  int32_t xfer = 0;
+
+  if (value->iptype == AF_INET)
+  {
+    if ((ret = thrift_protocol_write_byte (protocol, AF_INET, error)) < 0)
+    {
+      return -1;
+    }
+    xfer += ret;
+    if (thrift_transport_write (protocol->transport,
+                                (const void *) &value->ipv4, 4, error))
+    {
+      return xfer+4;
+    } else {
+      return -1;
+    }
+  } else if (value->iptype == AF_INET6) {
+    if ((ret = thrift_protocol_write_byte (protocol, AF_INET6, error)) < 0)
+    {
+      return -1;
+    }
+    xfer += ret;
+    if (thrift_transport_write (protocol->transport,
+                                (const void *) &value->ipv6, 16, error))
+    {
+      return xfer+16;
+    } else {
+      return -1;
+    }
+  }
+  return -1;
+}
+
+int32_t
 thrift_binary_protocol_write_uuid_t (ThriftProtocol *protocol, const uuid_t value,
                                   int *error)
 {
@@ -846,6 +884,38 @@ thrift_binary_protocol_read_ipv4 (ThriftProtocol *protocol, u_int32_t *value,
 }
 
 int32_t
+thrift_binary_protocol_read_ipaddr (ThriftProtocol *protocol, ipaddr_t *value,
+                                    int *error)
+{
+  int32_t ret;
+  int xfer = 0;
+
+  if ((ret = thrift_protocol_read_byte (protocol, (int8_t *) &value->iptype,
+                                        error)) < 0)
+  {
+    return -1;
+  }
+  xfer += ret;
+  if (value->iptype == AF_INET)
+  {
+    if ((ret = thrift_transport_read (protocol->transport, &value->ipv4,
+                                      4, error)) < 0)
+    {
+      return -1;
+    }
+    return xfer+ret;
+  } else if (value->iptype == AF_INET6) {
+    if ((ret = thrift_transport_read (protocol->transport, &value->ipv6,
+                                      16, error)) < 0)
+    {
+      return -1;
+    }
+    return xfer+ret;
+  }
+  return -1;
+}
+
+int32_t
 thrift_binary_protocol_read_uuid_t (ThriftProtocol *protocol, uuid_t *value,
                                  int *error)
 {
@@ -991,6 +1061,7 @@ thrift_binary_protocol_init (ThriftBinaryProtocol *protocol)
   protocol->write_u32 = thrift_binary_protocol_write_u32;
   protocol->write_u64 = thrift_binary_protocol_write_u64;
   protocol->write_ipv4 = thrift_binary_protocol_write_ipv4;
+  protocol->write_ipaddr = thrift_binary_protocol_write_ipaddr;
   protocol->write_double = thrift_binary_protocol_write_double;
   protocol->write_string = thrift_binary_protocol_write_string;
   protocol->write_binary = thrift_binary_protocol_write_binary;
@@ -1019,6 +1090,7 @@ thrift_binary_protocol_init (ThriftBinaryProtocol *protocol)
   protocol->read_u32 = thrift_binary_protocol_read_u32;
   protocol->read_u64 = thrift_binary_protocol_read_u64;
   protocol->read_ipv4 = thrift_binary_protocol_read_ipv4;
+  protocol->read_ipaddr = thrift_binary_protocol_read_ipaddr;
   protocol->read_double = thrift_binary_protocol_read_double;
   protocol->read_string = thrift_binary_protocol_read_string;
   protocol->read_binary = thrift_binary_protocol_read_binary;

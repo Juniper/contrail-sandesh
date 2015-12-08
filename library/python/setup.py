@@ -32,5 +32,6 @@ setup(
     long_description="Sandesh python Implementation",
     install_requires=[
                       'gevent',
+                      'py2-ipaddress'
                      ]
 )

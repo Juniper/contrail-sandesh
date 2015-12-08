@@ -25,6 +25,7 @@ struct abc_inner {
     8:xml inner_h;
     9:ipv4 inner_i;
     10:uuid_t inner_j;
+    11:ipaddr inner_k;
 }
  
 struct abc {
