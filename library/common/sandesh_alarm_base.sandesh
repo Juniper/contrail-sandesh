@@ -18,14 +18,90 @@ struct AlarmRule {
     3: optional AlarmOperand operand2
 }
 
-struct AlarmElement {
-    1: string rule
-    2: string value
+
+struct Operand1 {
+    1: list<string> keys
+    2: optional map<byte, string> vars
+    3: optional byte json
 }
 
+union Operand2 {
+    1: list<string> keys 
+    2: string json_value
+}
+
+/**
+ * An AlarmTemplate consists of a comparison operator,
+ * and two operands to be compared
+ * 
+ * operand1 contains a list of keys used to examine the UVE's JSON tree
+ * As we process these keys against the UVE's JSON tree:
+ *     - If we are at the last key, use the value of the current subtree.
+ *       Processing is finished.
+ *     - Otherwise
+ *       - If the current subtree is a JSON object, go deeper into the subtree 
+ *         according to this key. Process the next key in the list
+ *       - If the current subtree is a JSON array, process each element of the 
+ *         array with the current key
+ *       - Any other situation is unexpected; this UVE tree cannot be processed
+ *         with this operand specification
+ * Also, we will use the "vars" attributes to print parts of the UVE other than
+ * the operand1 and operand2 value inthe Alarm description
+ *     
+ * operand2 is what we want to compare the first operand to
+ * It can be either:
+ *     - a list of keys to find which part of the UVE
+ *       to compare operand1 to. There is no "vars" element.
+ *       "vars" can be specified with operand1 only.
+ *     - JSON string representing a fixed value
+ *       (The special value "null" is used to check for whether operand1 exists,
+ *        using the operators "!=" and "=="
+ *
+ */
+struct AlarmTemplate {
+    1: string oper
+    2: Operand1 operand1
+    3: Operand2 operand2
+}
+
+/**
+ * AlarmElement is used to explain why an Alarm was raised.
+ * It contains:
+ *     - The AlarmTemplate that was violated
+ *     - When we examined the UVE, we also noted some parts of the UVE
+ *       whose values need to be reported along with the alarm. (from
+ *       the "var" attribute of operand1 of the AlarmTemplate)
+ *       This is reported as a map, with the the key being the
+ *       fully-qualified name of the var
+ *     - json string of value seen for operand1. 
+ *     - json string of value seen for operand2,
+ *       if operand2 was not a fixed value
+ */
+struct AlarmElement {
+    1: AlarmTemplate rule
+    2: optional map<string,string> json_vars
+    3: string json_operand1_value
+    4: optional string json_operand2_value
+}
+
+struct AnyOf {
+    1: list <AlarmElement> elems
+}
+/**
+ * UVEAlarmInfo is used to report any Alarm
+ * It contains:
+ *     - Alarm Tyoe
+ *     - A description of why the alarm was raised.
+ *       This corresponds to an AND of ORs of the 
+ *       AlarmElements of individual AlarmTemplates
+ *     - Whether the alarm has been acknowledged yet
+ *     - Timestamp
+ *     - Severity
+ *     - token used when calling the Acknowledgement API
+ */
 struct UVEAlarmInfo {
     1: string type
-    2: optional list<AlarmElement> description
+    8: optional list<AnyOf> all_of
     7: optional list<AlarmRule> rules
     3: bool ack
     4: u64 timestamp
