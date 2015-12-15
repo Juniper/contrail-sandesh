@@ -568,6 +568,8 @@ string t_c_generator::base_type_name(t_base_type *type) {
       return "double";
     case t_base_type::TYPE_IPV4:
       return "uint32_t";
+    case t_base_type::TYPE_IPADDR:
+      return "ipaddr_t";
     case t_base_type::TYPE_UUID:
       return "uuid_t";
     default:
@@ -623,6 +625,8 @@ string t_c_generator::type_to_enum (t_type *type) {
         return "T_DOUBLE";
       case t_base_type::TYPE_IPV4:
         return "T_IPV4";
+      case t_base_type::TYPE_IPADDR:
+        return "T_IPADDR";
       case t_base_type::TYPE_UUID:
         return "T_UUID";
     }
@@ -1402,6 +1406,9 @@ void t_c_generator::generate_serialize_field(ofstream &out,
         case t_base_type::TYPE_IPV4:
           out << "ipv4 (protocol, " << name;
           break;
+        case t_base_type::TYPE_IPADDR:
+          out << "ipaddr (protocol, &" << name;
+          break;
         case t_base_type::TYPE_STRING:
           if (((t_base_type *) type)->is_binary()) {
             out << "binary (protocol, ((GByteArray *) " << name <<
@@ -1573,6 +1580,9 @@ void t_c_generator::generate_deserialize_field(ofstream &out,
         break;
       case t_base_type::TYPE_IPV4:
         out << "ipv4 (protocol, &" << name;
+        break;
+      case t_base_type::TYPE_IPADDR:
+        out << "ipaddr (protocol, &" << name;
         break;
       case t_base_type::TYPE_UUID:
         out << "uuid_t (protocol, &" << name;

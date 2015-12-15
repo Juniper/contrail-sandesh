@@ -32,5 +32,6 @@ setup(
     long_description="Sandesh python Implementation",
     install_requires=[
                       'gevent',
+                      'netaddr>=0.7.5'
                      ]
 )

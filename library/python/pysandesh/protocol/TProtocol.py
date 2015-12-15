@@ -107,6 +107,9 @@ class TProtocolBase:
   def writeIPV4(self, ipv4):
     pass
 
+  def writeIPADDR(self, ipaddr):
+    pass
+
   def writeDouble(self, dub):
     pass
 
@@ -180,6 +183,9 @@ class TProtocolBase:
     pass
 
   def readIPV4(self):
+    pass
+
+  def readIPADDR(self):
     pass
 
   def readDouble(self):
