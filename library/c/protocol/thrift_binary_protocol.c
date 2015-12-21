@@ -19,6 +19,14 @@
 
 #include "sandesh.h"
 
+int32_t thrift_binary_protocol_write_byte(ThriftProtocol *, const int8_t, int *);
+int32_t thrift_binary_protocol_write_i16(ThriftProtocol *, const int16_t, int *);
+int32_t thrift_binary_protocol_write_i32(ThriftProtocol *, const int32_t, int *);
+int32_t thrift_binary_protocol_write_string(ThriftProtocol *, const char *, int *);
+int32_t thrift_binary_protocol_write_binary(ThriftProtocol *, const void *,
+        const u_int32_t, int *);
+
+
 #ifndef __KERNEL__
 static u_int64_t
 thrift_bitwise_cast_u_int64 (double v)
@@ -53,17 +61,17 @@ thrift_binary_protocol_write_message_begin (ThriftProtocol *protocol,
   int32_t ret;
   int32_t xfer = 0;
 
-  if ((ret = thrift_protocol_write_i32 (protocol, version, error)) < 0)
+  if ((ret = thrift_binary_protocol_write_i32 (protocol, version, error)) < 0)
   {
     return -1;
   }
   xfer += ret;
-  if ((ret = thrift_protocol_write_string (protocol, name, error)) < 0)
+  if ((ret = thrift_binary_protocol_write_string (protocol, name, error)) < 0)
   {
     return -1;
   }
   xfer += ret;
-  if ((ret = thrift_protocol_write_i32 (protocol, seqid, error)) < 0)
+  if ((ret = thrift_binary_protocol_write_i32 (protocol, seqid, error)) < 0)
   {
     return -1;
   }
@@ -87,7 +95,7 @@ thrift_binary_protocol_write_sandesh_begin (ThriftProtocol *protocol,
   int32_t ret;
   int32_t xfer = 0;
 
-  if ((ret = thrift_protocol_write_string (protocol, name, error)) < 0)
+  if ((ret = thrift_binary_protocol_write_string (protocol, name, error)) < 0)
   {
     return -1;
   }
@@ -134,13 +142,13 @@ thrift_binary_protocol_write_field_begin (ThriftProtocol *protocol,
   int32_t ret;
   int32_t xfer = 0;
 
-  if ((ret = thrift_protocol_write_byte (protocol, (int8_t) field_type,
+  if ((ret = thrift_binary_protocol_write_byte (protocol, (int8_t) field_type,
                                          error)) < 0)
   {
     return -1;
   }
   xfer += ret;
-  if ((ret = thrift_protocol_write_i16 (protocol, field_id, error)) < 0)
+  if ((ret = thrift_binary_protocol_write_i16 (protocol, field_id, error)) < 0)
   {
     return -1;
   }
@@ -160,7 +168,7 @@ thrift_binary_protocol_write_field_stop (ThriftProtocol *protocol,
                                          int *error)
 {
 
-  return thrift_protocol_write_byte (protocol, (int8_t) T_STOP, error);
+  return thrift_binary_protocol_write_byte (protocol, (int8_t) T_STOP, error);
 }
 
 int32_t
@@ -173,19 +181,19 @@ thrift_binary_protocol_write_map_begin (ThriftProtocol *protocol,
   int32_t ret;
   int32_t xfer = 0;
 
-  if ((ret = thrift_protocol_write_byte (protocol, (int8_t) key_type,
+  if ((ret = thrift_binary_protocol_write_byte (protocol, (int8_t) key_type,
                                          error)) < 0)
   {
     return -1;
   }
   xfer += ret;
-  if ((ret = thrift_protocol_write_byte (protocol, (int8_t) value_type,
+  if ((ret = thrift_binary_protocol_write_byte (protocol, (int8_t) value_type,
                                          error)) < 0)
   {
     return -1;
   }
   xfer += ret;
-  if ((ret = thrift_protocol_write_i32 (protocol, (int32_t) size, error)) < 0)
+  if ((ret = thrift_binary_protocol_write_i32 (protocol, (int32_t) size, error)) < 0)
   {
     return -1;
   }
@@ -211,14 +219,14 @@ thrift_binary_protocol_write_list_begin (ThriftProtocol *protocol,
   int32_t ret;
   int32_t xfer = 0;
 
-  if ((ret = thrift_protocol_write_byte (protocol, (int8_t) element_type,
+  if ((ret = thrift_binary_protocol_write_byte (protocol, (int8_t) element_type,
                                          error)) < 0)
   {
     return -1;
   }
   xfer += ret;
 
-  if ((ret = thrift_protocol_write_i32 (protocol, (int32_t) size, error)) < 0)
+  if ((ret = thrift_binary_protocol_write_i32 (protocol, (int32_t) size, error)) < 0)
   {
     return -1;
   }
@@ -242,7 +250,7 @@ thrift_binary_protocol_write_set_begin (ThriftProtocol *protocol,
                                         const u_int32_t size,
                                         int *error)
 {
-  return thrift_protocol_write_list_begin (protocol, element_type,
+  return thrift_binary_protocol_write_list_begin (protocol, element_type,
                                            size, error);
 }
 
@@ -260,7 +268,7 @@ thrift_binary_protocol_write_bool (ThriftProtocol *protocol,
                                    const u_int8_t value, int *error)
 {
   u_int8_t tmp = value ? 1 : 0;
-  return thrift_protocol_write_byte (protocol, tmp, error);
+  return thrift_binary_protocol_write_byte (protocol, tmp, error);
 }
 
 int32_t
@@ -288,6 +296,7 @@ thrift_binary_protocol_write_i16 (ThriftProtocol *protocol, const int16_t value,
   } else {
     return -1;
   }
+
 }
 
 int32_t
@@ -445,7 +454,7 @@ thrift_binary_protocol_write_string (ThriftProtocol *protocol,
 {
   u_int32_t len = str != NULL ? strlen (str) : 0;
   /* write the string length + 1 which includes the null terminator */
-  return thrift_protocol_write_binary (protocol, (const void *) str,
+  return thrift_binary_protocol_write_binary (protocol, (const void *) str,
                                        len, error);
 }
 
@@ -457,7 +466,7 @@ thrift_binary_protocol_write_binary (ThriftProtocol *protocol,
   int32_t ret;
   int32_t xfer = 0;
 
-  if ((ret = thrift_protocol_write_i32 (protocol, len, error)) < 0)
+  if ((ret = thrift_binary_protocol_write_i32 (protocol, len, error)) < 0)
   {
     return -1;
   }
