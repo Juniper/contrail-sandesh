@@ -805,9 +805,10 @@ void SandeshStateMachine::SetSandeshMessageDropLevel(size_t queue_count,
             Sandesh::LevelToString(level) << "], SM QUEUE COUNT: " <<
             queue_count);
         message_drop_level_ = level;
-        if (!cb.empty()) {
-            cb();
-        }
+    }
+    // Always invoke the callback
+    if (!cb.empty()) {
+        cb();
     }
 }
 
