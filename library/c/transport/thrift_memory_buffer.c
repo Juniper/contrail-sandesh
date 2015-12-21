@@ -19,13 +19,13 @@
 
 #include "sandesh.h"
 
-static u_int32_t
+static inline u_int32_t
 available_read (ThriftMemoryBuffer *t)
 {
   return t->buf_woffset - t->buf_roffset;
 }
 
-static u_int32_t
+static inline u_int32_t
 available_write (ThriftMemoryBuffer *t)
 {
   return t->buf_size - t->buf_woffset;
@@ -38,13 +38,7 @@ ensure_can_write (ThriftMemoryBuffer *t, u_int32_t len)
   void *new_buf;
   int error;
 
-  /* Check available space */
   avail = available_write(t);
-  if (len <= avail)
-  {
-    return 0;
-  }
-
   if (!t->owner)
   {
 #ifdef __KERNEL__
@@ -170,22 +164,26 @@ thrift_memory_buffer_write (ThriftTransport *transport,
 {
   ThriftMemoryBuffer *t = (ThriftMemoryBuffer *) (transport);
 
-  /* does the buffer have enough space. ? */
-  if (ensure_can_write(t, len))
+  if (len > available_write(t))
   {
-    *error = THRIFT_TRANSPORT_ERROR_SEND;
-#ifdef __KERNEL__
-    if (vrouter_dbg)
+    /* does the buffer have enough space. ? */
+    if (ensure_can_write(t, len))
     {
-      os_log(OS_LOG_DEBUG, "Unable to write %d bytes to buffer of length %d"
-             " at write offset %d", len, t->buf_size, t->buf_woffset);
-    }
+      *error = THRIFT_TRANSPORT_ERROR_SEND;
+#ifdef __KERNEL__
+      if (vrouter_dbg)
+      {
+        os_log(OS_LOG_DEBUG, "Unable to write %d bytes to buffer of length %d"
+               " at write offset %d", len, t->buf_size, t->buf_woffset);
+      }
 #else
-    os_log(OS_LOG_ERR, "Unable to write %d bytes to buffer of length %d"
-           " at write offset %d", len, t->buf_size, t->buf_woffset);
+        os_log(OS_LOG_ERR, "Unable to write %d bytes to buffer of length %d"
+               " at write offset %d", len, t->buf_size, t->buf_woffset);
 #endif
-    return 0;
+        return 0;
+      }
   }
+
   memcpy(t->buf + t->buf_woffset, buf, len);
   t->buf_woffset += len;
   return 1;
