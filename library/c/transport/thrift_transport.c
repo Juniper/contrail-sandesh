@@ -19,6 +19,8 @@
 
 #include "sandesh.h"
 
+#if 0
+
 u_int8_t
 thrift_transport_is_open (ThriftTransport *transport)
 {
@@ -68,3 +70,5 @@ thrift_transport_flush (ThriftTransport *transport, int *error)
 {
   return transport->flush (transport, error);
 }
+
+#endif

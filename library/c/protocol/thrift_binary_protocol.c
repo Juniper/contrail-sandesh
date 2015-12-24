@@ -19,9 +19,6 @@
 
 #include "sandesh.h"
 
-int32_t thrift_binary_protocol_write_byte(ThriftProtocol *, const int8_t, int *);
-int32_t thrift_binary_protocol_write_i16(ThriftProtocol *, const int16_t, int *);
-int32_t thrift_binary_protocol_write_i32(ThriftProtocol *, const int32_t, int *);
 int32_t thrift_binary_protocol_write_string(ThriftProtocol *, const char *, int *);
 int32_t thrift_binary_protocol_write_binary(ThriftProtocol *, const void *,
         const u_int32_t, int *);
@@ -55,6 +52,114 @@ thrift_bitwise_cast_double (u_int64_t v)
   return u.to;
 }
 #endif
+
+static inline int32_t
+thrift_binary_protocol_write_byte (ThriftProtocol *protocol, const int8_t value,
+                                   int *error)
+{
+  if (thrift_transport_write (protocol->transport,
+                              (const void *) &value, 1, error))
+  {
+    return 1;
+  } else {
+    return -1;
+  }
+}
+
+static inline int32_t
+thrift_binary_protocol_write_i16 (ThriftProtocol *protocol, const int16_t value,
+                                  int *error)
+{
+  int16_t net = htons (value);
+  if (thrift_transport_write (protocol->transport,
+                              (const void *) &net, 2, error))
+  {
+    return 2;
+  } else {
+    return -1;
+  }
+
+}
+
+static inline int32_t
+thrift_binary_protocol_write_u16 (ThriftProtocol *protocol, const u_int16_t value,
+                                  int *error)
+{
+  u_int16_t net = htons (value);
+  if (thrift_transport_write (protocol->transport,
+                              (const void *) &net, 2, error))
+  {
+    return 2;
+  } else {
+    return -1;
+  }
+}
+
+static inline int32_t
+thrift_binary_protocol_write_i32 (ThriftProtocol *protocol, const int32_t value,
+                                  int *error)
+{
+  int32_t net = htonl (value);
+  if (thrift_transport_write (protocol->transport,
+                              (const void *) &net, 4, error))
+  {
+    return 4;
+  } else {
+    return -1;
+  }
+}
+
+static inline int32_t
+thrift_binary_protocol_write_u32 (ThriftProtocol *protocol, const u_int32_t value,
+                                  int *error)
+{
+  u_int32_t net = htonl (value);
+  if (thrift_transport_write (protocol->transport,
+                              (const void *) &net, 4, error))
+  {
+    return 4;
+  } else {
+    return -1;
+  }
+}
+
+static inline int32_t
+thrift_binary_protocol_write_i64 (ThriftProtocol *protocol, const int64_t value,
+                                  int *error)
+{
+  int64_t net;
+  os_put_value64((uint8_t *)&net, value);
+  if (thrift_transport_write (protocol->transport,
+                              (const void *) &net, 8, error))
+  {
+    return 8;
+  } else {
+    return -1;
+  }
+}
+
+static inline int32_t
+thrift_binary_protocol_write_u64 (ThriftProtocol *protocol, const uint64_t value,
+                                  int *error)
+{
+  int64_t net;
+  os_put_value64((uint8_t *)&net, value);
+  if (thrift_transport_write (protocol->transport,
+                              (const void *) &net, 8, error))
+  {
+    return 8;
+  } else {
+    return -1;
+  }
+}
+
+static inline int32_t
+thrift_binary_protocol_write_bool (ThriftProtocol *protocol,
+                                   const u_int8_t value, int *error)
+{
+  u_int8_t tmp = value ? 1 : 0;
+  return thrift_binary_protocol_write_byte (protocol, tmp, error);
+}
 
 int32_t
 thrift_binary_protocol_write_message_begin (ThriftProtocol *protocol,
@@ -266,114 +371,6 @@ thrift_binary_protocol_write_set_end (ThriftProtocol *protocol ,
   THRIFT_UNUSED_VAR (protocol);
   THRIFT_UNUSED_VAR (error);
   return 0;
-}
-
-int32_t
-thrift_binary_protocol_write_bool (ThriftProtocol *protocol,
-                                   const u_int8_t value, int *error)
-{
-  u_int8_t tmp = value ? 1 : 0;
-  return thrift_binary_protocol_write_byte (protocol, tmp, error);
-}
-
-int32_t
-thrift_binary_protocol_write_byte (ThriftProtocol *protocol, const int8_t value,
-                                   int *error)
-{
-  if (thrift_transport_write (protocol->transport,
-                              (const void *) &value, 1, error))
-  {
-    return 1;
-  } else {
-    return -1;
-  }
-}
-
-int32_t
-thrift_binary_protocol_write_i16 (ThriftProtocol *protocol, const int16_t value,
-                                  int *error)
-{
-  int16_t net = htons (value);
-  if (thrift_transport_write (protocol->transport,
-                              (const void *) &net, 2, error))
-  {
-    return 2;
-  } else {
-    return -1;
-  }
-
-}
-
-int32_t
-thrift_binary_protocol_write_i32 (ThriftProtocol *protocol, const int32_t value,
-                                  int *error)
-{
-  int32_t net = htonl (value);
-  if (thrift_transport_write (protocol->transport,
-                              (const void *) &net, 4, error))
-  {
-    return 4;
-  } else {
-    return -1;
-  }
-}
-
-int32_t
-thrift_binary_protocol_write_i64 (ThriftProtocol *protocol, const int64_t value,
-                                  int *error)
-{
-  int64_t net;
-  os_put_value64((uint8_t *)&net, value);
-  if (thrift_transport_write (protocol->transport,
-                              (const void *) &net, 8, error))
-  {
-    return 8;
-  } else {
-    return -1;
-  }
-}
-
-int32_t
-thrift_binary_protocol_write_u16 (ThriftProtocol *protocol, const u_int16_t value,
-                                  int *error)
-{
-  u_int16_t net = htons (value);
-  if (thrift_transport_write (protocol->transport,
-                              (const void *) &net, 2, error))
-  {
-    return 2;
-  } else {
-    return -1;
-  }
-}
-
-int32_t
-thrift_binary_protocol_write_u32 (ThriftProtocol *protocol, const u_int32_t value,
-                                  int *error)
-{
-  u_int32_t net = htonl (value);
-  if (thrift_transport_write (protocol->transport,
-                              (const void *) &net, 4, error))
-  {
-    return 4;
-  } else {
-    return -1;
-  }
-}
-
-int32_t
-thrift_binary_protocol_write_u64 (ThriftProtocol *protocol, const uint64_t value,
-                                  int *error)
-{
-  int64_t net;
-  os_put_value64((uint8_t *)&net, value);
-  if (thrift_transport_write (protocol->transport,
-                              (const void *) &net, 8, error))
-  {
-    return 8;
-  } else {
-    return -1;
-  }
 }
 
 int32_t
