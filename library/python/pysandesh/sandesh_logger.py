@@ -70,11 +70,12 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
     def set_logging_params(self, enable_local_log=False, category='',
                            level=SandeshLevel.SYS_INFO, file=_DEFAULT_LOG_FILE,
                            enable_syslog=False, syslog_facility='LOG_LOCAL0',
-                           enable_trace_print=False, enable_flow_log=False):
+                           enable_trace_print=False, enable_flow_log=False,
+                           maxBytes=5000000, backupCount=10):
         self.set_local_logging(enable_local_log)
         self.set_logging_category(category)
         self.set_logging_level(level)
-        self.set_logging_file(file)
+        self.set_logging_file(file, maxBytes, backupCount)
         self.set_logging_syslog(enable_syslog, syslog_facility)
         self.set_trace_print(enable_trace_print)
         self.set_flow_logging(enable_flow_log)
@@ -116,7 +117,7 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
         super(SandeshLogger, self).set_logging_level(level)
     # end set_logging_level
 
-    def set_logging_file(self, file):
+    def set_logging_file(self, file, maxBytes=5000000, backupCount=10):
         if self.logging_file() != file:
             self._logger.info('SANDESH: Logging: FILE: [%s] -> [%s]',
                               self.logging_file(), file)
@@ -126,7 +127,8 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
             else:
                 self._logging_file_handler = (
                     logging.handlers.RotatingFileHandler(
-                        filename=file, maxBytes=5000000, backupCount=10))
+                        filename=file, maxBytes=maxBytes,
+                        backupCount=backupCount))
             log_format = logging.Formatter(
                 '%(asctime)s [%(name)s]: %(message)s',
                 datefmt='%m/%d/%Y %I:%M:%S %p')
