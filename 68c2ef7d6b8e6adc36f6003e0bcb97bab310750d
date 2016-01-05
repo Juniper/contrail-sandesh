@@ -1,0 +1,9 @@
+Verified+2: Zuul <zuul@lists.opencontrail.org>
+Approved+1: Ashish Ranjan <aranjan@juniper.net>
+Code-Review+2: Arvind <arvindv@juniper.net>
+Approved+1: Karl Klashinsky <klash@juniper.net>
+Submitted-by: Zuul <zuul@lists.opencontrail.org>
+Submitted-at: Tue, 05 Jan 2016 14:07:24 -0800
+Reviewed-on: https://review.opencontrail.org/15958
+Project: Juniper/contrail-sandesh
+Branch: refs/heads/R2.20
