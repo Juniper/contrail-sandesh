@@ -6,45 +6,94 @@
 # sandesh_stats.py
 #
 
-class SandeshStats(object):
-    class SandeshStatsElem(object):
-        def __init__(self):
-            self.tx_count = 0
-            self.tx_bytes = 0
-            self.rx_count = 0
-            self.rx_bytes = 0
-        #end __init__
-    #end SandeshStatsElem
+from pysandesh.sandesh_base import Sandesh
+from pysandesh.gen_py.sandesh_uve.ttypes import SandeshMessageStats
+
+class SandeshMessageStatistics(object):
 
     def __init__(self):
-        self._sandesh_sent = 0
-        self._bytes_sent = 0
-        self._sandesh_received = 0
-        self._bytes_received = 0
-        self._stats_map = {}
-    #end __init__
+        self._message_type_stats = {}
+        self._aggregate_stats = SandeshMessageStats()
+    # end __init__
 
-    def stats_map(self):
-        return self._stats_map
-    #end stats_map
+    def message_type_stats(self):
+        return self._message_type_stats
+    # end message_type_stats
 
-    def update_stats(self, sandesh_name, bytes, is_tx):
+    def aggregate_stats(self):
+        return self._aggregate_stats
+    # end aggregate_stats
+
+    def update_tx_stats(self, message_type, nbytes):
+        return self._update_tx_rx_stats_internal(message_type, nbytes, True,
+            False)
+    # end update_tx_stats
+
+    def update_tx_drop_stats(self, message_type, nbytes):
+        return self._update_tx_rx_stats_internal(message_type, nbytes, True,
+            True)
+    # end update_tx_drop_stats
+
+    def update_rx_stats(self, message_type, nbytes):
+        return self._update_tx_rx_stats_internal(message_type, nbytes, False,
+            False)
+    # end update_rx_stats
+
+    def update_rx_drop_stats(self, message_type, nbytes):
+        return self._update_tx_rx_stats_internal(message_type, nbytes, False,
+            True)
+    # end update_rx_drop_stats
+
+    def _update_tx_rx_stats_internal(self, message_type, nbytes, tx, drop):
         try:
-            stats_elem = self._stats_map[sandesh_name]
+            message_stats = self._message_type_stats[message_type]
         except KeyError:
-            stats_elem = SandeshStats.SandeshStatsElem()
+            message_stats = SandeshMessageStats()
+            self._message_type_stats[message_type] = message_stats
         finally:
-            if is_tx:
-                stats_elem.tx_count += 1
-                stats_elem.tx_bytes += bytes
-                self._sandesh_sent += 1
-                self._bytes_sent += bytes
+            if tx:
+                self._update_tx_stats_internal(message_stats, nbytes, drop)
+                self._update_tx_stats_internal(self._aggregate_stats, nbytes,
+                    drop)
             else:
-                stats_elem.rx_count += 1
-                stats_elem.rx_bytes += bytes
-                self._sandesh_received += 1
-                self._bytes_received += bytes
-            self._stats_map[sandesh_name] = stats_elem
-    #end update_stats
+                self._update_rx_stats_internal(message_stats, nbytes, drop)
+                self._update_rx_stats_internal(self._aggregate_stats, nbytes,
+                    drop)
+        return True
+    # end update_tx_rx_stats_internal
 
-#end class SandeshStats
+    def _update_tx_stats_internal(self, msg_stats, nbytes, drop):
+        if not drop:
+            try:
+                msg_stats.messages_sent += 1
+                msg_stats.bytes_sent += nbytes
+            except TypeError:
+                msg_stats.messages_sent = 1
+                msg_stats.bytes_sent = nbytes
+        else:
+            if msg_stats.messages_sent_dropped:
+                msg_stats.messages_sent_dropped += 1
+                msg_stats.bytes_sent_dropped += nbytes
+            else:
+                msg_stats.messages_sent_dropped = 1
+                msg_stats.bytes_sent_dropped = nbytes
+    # end _update_tx_stats_internal
+
+    def _update_rx_stats_internal(self, msg_stats, nbytes, drop):
+        if not drop:
+            if msg_stats.messages_received:
+                msg_stats.messages_received += 1
+                msg_stats.bytes_received += nbytes
+            else:
+                msg_stats.messages_received = 1
+                msg_stats.bytes_received = nbytes
+        else:
+            if msg_stats.messages_received_dropped:
+                msg_stats.messages_received_dropped += 1
+                msg_stats.bytes_received_dropped += nbytes
+            else:
+                msg_stats.messages_received_dropped = 1
+                msg_stats.bytes_received_dropped = nbytes
+    # end _update_rx_stats_internal
+
+# end class SandeshMessageStatistics
