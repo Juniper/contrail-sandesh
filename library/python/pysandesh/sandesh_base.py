@@ -16,10 +16,9 @@ import util
 
 from gen_py.sandesh.ttypes import SandeshType, SandeshLevel
 from gen_py.sandesh.constants import *
-from sandesh_client import SandeshClient
 from sandesh_http import SandeshHttp
-from sandesh_stats import SandeshStats
 from sandesh_trace import SandeshTraceRequestRunner
+from sandesh_client import SandeshClient
 from sandesh_uve import SandeshUVETypeMaps, SandeshUVEPerTypeMap
 from work_queue import WorkQueue
 
@@ -77,7 +76,8 @@ class Sandesh(object):
                           logger_config_file=logger_config_file)
         self._logger.info('SANDESH: CONNECT TO COLLECTOR: %s',
                           connect_to_collector)
-        self._stats = SandeshStats()
+        from sandesh_stats import SandeshMessageStatistics
+        self._msg_stats = SandeshMessageStatistics()
         self._trace = trace.Trace()
         self._sandesh_request_dict = {}
         self._uve_type_maps = SandeshUVETypeMaps(self._logger)
@@ -167,6 +167,10 @@ class Sandesh(object):
         self._sandesh_logger.set_logging_file(file)
     # end set_logging_file
 
+    def is_logging_dropped_allowed(self, sandesh):
+        return True
+    # end is_logging_dropped_allowed
+
     def is_send_queue_enabled(self):
         return self._send_queue_enabled
     # end is_send_queue_enabled
@@ -190,9 +194,9 @@ class Sandesh(object):
         pass
     # end init_collector
 
-    def stats(self):
-        return self._stats
-    # end stats
+    def msg_stats(self):
+        return self._msg_stats
+    # end msg_stats
 
     @classmethod
     def next_seqnum(cls):
@@ -331,6 +335,8 @@ class Sandesh(object):
                 self._logger.log(
                     sand_logger.SandeshLogger.get_py_logger_level(
                         tx_sandesh.level()), tx_sandesh.log())
+            self._msg_stats.update_tx_drop_stats(tx_sandesh.__class__.__name__,
+                0)
     # end send_sandesh
 
     def send_generator_info(self):
@@ -650,6 +656,8 @@ class SandeshAsync(Sandesh):
         try:
             self.validate()
         except e:
+            sandesh.msg_stats().update_tx_drop_stats(self.__class__.__name__,
+                0)
             sandesh._logger.error('sandesh "%s" validation failed [%s]'
                                   % (self.__class__.__name__, e))
             return -1
@@ -704,6 +712,8 @@ class SandeshRequest(Sandesh):
         try:
             self.validate()
         except e:
+            sandesh.msg_stats().update_tx_drop_stats(self.__class__.__name__,
+                0)
             sandesh._logger.error('sandesh "%s" validation failed [%s]'
                                   % (self.__class__.__name__, e))
             return -1
@@ -732,6 +742,8 @@ class SandeshResponse(Sandesh):
         try:
             self.validate()
         except e:
+            sandesh.msg_stats().update_tx_drop_stats(self.__class__.__name__,
+                0)
             sandesh._logger.error('sandesh "%s" validation failed [%s]'
                                   % (self.__class__.__name__, e))
             return -1
@@ -763,6 +775,8 @@ class SandeshUVE(Sandesh):
         try:
             self.validate()
         except e:
+            sandesh.msg_stats().update_tx_drop_stats(self.__class__.__name__,
+                0)
             sandesh._logger.error('sandesh "%s" validation failed [%s]'
                                   % (self.__class__.__name__, e))
             return -1
@@ -773,9 +787,15 @@ class SandeshUVE(Sandesh):
             uve_type_map = sandesh._uve_type_maps.get_uve_type_map(
                 self.__class__.__name__)
             if uve_type_map is None:
+                sandesh._logger.error('sandesh uve <%s> not registered: %s'\
+                    % (self.__class__.__name__, self.log()))
+                sandesh.msg_stats().update_tx_drop_stats(self.__class__.__name__,
+                    0)
                 return -1
             self._seqnum = self.next_seqnum()
             if not uve_type_map.update_uve(self):
+                sandesh.msg_stats().update_tx_drop_stats(self.__class__.__name__,
+                    0)
                 sandesh._logger.error('Failed to update sandesh in cache. '
                                       + self.log())
                 return -1
@@ -819,6 +839,8 @@ class SandeshTrace(Sandesh):
         try:
             self.validate()
         except e:
+            sandesh.msg_stats().update_tx_drop_stats(self.__class__.__name__,
+                0)
             sandesh._logger.error('sandesh "%s" validation failed [%s]'
                                   % (self.__class__.__name__, e))
             return -1
