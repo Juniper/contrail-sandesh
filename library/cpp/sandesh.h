@@ -182,6 +182,10 @@ public:
             int collector_port);
     static void Uninit();
 
+    // Disable flow collection
+    static void DisableFlowCollection(bool disable);
+    static bool IsFlowCollectionDisabled() { return disable_flow_collection_; }
+
     // Logging and category APIs
     static void SetLoggingParams(bool enable_local_log, std::string category,
             std::string level, bool enable_trace_print = false,
@@ -384,6 +388,7 @@ private:
     static SandeshMessageStatistics msg_stats_;
     static tbb::mutex stats_mutex_;
     static log4cplus::Logger logger_;
+    static bool disable_flow_collection_; // disable flow collection
 
     const uint32_t seqnum_;
     std::string context_;
