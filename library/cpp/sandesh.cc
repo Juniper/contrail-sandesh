@@ -46,6 +46,7 @@ int Sandesh::http_port_ = 0;
 bool Sandesh::enable_trace_print_ = false;
 bool Sandesh::send_queue_enabled_ = true;
 bool Sandesh::connect_to_collector_ = false;
+bool Sandesh::disable_flow_collection_ = false;
 SandeshLevel::type Sandesh::sending_level_ = SandeshLevel::INVALID;
 SandeshClient *Sandesh::client_ = NULL;
 std::auto_ptr<Sandesh::SandeshRxQueue> Sandesh::recv_queue_;
@@ -449,6 +450,14 @@ void Sandesh::SetFlowLogging(bool enable_flow_log) {
             (enable_flow_log_ ? "ENABLED" : "DISABLED") << " -> " <<
             (enable_flow_log ? "ENABLED" : "DISABLED"));
         enable_flow_log_ = enable_flow_log;
+    }
+}
+
+void Sandesh::DisableFlowCollection(bool disable) {
+    if (disable_flow_collection_ != disable) {
+        SANDESH_LOG(INFO, "SANDESH: Disable Flow Collection: " <<
+            disable_flow_collection_ << " -> " << disable);
+        disable_flow_collection_ = disable;
     }
 }
 
@@ -874,6 +883,10 @@ bool DoDropSandeshMessage(const SandeshHeader &header,
         if (slevel >= drop_level) {
             return true;
         }
+    }
+    // Drop flow message if flow collection is disabled
+    if (Sandesh::IsFlowCollectionDisabled() && stype == SandeshType::FLOW) {
+        return true;
     }
     return false;
 }
