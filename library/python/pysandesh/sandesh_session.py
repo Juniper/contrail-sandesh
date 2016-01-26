@@ -144,7 +144,7 @@ class SandeshWriter(object):
     # Public functions
 
     @staticmethod
-    def encode_sandesh(sandesh):
+    def encode_sandesh(sandesh, sandesh_instance=None):
         transport = TTransport.TMemoryBuffer()
         protocol_factory = TXMLProtocol.TXMLProtocolFactory()
         protocol = protocol_factory.getProtocol(transport)
@@ -166,11 +166,15 @@ class SandeshWriter(object):
                                     sandesh.instance_id())
         # write the sandesh header
         if sandesh_hdr.write(protocol) < 0:
-            print 'Error in encoding sandesh header'
+            if sandesh_instance is not None:
+                sandesh_instance.msg_stats().update_tx_drop_stats(
+                    sandesh.__class__.__name__, 0)
             return None
         # write the sandesh
         if sandesh.write(protocol) < 0:
-            print 'Error in encoding sandesh'
+            if sandesh_instance is not None:
+                sandesh_instance.msg_stats().update_tx_drop_stats(
+                    sandesh.__class__.__name__, 0)
             return None
         # get the message
         msg = transport.getvalue()
@@ -191,9 +195,8 @@ class SandeshWriter(object):
             self._logger.error('Failed to send sandesh')
             return -1
         # update sandesh tx stats
-        sandesh_name = sandesh.__class__.__name__
-        self._sandesh_instance.stats().update_stats(
-            sandesh_name, len(send_buf), True)
+        self._sandesh_instance.msg_stats().update_tx_stats(
+            sandesh.__class__.__name__, len(send_buf))
         if more:
             self._send_msg_more(send_buf)
         else:
@@ -317,9 +320,11 @@ class SandeshSession(TcpSession):
         else:
             more = True
         if not self._connected:
-            self._logger.log(
-                SandeshLogger.get_py_logger_level(sandesh.level()),
-                sandesh.log())
+            if self._sandesh_instance.is_logging_dropped_allowed(sandesh):
+                self._logger.error(
+                    "SANDESH: %s: %s" % ("Not connected", sandesh.log()))
+            self._sandesh_instance.msg_stats().update_tx_drop_stats(
+                sandesh.__class__.__name__, 0)
             return
         if sandesh.is_logging_allowed(self._sandesh_instance):
             self._logger.log(
