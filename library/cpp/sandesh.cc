@@ -411,6 +411,8 @@ void Sandesh::SetLoggingLevel(SandeshLevel::type level) {
                 " ]");
         logging_level_ = level;
         logger_.setLogLevel(log4_new_level);
+        // Set the LogLevel on rootLogger
+        ::SetLoggingLevel(log4_new_level);
     }
 }
 
