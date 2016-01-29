@@ -1338,24 +1338,6 @@ void t_cpp_generator::generate_sandesh_async_creator_helper(ofstream &out, t_san
     }
     out << indent() << "return;" << endl;
     scope_down(out);
-    out << indent() << "if (level >= SendingLevel()) {" << endl;
-    indent_up();
-    out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
-        "\", 0, SandeshTxDropReason::QueueLevel);" << endl;
-    if (!is_flow) {
-        out << indent() << "std::string drop_reason = \"SANDESH: Queue Drop:"
-            " \";" << endl;
-        out << indent() << "DropLog";
-	if(use_sandesh) {
-	    out << "(drop_reason, category, level, snh);" << endl;
-	    out << indent() << "snh->Release();" << endl;
-	} else {
-            out << generate_sandesh_async_creator(tsandesh, false, false, false, "",
-                                           "", false, false, true) << "; " << endl;
-	}
-    }
-    out << indent() << "return;" << endl;
-    scope_down(out);
     if (is_system) {
         out << indent() << "if (!IsRatelimitPass()) {" << endl;
         indent_up();
@@ -1391,7 +1373,24 @@ void t_cpp_generator::generate_sandesh_async_creator_helper(ofstream &out, t_san
         out << indent() << "return;" << endl;
         scope_down(out);
     }
-
+    out << indent() << "if (level >= SendingLevel()) {" << endl;
+    indent_up();
+    out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
+        "\", 0, SandeshTxDropReason::QueueLevel);" << endl;
+    if (!is_flow) {
+        out << indent() << "std::string drop_reason = \"SANDESH: Queue Drop:"
+            " \";" << endl;
+        out << indent() << "DropLog";
+        if(use_sandesh) {
+            out << "(drop_reason, category, level, snh);" << endl;
+            out << indent() << "snh->Release();" << endl;
+        } else {
+            out << generate_sandesh_async_creator(tsandesh, false, false, false, "",
+                                           "", false, false, true) << "; " << endl;
+        }
+    }
+    out << indent() << "return;" << endl;
+    scope_down(out);
     if (!use_sandesh) {
 	out << indent() << tsandesh->get_name() <<
 		" * snh = new " << tsandesh->get_name() <<

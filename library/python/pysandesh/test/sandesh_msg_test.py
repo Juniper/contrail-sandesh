@@ -106,17 +106,25 @@ class SandeshMsgTest(unittest.TestCase):
     # end test_systemlog_msg_buffer_threshold
 
     def test_sandesh_queue_level_drop(self):
-        levels = SandeshLevel._VALUES_TO_NAMES.keys()
-        queue_level_drop = 0
-        for send_level in levels:
-            sandesh_global.set_send_level(None, send_level)
-            for sandesh_level in levels:
-                systemlog = SystemLogTest(level=sandesh_level)
-                systemlog.send()
-                if sandesh_level >= send_level:
-                    queue_level_drop += 1
-                self.assertEqual(queue_level_drop, sandesh_global.msg_stats().\
-                    aggregate_stats().messages_sent_dropped_queue_level)
+        sandesh_global.set_send_level(None,SandeshLevel.SYS_NOTICE)
+        SandeshSystem.set_sandesh_send_rate_limit(10)
+        systemlog = SystemLogTest(level=SandeshLevel.SYS_ERR)
+        time.sleep(1)
+        for i in xrange(0,10):
+            systemlog.send()
+        # No queue level drops should be seen ERR < NOTICE
+        self.assertEqual(None, sandesh_global.msg_stats().\
+            aggregate_stats().messages_sent_dropped_queue_level)
+        systemlog = SystemLogTest(level=SandeshLevel.SYS_DEBUG)
+        time.sleep(1)
+        for i in xrange(0,25):
+            systemlog = SystemLogTest(level=SandeshLevel.SYS_DEBUG)
+            systemlog.send()
+        # queue level drops should be seen since DEBUG > NOTICE
+        # queue level drops should be less than sent messages
+        # because there will be rate limit drops happening
+        self.assertEqual(10, sandesh_global.msg_stats().\
+            aggregate_stats().messages_sent_dropped_queue_level)
     # end test_sandesh_queue_level_drop
 
     def test_sandesh_sizeof(self):
