@@ -106,7 +106,7 @@ class SandeshMsgTest(unittest.TestCase):
     # end test_systemlog_msg_buffer_threshold
 
     def test_sandesh_queue_level_drop(self):
-        levels = SandeshLevel._VALUES_TO_NAMES.keys()
+        levels = list(range(SandeshLevel.SYS_EMERG,SandeshLevel.SYS_DEBUG))
         queue_level_drop = 0
         for send_level in levels:
             sandesh_global.set_send_level(None, send_level)
