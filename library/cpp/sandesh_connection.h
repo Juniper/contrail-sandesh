@@ -34,7 +34,7 @@ public:
 
     // Invoked from server when a session is accepted.
     void AcceptSession(SandeshSession *session);
-    virtual void ReceiveMsg(const std::string &msg, SandeshSession *session);
+    virtual bool ReceiveMsg(const std::string &msg, SandeshSession *session);
 
     TcpServer *server() { return server_; }
 

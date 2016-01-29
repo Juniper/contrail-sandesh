@@ -69,8 +69,8 @@ SandeshSession *SandeshConnection::session() const {
     return session_;
 }
 
-void SandeshConnection::ReceiveMsg(const std::string &msg, SandeshSession *session) {
-    state_machine_->OnSandeshMessage(session, msg);
+bool SandeshConnection::ReceiveMsg(const std::string &msg, SandeshSession *session) {
+    return state_machine_->OnSandeshMessage(session, msg);
 }
 
 bool SandeshConnection::SendSandesh(Sandesh *snh) {

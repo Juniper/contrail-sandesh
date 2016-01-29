@@ -90,7 +90,7 @@ public:
     void SandeshUVESend(SandeshUVE *usnh);
 
     // Receive incoming sandesh message
-    void OnSandeshMessage(SandeshSession *session, const std::string &msg);
+    bool OnSandeshMessage(SandeshSession *session, const std::string &msg);
 
     // In established state, the SM accepts updates to resource state
     void ResourceUpdate(bool rsc);

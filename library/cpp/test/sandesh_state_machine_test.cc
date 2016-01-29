@@ -380,11 +380,10 @@ TEST_F(SandeshServerStateMachineTest, Matrix) {
 }
 
 TEST_F(SandeshServerStateMachineTest, ReadInvalidTypeMessage) {
+    // Move to ssm::SERVER_INIT
     GetToState(ssm::SERVER_INIT);
-    EvTcpPassiveOpen();
     // Enqueue 1 message with type i128
     EvInvalidTypeSandeshMessageRecv();
-
     SandeshStateMachineStats sm_stats;
     SandeshGeneratorStats msg_stats;
     int error = 0;
@@ -400,12 +399,12 @@ TEST_F(SandeshServerStateMachineTest, ReadInvalidTypeMessage) {
 	}
     }
     EXPECT_EQ(1, error);
+    task_util::WaitForIdle();
 }
 
 TEST_F(SandeshServerStateMachineTest, ReadMalformedXmlMessage) {
-    // Also verify that we can proceed after this event
+    // Move to ssm::SERVER_INIT
     GetToState(ssm::SERVER_INIT);
-    EvTcpPassiveOpen();
     // Enqueue 1 message with type i128
     EvMalformedXmlSandeshMessageRecv();
     SandeshStateMachineStats sm_stats;
@@ -423,6 +422,7 @@ TEST_F(SandeshServerStateMachineTest, ReadMalformedXmlMessage) {
 	}
     }
     EXPECT_EQ(1, error);
+    task_util::WaitForIdle();
 }
 
 TEST_F(SandeshServerStateMachineTest, WaterMark) {

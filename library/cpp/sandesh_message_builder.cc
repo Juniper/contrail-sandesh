@@ -115,11 +115,17 @@ bool SandeshXMLMessage::Parse(const uint8_t *xml_msg, size_t size) {
     if (!ParseHeader(header_node, header_)) {
         SANDESH_LOG(ERROR, __func__ << ": Sandesh header parse FAILED: " <<
             xml_msg);
-        return EINVAL;
+        return false;
     }
     message_node_ = header_node.next_sibling();
     message_type_ = message_node_.name();
+    if (message_type_.empty()) {
+        SANDESH_LOG(ERROR, __func__ << ": Message type NOT PRESENT: " <<
+            xml_msg);
+        return false;
+    }
     size_ = size;
+    return true;
 }
 
 const std::string SandeshXMLMessage::ExtractMessage() const {
@@ -162,7 +168,10 @@ SandeshMessageBuilder *SandeshMessageBuilder::GetInstance(
 SandeshMessage *SandeshXMLMessageBuilder::Create(
     const uint8_t *xml_msg, size_t size) const {
     SandeshXMLMessage *msg = new SandeshXMLMessage;
-    msg->Parse(xml_msg, size);
+    if (!msg->Parse(xml_msg, size)) {
+        delete msg;
+        return NULL;
+    }
     return msg;
 }
 

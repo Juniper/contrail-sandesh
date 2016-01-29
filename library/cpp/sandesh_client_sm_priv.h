@@ -70,7 +70,7 @@ public:
     void OnSessionEvent(TcpSession *session, TcpSession::Event event);
 
     // Receive incoming message
-    void OnMessage(SandeshSession *session, const std::string &msg);
+    bool OnMessage(SandeshSession *session, const std::string &msg);
 
     // State transitions
     template <class Ev> void OnIdle(const Ev &event);

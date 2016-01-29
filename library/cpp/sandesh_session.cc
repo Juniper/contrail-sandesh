@@ -593,7 +593,12 @@ void SandeshReader::OnRead(Buffer buffer) {
             std::string xml(st, end);
             offset_ += msg_length();
             reset_msg_length();
-            cb_(xml, session_);
+            if (!cb_(xml, session_)) {
+                // Enqueue a close on the state machine
+                session_->increment_recv_fail();
+                session_->EnqueueClose();
+                break;
+            }
         } else {
             // Read more data.
             break;

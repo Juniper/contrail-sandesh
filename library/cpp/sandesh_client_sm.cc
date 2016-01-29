@@ -786,7 +786,7 @@ bool SandeshClientSMImpl::SendSandesh(Sandesh * snh) {
     return true;
 }
 
-void SandeshClientSMImpl::OnMessage(SandeshSession *session,
+bool SandeshClientSMImpl::OnMessage(SandeshSession *session,
                                     const std::string &msg) {
     // Demux based on Sandesh message type
     SandeshHeader header;
@@ -799,13 +799,14 @@ void SandeshClientSMImpl::OnMessage(SandeshSession *session,
     if (ret) {
         SM_LOG(ERROR, "OnMessage in state: " << StateName() << ": Extract "
                << " FAILED(" << ret << ")");
-        return;
+        return false;
     }
     
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
         SM_LOG(INFO, "OnMessage control in state: " << StateName() );
     } 
     Enqueue(scm::EvSandeshMessageRecv(msg, header, message_type, xml_offset));
+    return true;
 }
 
 static const std::string state_names[] = {

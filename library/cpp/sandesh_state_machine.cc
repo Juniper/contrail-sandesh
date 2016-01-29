@@ -615,30 +615,26 @@ void SandeshStateMachine::UpdateRxMsgFailStats(const std::string &msg_name,
     message_stats_.UpdateRecvFailed(msg_name, msg_size, dreason);
 }
 
-void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
+bool SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
                                            const std::string &msg) {
     // Demux based on Sandesh messkage type
     SandeshMessage *xmessage = builder_->Create(
         reinterpret_cast<const uint8_t *>(msg.c_str()), msg.size());
+    if (xmessage == NULL) {
+        // Update message statistics
+        UpdateRxMsgFailStats(std::string(), msg.size(),
+            SandeshRxDropReason::DecodingFailed);
+        return false;
+    }
     const SandeshHeader &header(xmessage->GetHeader());
     const std::string &message_type(xmessage->GetMessageType());
-    // Drop if not able to parse the header
-    if (message_type.empty()) {
-        // Update message statistics
-        UpdateRxMsgFailStats(message_type, msg.size(),
-            SandeshRxDropReason::DecodingFailed);
-        delete xmessage;
-	DeleteSession(session);
-        return;
-    }
     // Drop ? 
     if (DoDropSandeshMessage(header, message_drop_level_)) {
         // Update message statistics
         UpdateRxMsgFailStats(message_type, msg.size(),
             SandeshRxDropReason::QueueLevel);
         delete xmessage;
-	DeleteSession(session);
-        return;
+        return true;
     }
     if (header.get_Hints() & g_sandesh_constants.SANDESH_CONTROL_HINT) {
         SandeshHeader ctrl_header;
@@ -647,7 +643,7 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
         // Extract the header and message type
         int ret = SandeshReader::ExtractMsgHeader(msg, ctrl_header,
             ctrl_message_type, ctrl_xml_offset);
-        if (ret || header != ctrl_header) {
+        if (ret) {
             SM_LOG(ERROR, "OnMessage control in state: " << StateName() <<
                 " session " << session->ToString() << ": Extract FAILED ("
                 << ret << ")");
@@ -655,10 +651,19 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
             UpdateRxMsgFailStats(message_type, msg.size(),
                 SandeshRxDropReason::ControlMsgFailed);
             delete xmessage;
-	    DeleteSession(session);
-            return;
-        } 
-        assert(message_type == ctrl_message_type);
+            return false;
+        }
+        if (header != ctrl_header ||
+            message_type != ctrl_message_type) {
+            SM_LOG(ERROR, "OnMessage control in state: " << StateName() <<
+                " session " << session->ToString() << ": Header or message "
+                << "type (" << ctrl_message_type << ") MISMATCH");
+            // Update message statistics
+            UpdateRxMsgFailStats(message_type, msg.size(),
+                SandeshRxDropReason::ControlMsgFailed);
+            delete xmessage;
+            return false;
+        }
         SM_LOG(DEBUG, "OnMessage control in state: " << StateName() <<
                 " session " << session->ToString());
         // Update message statistics
@@ -671,6 +676,7 @@ void SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
         UpdateRxMsgStats(message_type, msg.size());
         Enqueue(ssm::EvSandeshMessageRecv(xmessage));
     }
+    return true;
 }
 
 void SandeshStateMachine::ResourceUpdate(bool rsc) {

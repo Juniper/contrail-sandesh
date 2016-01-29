@@ -98,12 +98,13 @@ protected:
     }
 
 private:
-    void ReceiveMsg(const std::string& msg) {
+    bool ReceiveMsg(const std::string& msg) {
         // Add sandesh open and close envelope lengths
         size_t size = msg.size() + SandeshWriter::sandesh_open_.size() +
                 SandeshWriter::sandesh_close_.size();
         LOG(DEBUG, "ReceiveMsg: " << size << " bytes");
         sizes.push_back(size);
+        return true;
     }
 
     virtual bool Send(const u_int8_t *data, size_t size, size_t *sent) {

@@ -93,7 +93,7 @@ private:
     DISALLOW_COPY_AND_ASSIGN(SandeshWriter);
 };
 
-typedef boost::function<void(const std::string&, SandeshSession *)>
+typedef boost::function<bool(const std::string&, SandeshSession *)>
     SandeshReceiveMsgCb;
 
 class SandeshReader {
