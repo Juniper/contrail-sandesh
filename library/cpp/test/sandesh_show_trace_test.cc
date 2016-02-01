@@ -55,6 +55,7 @@ class TraceTestTask : public Task {
             iter_ = 0;
             return false; 
         }
+        std::string Description() const { return "TraceTaskTest"; }
     private:
         std::vector<SandeshTraceBufferPtr> trace_bufs_;
         const int kMinVal;

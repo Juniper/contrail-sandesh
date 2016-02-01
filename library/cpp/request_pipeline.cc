@@ -87,6 +87,7 @@ public:
 
         return true;
     }
+    std::string Description() const { return "RequestPipeline::StageWorker"; }
 private:
     PipeImpl& pImpl_;
     const int instNum_;
