@@ -102,7 +102,9 @@ void SandeshClient::Initiate() {
     sm_->SetAdminState(false);
     if (primary_ != Endpoint())
         sm_->SetCandidates(primary_,secondary_);
-    if (csf_!=0){
+    // subscribe for the collector service only if the collector list
+    // is not provided by the generator.
+    else if (csf_ != 0) {
         SANDESH_LOG(INFO, "Subscribe to Discovery Service for Collector" );
         csf_(g_vns_constants.COLLECTOR_DISCOVERY_SERVICE_NAME, 2,
             boost::bind(&SandeshClient::CollectorHandler, this, _1));
