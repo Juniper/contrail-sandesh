@@ -206,6 +206,37 @@
     </xsl:template>
 
 
+    <xsl:template match="@type[.='map']">
+        <xsl:for-each select="../*">
+	  <table class="table table-bordered table-condensed" border="1">
+	    <thead>
+		<h4>
+		    <td> <xsl:text>key</xsl:text> </td>
+		    <td> <xsl:text>value</xsl:text> </td>
+		</h4>
+	    </thead>
+	    <tbody>
+		<xsl:for-each select="*">
+		    <xsl:variable name="count" select="position()"/>
+		    <xsl:if test="$count mod 2 = 1">
+			<td>
+			    <xsl:value-of select="."/>
+			</td>
+		    </xsl:if>
+		    <xsl:if test="$count mod 2 = 0">
+			<td>
+			    <table class="table table-bordered table-condensed" border="1">
+				<xsl:apply-templates select="."/>
+			    </table>
+			</td>
+			<tr/>
+		    </xsl:if>
+		</xsl:for-each>
+	    </tbody>
+	  </table>
+	</xsl:for-each>
+    </xsl:template>
+
     <xsl:template match="element">
         <xsl:choose>
             <xsl:when test="$snhreq = 'rlist'">
@@ -267,7 +298,7 @@
                             <xsl:for-each select="*">
 
                                 <xsl:choose>
-                                    <xsl:when test="@type[.='struct'] | @type[.='list']">
+                                    <xsl:when test="@type[.='struct'] | @type[.='list'] | @type[.='map']">
                                         <xsl:choose>
                                             <xsl:when test="$snhreq = 'rlist'">
                                                 <td>
@@ -327,7 +358,7 @@
                                     </xsl:if>
                                 </td>
                                 <xsl:choose>
-                                    <xsl:when test="@type[.='struct'] | @type[.='list']">
+                                    <xsl:when test="@type[.='struct'] | @type[.='list'] | @type[.='map']">
                                         <xsl:choose>
                                             <xsl:when test="$snhreq = 'rlist'">
                                                 <td>
@@ -390,11 +421,11 @@
                             <xsl:for-each select="../*">
 
                                 <xsl:choose>
-                                    <xsl:when test="@type[.='struct'] | @type[.='list']">
+                                    <xsl:when test="@type[.='struct'] | @type[.='list'] | @type[.='map']">
                                         <td>
                                             <table class="table table-bordered table-condensed" border="1">
                                                 <!--NNN-->
-                                                <xsl:apply-templates select="@type[.='struct'] | @type[.='list']"/>
+                                                <xsl:apply-templates select="@type[.='struct'] | @type[.='list'] | @type[.='map']"/>
                                             </table>
                                         </td>
                                     </xsl:when>
@@ -411,7 +442,7 @@
             <xsl:otherwise>
                 <xsl:for-each select="../*">
                     <xsl:choose>
-                        <xsl:when test="@type[.='struct'] | @type[.='list']">
+                        <xsl:when test="@type[.='struct'] | @type[.='list'] | @type[.='map']">
                             <h4>
                                 <xsl:value-of select="name()"/>
                                 <xsl:if test="$snhreq = 'rlist'">(<xsl:value-of select="@type"/>)
@@ -426,6 +457,7 @@
                                                 <!--h4><xsl:value-of select="name()"/></h4--><!--OOO-->
                                                 <xsl:apply-templates select="@type[.='struct']"/>
                                                 <xsl:apply-templates select="@type[.='list']"/>
+                                                <xsl:apply-templates select="@type[.='map']"/>
                                             </table>
                                         </td>
                                     </tr>
