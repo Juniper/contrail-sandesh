@@ -197,6 +197,8 @@ class Sandesh(object):
         if sandesh.type() == SandeshType.FLOW:
             return self.is_flow_logging_enabled()
         else:
+            if hasattr(sandesh, 'do_rate_limit_drop_log'):
+                return sandesh.do_rate_limit_drop_log
             return True
     # end is_logging_dropped_allowed
 
@@ -359,7 +361,7 @@ class Sandesh(object):
         if sandesh_init.is_unit_test() or self._is_level_ut():
             if self.is_logging_allowed(sandesh_init):
                 sandesh_init._logger.debug(self.log())
-                return True
+            return True
         return False
 
     def is_logging_allowed(self, sandesh_init):
@@ -390,10 +392,10 @@ class Sandesh(object):
             self._client.send_sandesh(tx_sandesh)
         else:
             if self._connect_to_collector:
+                self.drop_tx_sandesh(tx_sandesh, SandeshTxDropReason.NoClient)
+            else:
                 self.drop_tx_sandesh(tx_sandesh, SandeshTxDropReason.NoClient,
                     tx_sandesh.level())
-            else:
-                self.drop_tx_sandesh(tx_sandesh, SandeshTxDropReason.NoClient)
     # end send_sandesh
 
     def drop_tx_sandesh(self, tx_sandesh, drop_reason, level=None):
@@ -667,9 +669,8 @@ class SandeshAsync(Sandesh):
         except e:
             sandesh.drop_tx_sandesh(self, SandeshTxDropReason.ValidationFailed)
             return -1
-        if self._level >= sandesh.send_level():
-            sandesh.drop_tx_sandesh(self, SandeshTxDropReason.QueueLevel)
-            return -1
+        if self.handle_test(sandesh):
+            return 0
         # For systemlog message, first check if the transmit side buffer
         # has space
         if self._type == SandeshType.SYSTEM:
@@ -677,9 +678,10 @@ class SandeshAsync(Sandesh):
                 sandesh.drop_tx_sandesh(self,
                     SandeshTxDropReason.RatelimitDrop)
                 return -1
+        if self._level >= sandesh.send_level():
+            sandesh.drop_tx_sandesh(self, SandeshTxDropReason.QueueLevel)
+            return -1
         self._seqnum = self.next_seqnum()
-        if self.handle_test(sandesh):
-            return 0
         sandesh.send_sandesh(self)
         return 0
 
