@@ -59,6 +59,20 @@ struct SandeshMessageStats {
     135: u64 bytes_received_dropped_decoding_failed;
 }
 
+struct SandeshMessageBasicStats {
+    1: u64 messages_sent;
+    2: u64 bytes_sent;
+    3: u64 messages_received;
+    4: u64 bytes_received;
+    5: u64 messages_sent_dropped;
+    6: u64 messages_received_dropped;
+}
+
+struct SandeshMessageTypeBasicStats {
+    1: string message_type;
+    2: SandeshMessageBasicStats stats;
+}
+
 struct SandeshMessageTypeStats {
     1: string message_type;
     2: SandeshMessageStats stats;
@@ -72,6 +86,12 @@ struct SandeshQueueStats {
 struct SandeshGeneratorStats {
     1: list<SandeshMessageTypeStats> type_stats;
     2: SandeshMessageStats aggregate_stats;
+    3: SandeshQueueStats send_queue_stats;
+}
+
+struct SandeshGeneratorBasicStats {
+    1: list<SandeshMessageTypeBasicStats> type_stats;
+    2: SandeshMessageBasicStats aggregate_stats;
     3: SandeshQueueStats send_queue_stats;
 }
 
@@ -210,7 +230,7 @@ struct ModuleClientState {
     1: string                              name (key="ObjectGeneratorInfo")
     2: optional bool                       deleted
     3: optional SandeshClientInfo          client_info
-    4: optional SandeshGeneratorStats      msg_stats
+    4: optional SandeshGeneratorBasicStats msg_stats
     5: optional u64                        sm_queue_count
     6: optional SandeshStateMachineStats   sm_stats
     7: optional SandeshSessionStats        session_stats
