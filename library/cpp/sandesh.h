@@ -117,6 +117,8 @@ public:
 class SandeshMessageStatistics;
 class SandeshMessageTypeStats;
 class SandeshMessageStats;
+class SandeshMessageTypeBasicStats;
+class SandeshMessageBasicStats;
 class SandeshConnection;
 class SandeshRequest;
 

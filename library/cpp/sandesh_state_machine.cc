@@ -571,6 +571,34 @@ bool SandeshStateMachine::GetStatistics(
     return true;
 }
 
+bool SandeshStateMachine::GetStatistics(
+        SandeshStateMachineStats &sm_stats,
+        SandeshGeneratorBasicStats &msg_stats) {
+    if (deleted_ || generator_key_.empty()) {
+        return false;
+    }
+    std::vector<SandeshStateMachineEvStats> ev_stats;
+    tbb::mutex::scoped_lock elock(smutex_);
+    // State machine event statistics
+    event_stats_.Get(&ev_stats);
+    elock.release();
+    sm_stats.set_ev_stats(ev_stats);
+    sm_stats.set_state(StateName());
+    sm_stats.set_last_state(LastStateName());
+    sm_stats.set_last_event(last_event());
+    sm_stats.set_state_since(state_since_);
+    sm_stats.set_last_event_at(last_event_at_);
+    // Sandesh message statistics
+    std::vector<SandeshMessageTypeBasicStats> mtype_stats;
+    SandeshMessageBasicStats magg_stats;
+    tbb::mutex::scoped_lock mlock(smutex_);
+    message_stats_.Get(&mtype_stats, &magg_stats);
+    mlock.release();
+    msg_stats.set_type_stats(mtype_stats);
+    msg_stats.set_aggregate_stats(magg_stats);
+    return true;
+}
+
 bool SandeshStateMachine::IdleHoldTimerExpired() {
     Enqueue(ssm::EvIdleHoldTimerExpired(idle_hold_timer_));
     return false;

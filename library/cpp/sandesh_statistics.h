@@ -22,6 +22,10 @@ public:
              SandeshMessageStats *magg_stats) const;
     void Get(boost::ptr_map<std::string, SandeshMessageTypeStats> *mtype_stats,
              SandeshMessageStats *magg_stats) const;
+    void Get(std::vector<SandeshMessageTypeBasicStats> *mtype_stats,
+             SandeshMessageBasicStats *magg_stats) const;
+    void Get(boost::ptr_map<std::string, SandeshMessageTypeBasicStats> *mtype_stats,
+             SandeshMessageBasicStats *magg_stats) const;
 
 private:
     void UpdateInternal(const std::string &msg_name,
@@ -29,8 +33,10 @@ private:
                         SandeshTxDropReason::type send_dreason,
                         SandeshRxDropReason::type recv_dreason);
 
-    boost::ptr_map<std::string, SandeshMessageTypeStats> type_stats_;
-    SandeshMessageStats agg_stats_;
+    boost::ptr_map<std::string, SandeshMessageTypeBasicStats> type_stats_;
+    SandeshMessageBasicStats agg_stats_;
+    boost::ptr_map<std::string, SandeshMessageTypeStats> type_all_stats_;
+    SandeshMessageStats agg_all_stats_;
 };
 
 struct EventStats {

@@ -152,6 +152,8 @@ public:
     bool GetQueueCount(uint64_t &queue_count) const;
     bool GetMessageDropLevel(std::string &drop_level) const;
     bool GetStatistics(SandeshStateMachineStats &stats, 
+                       SandeshGeneratorBasicStats &msg_stats);
+    bool GetStatistics(SandeshStateMachineStats &stats, 
                        SandeshGeneratorStats &msg_stats);
 
 private:
