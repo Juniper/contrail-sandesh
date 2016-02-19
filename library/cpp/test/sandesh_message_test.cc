@@ -444,7 +444,7 @@ protected:
                 EXPECT_EQ(2, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
                 EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
-                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name><x type=\"i32\" identifier=\"3\">55</x></SandeshUVEData></data></SandeshUVETest>";
+                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name><x type=\"i32\" identifier=\"3\">55</x><null_x type=\"struct\" identifier=\"4\" stats=\"x:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><uptime type=\"u64\" identifier=\"4\">100</uptime></NullResult></null_x></SandeshUVEData></data></SandeshUVETest>";
                 EXPECT_STREQ(expected_xml, message.c_str());
                 break;
             }
