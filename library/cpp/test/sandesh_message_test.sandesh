@@ -7,6 +7,7 @@
  *
  * Sandesh definitions for message test
  */
+include "sandesh/library/common/derived_stats_results.sandesh"
 
 systemlog sandesh SystemLogTest {
     1: "Const static string is",
@@ -66,6 +67,7 @@ struct SandeshUVEData {
     1: string name (key="ObjectGeneratorInfo")
     2: optional bool deleted
     3: optional i32 x
+    4: optional derived_stats_results.NullResult null_x (stats="x:")
 }
 
 uve sandesh SandeshUVETest {

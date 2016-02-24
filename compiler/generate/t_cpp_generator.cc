@@ -33,11 +33,12 @@
 #endif
 
 #include <sys/stat.h>
-
+#include <boost/tuple/tuple.hpp>
 #include "platform.h"
 #include "t_oop_generator.h"
 using namespace std;
-
+using boost::tuple;
+using boost::tuples::make_tuple;
 
 /**
  * C++ code generator. This is legitimacy incarnate.
@@ -151,6 +152,11 @@ void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, b
   void generate_sandesh_static_rate_limit_log_def(ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_static_rate_limit_mutex_def(ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_static_rate_limit_buffer_def(ofstream& out, t_sandesh* tsandesh);
+  void derived_stats_info(t_struct* tstruct,
+    // val is rawtype,resulttype,annotation
+    map<string,tuple<string,string,string> >& dsmap,
+    // val is set of ds attributes
+    map<string,set<string> >& rawmap);
 #endif
 
   void generate_cpp_struct(t_struct* tstruct, bool is_exception);
@@ -450,6 +456,10 @@ void t_cpp_generator::init_generator() {
     "#include <sandesh/Thrift.h>" << endl <<
 #ifndef SANDESH
     "#include <TApplicationException.h>" << endl <<
+#else
+    "#include <boost/shared_ptr.hpp>" << endl <<
+    "#include <sandesh/derived_stats.h>" << endl <<
+    "#include <boost/pointer_cast.hpp>" << endl <<
 #endif
     "#include <base/trace.h>" << endl;
   if (program_name_ != "sandesh") {
@@ -2110,6 +2120,50 @@ void t_cpp_generator::generate_sandesh_fingerprint(ofstream& out,
   }
 }
 
+void t_cpp_generator::derived_stats_info(t_struct* tstruct,
+    // val is rawtype,resulttype,annotation
+    map<string,tuple<string,string,string> >& dsmap,
+    // val is set of ds attributes
+    map<string,set<string> >& rawmap) {
+  const vector<t_field*>& members = tstruct->get_members();
+  vector<t_field*>::const_iterator m_iter;
+  for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+    std::map<std::string, std::string>::iterator jt;
+    jt = (*m_iter)->annotations_.find("stats");
+    if (jt != (*m_iter)->annotations_.end()) {
+      string restype = type_name(get_true_type((*m_iter)->get_type()));
+      const string &tstr = jt->second;
+      size_t pos = tstr.find(':');
+      string rawattr = tstr.substr(0,pos);
+      string anno = tstr.substr(pos+1, string::npos);
+
+      string rawtype;
+      vector<t_field*>::const_iterator s_iter;
+      for (s_iter = members.begin(); s_iter != members.end(); ++s_iter) {
+        if (rawattr.compare((*s_iter)->get_name())==0) {
+          rawtype = type_name(get_true_type((*s_iter)->get_type()));
+          break;
+        }
+      }
+      if (rawtype.empty()) {
+        rawtype = rawattr;
+      }
+      // map of derived stats
+      dsmap.insert(make_pair((*m_iter)->get_name(),
+        make_tuple(rawtype, restype, anno)));
+
+      // map of raw attributes
+      map<string,set<string> >::iterator r_iter = rawmap.find(rawattr);
+      if (r_iter != rawmap.end()) {
+          r_iter->second.insert((*m_iter)->get_name());
+      } else {
+          set<string> dss;
+          dss.insert((*m_iter)->get_name());
+          rawmap.insert(make_pair(rawattr,dss));
+      }
+    }
+  }
+}
 #endif
 /**
  * Writes the struct definition into the header file
@@ -2193,6 +2247,11 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
 
 #ifdef SANDESH
   bool is_table = false;
+  map<string,tuple<string,string,string> > dsinfo;
+  map<string,set<string> > rawmap;
+  derived_stats_info(tstruct, dsinfo, rawmap);
+  map<string,tuple<string,string,string> >::iterator ds_iter;
+
 #endif
 
   if (!pointers) {
@@ -2246,7 +2305,14 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
           is_table = true;
           out << ", table_(\"" << it->second << "\")";
         }
-        break;
+        for (ds_iter = dsinfo.begin(); ds_iter != dsinfo.end(); ++ds_iter) {
+          out << ", __dsobj_" << ds_iter->first << 
+            "(boost::dynamic_pointer_cast<DerivedStatsBase<" << 
+            ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
+            "> >(DerivedStatsUpdateIf<" << ds_iter->second.get<0>() <<
+            ">::Create(\"" << ds_iter->second.get<1>() << "\", \"" <<
+            ds_iter->second.get<2>() << "\")))";
+        }
       }
     }
 #endif
@@ -2289,6 +2355,12 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   if (is_table) {
     indent(out) << "std::string table_;" << endl;
   }
+
+  for (ds_iter = dsinfo.begin(); ds_iter != dsinfo.end(); ++ds_iter) {
+    indent(out) << "boost::shared_ptr<DerivedStatsBase<" << 
+      ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
+      "> > __dsobj_" << ds_iter->first << ";" << endl;
+  }
 #endif
 
   // Add the __isset data member if we need it, using the definition from above
@@ -2300,6 +2372,7 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
 
   // Create a setter and getter function for each field except static const
   // string
+  vector<string> dskeys;
   for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
     if (pointers) {
       continue;
@@ -2308,11 +2381,19 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
     if (((*m_iter)->get_type())->is_static_const_string()) {
       continue;
     }
+    std::map<std::string, std::string>::iterator jt;
+    jt = (*m_iter)->annotations_.find("aggtype");
+    if (jt != (*m_iter)->annotations_.end()) {
+        if (jt->second.compare("listkey")==0) {
+            dskeys.push_back((*m_iter)->get_name());
+        }
+    }
 #endif
     out <<
       endl <<
 #ifdef SANDESH
-      indent() << "void set_" << (*m_iter)->get_name() <<
+      indent() << (dsinfo.find((*m_iter)->get_name()) == dsinfo.end() ?
+                   "void set_" : "void __set_") << (*m_iter)->get_name() <<
 #else
       indent() << "void __set_" << (*m_iter)->get_name() <<
 #endif
@@ -2332,11 +2413,29 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
       indent()<< "}" << endl;
 
 #ifdef SANDESH
-    out << endl << indent() << type_name((*m_iter)->get_type(), false, true)
-            << " get_" << (*m_iter)->get_name() <<
-            "() const {" << endl;
-    out << indent() << indent() << "return " << (*m_iter)->get_name() << ";" << endl;
-    out << indent() << "}" << endl;
+    
+    ds_iter = dsinfo.find((*m_iter)->get_name());
+    if (ds_iter == dsinfo.end()) {
+      out << endl << indent() << type_name((*m_iter)->get_type(), false, true)
+              << " get_" << (*m_iter)->get_name() <<
+              "() const {" << endl;
+      out << indent() << indent() << "return " << (*m_iter)->get_name() << ";" << endl;
+      out << indent() << "}" << endl;
+    } else {
+      out << endl << indent() << type_name((*m_iter)->get_type(), false, false)
+              << " __get_dsobj_" << (*m_iter)->get_name() <<
+              "() {" << endl;
+      out << indent() << indent() << "return __dsobj_" << (*m_iter)->get_name() <<
+              "->GetResult();" << endl;
+      out << indent() << "}" << endl;
+
+      string rawtype = ds_iter->second.get<0>();
+      out << indent() << "void __update_dsobj_" << (*m_iter)->get_name() <<
+              "(" << rawtype << " raw) {" << endl;
+      out << indent() << indent() << "__dsobj_" << (*m_iter)->get_name() <<
+              "->Update(raw);" << endl;
+      out << indent() << "}" << endl;
+    }
 #endif
   }
   out << endl;
@@ -2407,6 +2506,19 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
 #ifdef SANDESH
   out << indent() << "std::string log() const;" << endl;
   out << indent() << "size_t GetSize() const;" << endl;
+  out << indent() << "std::string __listkey(void) {" << endl;
+  out << indent() << "    std::string __result;" << endl;
+  bool first = true; 
+  vector<string>::iterator kit;
+  for (kit = dskeys.begin(); kit != dskeys.end(); kit++) {
+    if (!first) {
+      out << indent() << "    __result.append(\":\");" << endl;
+    }
+    out << indent() << "    __result += " << *kit << ";" << endl;
+    first = false;
+  }
+  out << indent() << "    return __result;" << endl;
+  out << indent() << "}" << endl;
 #endif
   out << endl;
 
@@ -3099,16 +3211,37 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
 
   t_struct* ts = (t_struct*)t;
 
+  map<string,tuple<string,string,string> > dsinfo;
+  map<string,set<string> > rawmap;
+  derived_stats_info(ts, dsinfo, rawmap);
+
   const vector<t_field*>& sfields = ts->get_members();
   vector<t_field*>::const_iterator s_iter;
 
   for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
 
-    indent(out) << "if (data.__isset." << (*s_iter)->get_name() << ")" << endl;
-    indent_up();
-    indent(out) << "tdata.set_" << (*s_iter)->get_name() << "(data.get_" <<
-      (*s_iter)->get_name() << "());" << endl << endl;
-    indent_down();
+   
+    // Only set those attributes that are NOT derived stats results 
+    if (dsinfo.find((*s_iter)->get_name()) == dsinfo.end()) {
+      indent(out) << "if (data.__isset." << (*s_iter)->get_name() << ") {" << endl;
+      indent_up();
+      indent(out) << "tdata.set_" << (*s_iter)->get_name() << "(data.get_" <<
+        (*s_iter)->get_name() << "());" << endl; 
+      map<string,set<string> >::const_iterator r_iter = rawmap.find((*s_iter)->get_name());
+      // Update all derivied stats of this raw attribute
+      if (r_iter != rawmap.end()) {
+        set<string>::const_iterator d_iter;
+        for (d_iter = r_iter->second.begin(); d_iter != r_iter->second.end(); ++d_iter) {
+          indent(out) << "tdata.__update_dsobj_" << *d_iter << "(data.get_" <<
+            (*s_iter)->get_name() << "());" << endl; 
+          indent(out) << "data.__set_" << *d_iter << "(tdata.__get_dsobj_" <<
+            *d_iter << "());" << endl;
+        }
+      }
+
+      indent_down();
+      indent(out) <<  "}" << endl << endl;
+    }
   }
 
   indent_down();
