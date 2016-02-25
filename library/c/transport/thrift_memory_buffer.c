@@ -47,7 +47,7 @@ ensure_can_write (ThriftMemoryBuffer *t, u_int32_t len)
       os_log(OS_LOG_DEBUG, "Insufficient space in external memory buffer of size %d "
              "bytes for writing %d bytes", t->buf_size, len);
     }
-#else
+#elif (!defined(SANDESH_QUIET))
     os_log(OS_LOG_ERR, "Insufficient space in external memory buffer of size %d "
            "bytes for writing %d bytes", t->buf_size, len);
 #endif
@@ -176,7 +176,7 @@ thrift_memory_buffer_write (ThriftTransport *transport,
         os_log(OS_LOG_DEBUG, "Unable to write %d bytes to buffer of length %d"
                " at write offset %d", len, t->buf_size, t->buf_woffset);
       }
-#else
+#elif (!defined(SANDESH_QUIET))
         os_log(OS_LOG_ERR, "Unable to write %d bytes to buffer of length %d"
                " at write offset %d", len, t->buf_size, t->buf_woffset);
 #endif
