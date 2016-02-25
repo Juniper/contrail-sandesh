@@ -64,6 +64,7 @@ extern int vrouter_dbg;
 #include <arpa/inet.h>
 
 #define OS_LOG_ERR LOG_ERR
+#define OS_LOG_DEBUG LOG_DEBUG
 
 #define os_malloc(size)                  malloc(size)
 #define os_zalloc(size)                  calloc(1, size)
