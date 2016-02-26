@@ -444,7 +444,7 @@ protected:
                 EXPECT_EQ(2, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
                 EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
-                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name><x type=\"i32\" identifier=\"3\">55</x><null_x type=\"struct\" identifier=\"4\" stats=\"x:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><uptime type=\"u64\" identifier=\"4\">100</uptime></NullResult></null_x></SandeshUVEData></data></SandeshUVETest>";
+                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name><x type=\"i32\" identifier=\"3\">55</x><null_x type=\"struct\" identifier=\"4\" stats=\"x:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><uptime type=\"u64\" identifier=\"4\">100</uptime></NullResult></null_x><ts type=\"struct\" identifier=\"5\"><TestStat><sname type=\"string\" identifier=\"1\">i1</sname><s type=\"i32\" identifier=\"2\">4</s><null_s type=\"struct\" identifier=\"3\" stats=\"s:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><uptime type=\"u64\" identifier=\"4\">100</uptime></NullResult></null_s></TestStat></ts></SandeshUVEData></data></SandeshUVETest>";
                 EXPECT_STREQ(expected_xml, message.c_str());
                 break;
             }
@@ -626,6 +626,10 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     SandeshUVEData uve_data2;
     uve_data2.set_name("uve1");
     uve_data2.set_x(55);
+    TestStat ts;
+    ts.set_sname("i1");
+    ts.set_s(4);
+    uve_data2.set_ts(ts);
     SandeshUVETest::Send(uve_data2);
 
     // add another uve (override key @ run time)
