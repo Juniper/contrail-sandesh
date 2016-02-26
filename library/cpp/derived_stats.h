@@ -18,7 +18,6 @@
 #include <boost/function.hpp>
 #include <base/time_util.h>
 
-
 // This is the interface to feed in all updates to the raw stat
 // on which the derived stat will be based.
 // It also has a factory method to create DerivedStats objects 
@@ -27,25 +26,6 @@ class DerivedStatsUpdateIf {
   public:
     virtual void Update(ElemT raw) = 0;
 
-    enum DS_type { DST_ewm };
-    enum DS_period { DSP_60s, DSP_3600s };
-
-    // For non-inline derived stats.
-    // The function will register the DerivedStatsResultIf to 
-    // the DerivedStatsCache.
-    // TODO: Needs implementation
-    static boost::shared_ptr<DerivedStatsUpdateIf<ElemT> > Create(
-            DS_type ds_type, DS_period ds_period, 
-            std::string annotation,
-            const std::string &uve_table, const std::string &uve_key,
-            const std::string &attribute, const std::string &listkey) {
-        return boost::shared_ptr<DerivedStatsUpdateIf<ElemT> >();
-    }
-
-    // For inline derived stats. Call from generated sandesh code.
-    static boost::shared_ptr<DerivedStatsUpdateIf<ElemT> > 
-            Create(std::string type_name, std::string annotation);
-  
     virtual ~DerivedStatsUpdateIf() {}
 };
 
@@ -76,10 +56,11 @@ class DerivedStatsBase:
     const std::string listkey_;
     uint64_t samples_;
     uint64_t start_time_; 
-  protected:
+
     virtual void ResultImpl(ResultT &res) = 0;
     virtual void UpdateImpl(ElemT raw, uint64_t tm) = 0;
 
+  protected:
     // For inline DerivedStats, attribute and listkey
     // will be empty strings
     DerivedStatsBase(const std::string &attribute,
@@ -107,6 +88,24 @@ class DerivedStatsBase:
         UpdateImpl(raw, UTCTimestampUsec());
     }
 
+    enum DS_period { DSP_60s, DSP_3600s };
+
+    // For non-inline derived stats.
+    // The function will register the DerivedStatsResultIf to 
+    // the DerivedStatsCache.
+    // TODO: Needs implementation
+    static boost::shared_ptr<DerivedStatsBase<ElemT, ResultT> > Create(
+            DS_period ds_period, 
+            std::string annotation,
+            const std::string &uve_table, const std::string &uve_key,
+            const std::string &attribute, const std::string &listkey) {
+        return boost::shared_ptr<DerivedStatsBase<ElemT, ResultT> >();
+    }
+
+    // For inline derived stats. Call from generated sandesh code.
+    static boost::shared_ptr<DerivedStatsBase<ElemT, ResultT> > Create(
+            std::string annotation);
+  
 };
 
 #endif

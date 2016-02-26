@@ -25,8 +25,8 @@ void SandeshMessageStatistics::Get(
     std::vector<SandeshMessageTypeStats> *mtype_stats,
     SandeshMessageStats *magg_stats) const {
     for (boost::ptr_map<std::string,
-             SandeshMessageTypeStats>::const_iterator it = type_stats_.begin();
-         it != type_stats_.end();
+             SandeshMessageTypeStats>::const_iterator it = type_all_stats_.begin();
+         it != type_all_stats_.end();
          it++) {
         mtype_stats->push_back(*it->second);
     }
@@ -212,8 +212,8 @@ void SandeshMessageStatistics::UpdateInternal(const std::string &msg_name,
             mtastats->stats.bytes_received += bytes;
             agg_all_stats_.messages_received++;
             agg_all_stats_.bytes_received += bytes;
-            mtastats->stats.messages_received++;
-            mtastats->stats.bytes_received += bytes;
+            mtstats->stats.messages_received++;
+            mtstats->stats.bytes_received += bytes;
             agg_stats_.messages_received++;
             agg_stats_.bytes_received += bytes;
         }

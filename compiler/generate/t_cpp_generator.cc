@@ -2297,6 +2297,12 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
     }
 
 #ifdef SANDESH
+    for (ds_iter = dsinfo.begin(); ds_iter != dsinfo.end(); ++ds_iter) {
+      out << ", __dsobj_" << ds_iter->first << 
+        "(DerivedStatsBase<" << 
+        ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
+        ">::Create(\"" << ds_iter->second.get<2>() << "\"))";
+    }
     for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
       if ((*m_iter)->get_name() == "name") {
         std::map<std::string, std::string>::iterator it;
@@ -2304,14 +2310,6 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
         if (it != (*m_iter)->annotations_.end()) {
           is_table = true;
           out << ", table_(\"" << it->second << "\")";
-        }
-        for (ds_iter = dsinfo.begin(); ds_iter != dsinfo.end(); ++ds_iter) {
-          out << ", __dsobj_" << ds_iter->first << 
-            "(boost::dynamic_pointer_cast<DerivedStatsBase<" << 
-            ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
-            "> >(DerivedStatsUpdateIf<" << ds_iter->second.get<0>() <<
-            ">::Create(\"" << ds_iter->second.get<1>() << "\", \"" <<
-            ds_iter->second.get<2>() << "\")))";
         }
       }
     }
@@ -2413,7 +2411,6 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
       indent()<< "}" << endl;
 
 #ifdef SANDESH
-    
     ds_iter = dsinfo.find((*m_iter)->get_name());
     if (ds_iter == dsinfo.end()) {
       out << endl << indent() << type_name((*m_iter)->get_type(), false, true)
@@ -2439,6 +2436,44 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
 #endif
   }
   out << endl;
+#if SANDESH
+  indent(out) << "void __update(const " << tstruct->get_name() <<
+    "& tdata) {" << endl;
+  indent_up();
+  for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+    if (((*m_iter)->get_type())->is_static_const_string()) {
+      continue;
+    }
+    string nm = (*m_iter)->get_name();
+    ds_iter = dsinfo.find(nm);
+    if (ds_iter == dsinfo.end()) {
+      if ((*m_iter)->get_req() == t_field::T_OPTIONAL) {
+        indent(out) << "if (tdata.__isset." << nm << ")" << endl;
+      }
+      indent(out) << "{" << endl;
+      indent_up();
+      indent(out) << "set_" << nm << "(tdata.get_" << nm << "());" << endl;
+      map<string,set<string> >::const_iterator r_iter = rawmap.find(nm);
+      if (r_iter != rawmap.end()) {
+        set<string>::const_iterator d_iter;
+        for (d_iter = r_iter->second.begin(); d_iter != r_iter->second.end(); ++d_iter) {
+            indent(out) << "__update_dsobj_" << *d_iter << "(get_" <<
+              nm << "());" << endl;
+            indent(out) << "__set_" << *d_iter << "(__get_dsobj_" <<
+              *d_iter << "());" << endl;
+        }
+      }
+      indent_down();
+      if ((*m_iter)->get_req() == t_field::T_OPTIONAL) {
+        indent(out) << "} else __isset." << nm << " = false;" << endl;
+      } else {
+        indent(out) << "}" << endl;
+      }
+    }
+  }
+  indent_down();
+  indent(out) << "}" << endl << endl ;
+#endif
 
   if (!pointers) {
     // Generate an equality testing operator.  Make it inline since the compiler
@@ -3219,23 +3254,34 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
   vector<t_field*>::const_iterator s_iter;
 
   for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
-
-   
+    string snm = (*s_iter)->get_name(); 
     // Only set those attributes that are NOT derived stats results 
-    if (dsinfo.find((*s_iter)->get_name()) == dsinfo.end()) {
-      indent(out) << "if (data.__isset." << (*s_iter)->get_name() << ") {" << endl;
+    if (dsinfo.find(snm) == dsinfo.end()) {
+      if ((*s_iter)->get_req() == t_field::T_OPTIONAL) {
+        indent(out) << "if (data.__isset." << snm << ")" << endl;
+      }
+      indent(out) << "{" << endl;
+
       indent_up();
-      indent(out) << "tdata.set_" << (*s_iter)->get_name() << "(data.get_" <<
-        (*s_iter)->get_name() << "());" << endl; 
-      map<string,set<string> >::const_iterator r_iter = rawmap.find((*s_iter)->get_name());
-      // Update all derivied stats of this raw attribute
-      if (r_iter != rawmap.end()) {
-        set<string>::const_iterator d_iter;
-        for (d_iter = r_iter->second.begin(); d_iter != r_iter->second.end(); ++d_iter) {
-          indent(out) << "tdata.__update_dsobj_" << *d_iter << "(data.get_" <<
-            (*s_iter)->get_name() << "());" << endl; 
-          indent(out) << "data.__set_" << *d_iter << "(tdata.__get_dsobj_" <<
-            *d_iter << "());" << endl;
+
+      t_type* type = get_true_type((*s_iter)->get_type());
+      if (type->is_struct()) {
+        indent(out) << "const_cast<" << type_name((*s_iter)->get_type()) <<
+          " &>(tdata.get_" << snm << "()).__update(data.get_" << snm << "());" << endl;
+        indent(out) << "data.set_" << snm << "(tdata.get_" << snm << "());" << endl;
+      } else {
+        indent(out) << "tdata.set_" << snm << "(data.get_" <<
+          snm << "());" << endl; 
+        map<string,set<string> >::const_iterator r_iter = rawmap.find(snm);
+        // Update all derivied stats of this raw attribute
+        if (r_iter != rawmap.end()) {
+          set<string>::const_iterator d_iter;
+          for (d_iter = r_iter->second.begin(); d_iter != r_iter->second.end(); ++d_iter) {
+            indent(out) << "tdata.__update_dsobj_" << *d_iter << "(data.get_" <<
+              snm << "());" << endl; 
+            indent(out) << "data.__set_" << *d_iter << "(tdata.__get_dsobj_" <<
+              *d_iter << "());" << endl;
+          }
         }
       }
 

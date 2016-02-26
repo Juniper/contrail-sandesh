@@ -63,11 +63,18 @@ response sandesh SandeshResponseTest {
 request sandesh SandeshRequestEmptyTest {
 }
 
+struct TestStat {
+    1: string sname
+    2: i32 s
+    3: derived_stats_results.NullResult null_s (stats="s:")
+}
+
 struct SandeshUVEData {
     1: string name (key="ObjectGeneratorInfo")
     2: optional bool deleted
     3: optional i32 x
     4: optional derived_stats_results.NullResult null_x (stats="x:")
+    5: optional TestStat ts
 }
 
 uve sandesh SandeshUVETest {
