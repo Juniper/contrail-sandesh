@@ -454,6 +454,37 @@ TEST_F(SandeshServerStateMachineTest, WaterMark) {
     EXPECT_FALSE(sm_->session()->IsReaderDeferred());
 }
 
+TEST_F(SandeshServerStateMachineTest, WaterMark2) {
+    // Set high and low watermarks with level set to INVALID
+    // and defer undefer also set to true. Verify that the
+    // session reader defer status is still set/unset
+    std::vector<Sandesh::QueueWaterMarkInfo> wm_info =
+        boost::assign::tuple_list_of
+            (1 * 1024, SandeshLevel::INVALID, true, true)
+            (512, SandeshLevel::INVALID, false, true);
+    for (int i = 0; i < wm_info.size(); i++) {
+        sm_->SetQueueWaterMarkInfo(wm_info[i]);
+    }
+    // Verify initial message drop level and the session reader defer status
+    EXPECT_EQ(SandeshLevel::INVALID, MessageDropLevel());
+    EXPECT_TRUE(sm_->session() == NULL);
+    // Move to ssm::SERVER_INIT
+    GetToState(ssm::SERVER_INIT);
+    // Stop the task scheduler
+    TaskScheduler::GetInstance()->Stop();
+    // Enqueue 1 message 1024 byte
+    EvSandeshMessageRecv();
+    // Verify the message drop level and the session reader defer status
+    EXPECT_EQ(SandeshLevel::INVALID, MessageDropLevel());
+    EXPECT_TRUE(sm_->session()->IsReaderDeferred());
+    // Start the task scheduler
+    TaskScheduler::GetInstance()->Start();
+    task_util::WaitForIdle();
+    // Verify the message drop level and the session reader defer status
+    EXPECT_EQ(SandeshLevel::INVALID, MessageDropLevel());
+    EXPECT_FALSE(sm_->session()->IsReaderDeferred());
+}
+
 TEST_F(SandeshServerStateMachineTest, DeferDequeue) {
     // Move to ssm::SERVER_INIT
     GetToState(ssm::SERVER_INIT);
