@@ -543,60 +543,83 @@ bool SandeshStateMachine::GetMessageDropLevel(
     return true;
 } 
 
-bool SandeshStateMachine::GetStatistics(
-        SandeshStateMachineStats &sm_stats,
-        SandeshGeneratorStats &msg_stats) {
-    if (deleted_ || generator_key_.empty()) {
-        return false;
-    }
+void SandeshStateMachine::GetEventStatistics(
+    SandeshStateMachineStats *sm_stats) {
     std::vector<SandeshStateMachineEvStats> ev_stats;
     tbb::mutex::scoped_lock elock(smutex_);
     // State machine event statistics
     event_stats_.Get(&ev_stats);
     elock.release();
-    sm_stats.set_ev_stats(ev_stats);
-    sm_stats.set_state(StateName());
-    sm_stats.set_last_state(LastStateName());
-    sm_stats.set_last_event(last_event());
-    sm_stats.set_state_since(state_since_);
-    sm_stats.set_last_event_at(last_event_at_);
-    // Sandesh message statistics
-    std::vector<SandeshMessageTypeStats> mtype_stats;
-    SandeshMessageStats magg_stats;
+    sm_stats->set_ev_stats(ev_stats);
+    sm_stats->set_state(StateName());
+    sm_stats->set_last_state(LastStateName());
+    sm_stats->set_last_event(last_event());
+    sm_stats->set_state_since(state_since_);
+    sm_stats->set_last_event_at(last_event_at_);
+}
+
+void SandeshStateMachine::GetDetailMessageStatistics(
+    SandeshGeneratorStats *detail_msg_stats) {
+    // Detail message statistics
+    SandeshMessageStatistics::DetailStatsList v_detail_type_stats;
+    SandeshMessageStats detail_agg_stats;
     tbb::mutex::scoped_lock mlock(smutex_);
-    message_stats_.Get(&mtype_stats, &magg_stats);
+    message_stats_.Get(&v_detail_type_stats, &detail_agg_stats);
     mlock.release();
-    msg_stats.set_type_stats(mtype_stats);
-    msg_stats.set_aggregate_stats(magg_stats);
+    detail_msg_stats->set_type_stats(v_detail_type_stats);
+    detail_msg_stats->set_aggregate_stats(detail_agg_stats);
+}
+
+void SandeshStateMachine::GetBasicMessageStatistics(
+    SandeshGeneratorBasicStats *basic_msg_stats) {
+    // Basic message statistics
+    SandeshMessageStatistics::BasicStatsList v_basic_type_stats;
+    SandeshMessageBasicStats basic_agg_stats;
+    tbb::mutex::scoped_lock mlock(smutex_);
+    message_stats_.Get(&v_basic_type_stats, &basic_agg_stats);
+    mlock.release();
+    basic_msg_stats->set_type_stats(v_basic_type_stats);
+    basic_msg_stats->set_aggregate_stats(basic_agg_stats);
+}
+
+bool SandeshStateMachine::IsValid() const {
+    return !deleted_ && !generator_key_.empty();
+}
+ 
+bool SandeshStateMachine::GetDetailStatistics(
+    SandeshStateMachineStats *sm_stats,
+    SandeshGeneratorStats *detail_msg_stats) {
+    if (!IsValid()) {
+        return false;
+    }
+    // State machine event statistics
+    GetEventStatistics(sm_stats);
+    // Detail message statistics
+    GetDetailMessageStatistics(detail_msg_stats);
     return true;
 }
 
-bool SandeshStateMachine::GetStatistics(
-        SandeshStateMachineStats &sm_stats,
-        SandeshGeneratorBasicStats &msg_stats) {
-    if (deleted_ || generator_key_.empty()) {
+bool SandeshStateMachine::GetStatistics(SandeshStateMachineStats &sm_stats,
+    SandeshGeneratorStats &detail_msg_stats) {
+    return GetDetailStatistics(&sm_stats, &detail_msg_stats);
+}
+
+bool SandeshStateMachine::GetBasicStatistics(
+    SandeshStateMachineStats *sm_stats,
+    SandeshGeneratorBasicStats *basic_msg_stats) {
+    if (!IsValid()) {
         return false;
     }
-    std::vector<SandeshStateMachineEvStats> ev_stats;
-    tbb::mutex::scoped_lock elock(smutex_);
     // State machine event statistics
-    event_stats_.Get(&ev_stats);
-    elock.release();
-    sm_stats.set_ev_stats(ev_stats);
-    sm_stats.set_state(StateName());
-    sm_stats.set_last_state(LastStateName());
-    sm_stats.set_last_event(last_event());
-    sm_stats.set_state_since(state_since_);
-    sm_stats.set_last_event_at(last_event_at_);
-    // Sandesh message statistics
-    std::vector<SandeshMessageTypeBasicStats> mtype_stats;
-    SandeshMessageBasicStats magg_stats;
-    tbb::mutex::scoped_lock mlock(smutex_);
-    message_stats_.Get(&mtype_stats, &magg_stats);
-    mlock.release();
-    msg_stats.set_type_stats(mtype_stats);
-    msg_stats.set_aggregate_stats(magg_stats);
+    GetEventStatistics(sm_stats);
+    // Basic message statistics
+    GetBasicMessageStatistics(basic_msg_stats);
     return true;
+}
+
+bool SandeshStateMachine::GetStatistics(SandeshStateMachineStats &sm_stats,
+    SandeshGeneratorBasicStats &basic_msg_stats) {
+    return GetBasicStatistics(&sm_stats, &basic_msg_stats);
 }
 
 bool SandeshStateMachine::IdleHoldTimerExpired() {

@@ -18,14 +18,23 @@ public:
     void UpdateRecv(const std::string &msg_name, uint64_t bytes);
     void UpdateRecvFailed(const std::string &msg_name, uint64_t bytes,
                           SandeshRxDropReason::type dreason);
-    void Get(std::vector<SandeshMessageTypeStats> *mtype_stats,
-             SandeshMessageStats *magg_stats) const;
-    void Get(boost::ptr_map<std::string, SandeshMessageTypeStats> *mtype_stats,
-             SandeshMessageStats *magg_stats) const;
-    void Get(std::vector<SandeshMessageTypeBasicStats> *mtype_stats,
-             SandeshMessageBasicStats *magg_stats) const;
-    void Get(boost::ptr_map<std::string, SandeshMessageTypeBasicStats> *mtype_stats,
-             SandeshMessageBasicStats *magg_stats) const;
+    void Clear();
+
+    // Detail statistics
+    typedef boost::ptr_map<std::string, SandeshMessageTypeStats>
+        DetailStatsMap;
+    typedef std::vector<SandeshMessageTypeStats> DetailStatsList;
+
+    void Get(DetailStatsList *v_detail_type_stats,
+        SandeshMessageStats *detail_agg_stats) const;
+    void Get(DetailStatsMap *m_detail_type_stats,
+        SandeshMessageStats *detail_agg_stats) const;
+
+    // Basic statistics
+    typedef std::vector<SandeshMessageTypeBasicStats> BasicStatsList;
+
+    void Get(BasicStatsList *v_basic_type_stats,
+        SandeshMessageBasicStats *basic_agg_stats) const;
 
 private:
     void UpdateInternal(const std::string &msg_name,
@@ -33,10 +42,8 @@ private:
                         SandeshTxDropReason::type send_dreason,
                         SandeshRxDropReason::type recv_dreason);
 
-    boost::ptr_map<std::string, SandeshMessageTypeBasicStats> type_stats_;
-    SandeshMessageBasicStats agg_stats_;
-    boost::ptr_map<std::string, SandeshMessageTypeStats> type_all_stats_;
-    SandeshMessageStats agg_all_stats_;
+    DetailStatsMap detail_type_stats_map_;
+    SandeshMessageStats detail_agg_stats_;
 };
 
 struct EventStats {
