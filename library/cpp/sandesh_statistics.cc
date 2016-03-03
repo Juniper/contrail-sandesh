@@ -7,6 +7,8 @@
 // Sandesh Statistics Implementation
 //
 
+#include <boost/foreach.hpp>
+
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
 #include <sandesh/sandesh_statistics.h>
@@ -14,47 +16,55 @@
 //
 // SandeshMessageStatistics
 //
-void SandeshMessageStatistics::Get(
-    boost::ptr_map<std::string, SandeshMessageTypeStats> *mtype_stats,
-    SandeshMessageStats *magg_stats) const {
-    *mtype_stats = type_all_stats_;
-    *magg_stats = agg_all_stats_;
+
+// Detail stats
+void SandeshMessageStatistics::Get(DetailStatsMap *m_detail_type_stats,
+    SandeshMessageStats *detail_agg_stats) const {
+    *m_detail_type_stats = detail_type_stats_map_;
+    *detail_agg_stats = detail_agg_stats_;
 }
 
-void SandeshMessageStatistics::Get(
-    std::vector<SandeshMessageTypeStats> *mtype_stats,
-    SandeshMessageStats *magg_stats) const {
-    for (boost::ptr_map<std::string,
-             SandeshMessageTypeStats>::const_iterator it = type_all_stats_.begin();
-         it != type_all_stats_.end();
-         it++) {
-        mtype_stats->push_back(*it->second);
+void SandeshMessageStatistics::Get(DetailStatsList *v_detail_type_stats,
+    SandeshMessageStats *detail_agg_stats) const {
+    BOOST_FOREACH(DetailStatsMap::const_iterator::value_type it,
+        detail_type_stats_map_) {
+        v_detail_type_stats->push_back(*it.second);
     }
-    *magg_stats = agg_all_stats_;
+    *detail_agg_stats = detail_agg_stats_;
 }
 
-void SandeshMessageStatistics::Get(
-    boost::ptr_map<std::string, SandeshMessageTypeBasicStats> *mtype_stats,
-    SandeshMessageBasicStats *magg_stats) const {
-    *mtype_stats = type_stats_;
-    *magg_stats = agg_stats_;
+// Basic stats
+static void PopulateBasicStats(const SandeshMessageStats &detail_stats,
+    SandeshMessageBasicStats *basic_stats) {
+    basic_stats->messages_sent = detail_stats.messages_sent;
+    basic_stats->bytes_sent = detail_stats.bytes_sent;
+    basic_stats->messages_received = detail_stats.messages_received;
+    basic_stats->bytes_received = detail_stats.bytes_received;
+    basic_stats->messages_sent_dropped = detail_stats.messages_sent_dropped;
+    basic_stats->messages_received_dropped =
+        detail_stats.messages_received_dropped;
 }
 
-void SandeshMessageStatistics::Get(
-    std::vector<SandeshMessageTypeBasicStats> *mtype_stats,
-    SandeshMessageBasicStats *magg_stats) const {
-    for (boost::ptr_map<std::string,
-             SandeshMessageTypeBasicStats>::const_iterator it = type_stats_.begin();
-         it != type_stats_.end();
-         it++) {
-        mtype_stats->push_back(*it->second);
+static void PopulateBasicTypeStats(const SandeshMessageTypeStats &detail_stats,
+    SandeshMessageTypeBasicStats *basic_stats) {
+    basic_stats->message_type = detail_stats.message_type;
+    PopulateBasicStats(detail_stats.stats, &basic_stats->stats);
+}
+
+void SandeshMessageStatistics::Get(BasicStatsList *v_basic_type_stats,
+    SandeshMessageBasicStats *basic_agg_stats) const {
+    BOOST_FOREACH(DetailStatsMap::const_iterator::value_type it,
+        detail_type_stats_map_) {
+        const SandeshMessageTypeStats *detail_stats(it.second);
+        SandeshMessageTypeBasicStats basic_stats;
+        PopulateBasicTypeStats(*detail_stats, &basic_stats);
+        v_basic_type_stats->push_back(basic_stats);
     }
-    *magg_stats = agg_stats_;
+    PopulateBasicStats(detail_agg_stats_, basic_agg_stats);
 }
 
-static void UpdateSandeshMessageStatsDrops(SandeshMessageStats *smstats,
-    SandeshMessageBasicStats *stats, bool sent, uint64_t bytes, 
-    SandeshTxDropReason::type send_dreason,
+static void UpdateDetailStatsDrops(SandeshMessageStats *smstats,
+    bool sent, uint64_t bytes, SandeshTxDropReason::type send_dreason,
     SandeshRxDropReason::type recv_dreason) {
     if (sent) {
         switch (send_dreason) {
@@ -107,7 +117,6 @@ static void UpdateSandeshMessageStatsDrops(SandeshMessageStats *smstats,
         }
         smstats->messages_sent_dropped++;
         smstats->bytes_sent_dropped += bytes;
-        stats->messages_sent_dropped++;
     } else {
         switch (recv_dreason) {
           case SandeshRxDropReason::QueueLevel:
@@ -135,7 +144,6 @@ static void UpdateSandeshMessageStatsDrops(SandeshMessageStats *smstats,
         }
         smstats->messages_received_dropped++;
         smstats->bytes_received_dropped += bytes;
-        stats->messages_received_dropped++;
     }
 }
 
@@ -167,55 +175,31 @@ void SandeshMessageStatistics::UpdateInternal(const std::string &msg_name,
     uint64_t bytes, bool is_tx, bool dropped,
     SandeshTxDropReason::type send_dreason,
     SandeshRxDropReason::type recv_dreason) {
-    boost::ptr_map<std::string, SandeshMessageTypeStats>::iterator it =
-        type_all_stats_.find(msg_name);
-    if (it == type_all_stats_.end()) {
+    // Update detail stats
+    DetailStatsMap::iterator it = detail_type_stats_map_.find(msg_name);
+    if (it == detail_type_stats_map_.end()) {
         std::string name(msg_name);
-        SandeshMessageTypeStats *nmtastats = new SandeshMessageTypeStats;
-        nmtastats->message_type = name;
-        it = (type_all_stats_.insert(name, nmtastats)).first;
+        SandeshMessageTypeStats *n_detail_mtstats(new SandeshMessageTypeStats);
+        n_detail_mtstats->message_type = name;
+        it = (detail_type_stats_map_.insert(name, n_detail_mtstats)).first;
     }
-    SandeshMessageTypeStats *mtastats = it->second;
-    boost::ptr_map<std::string, SandeshMessageTypeBasicStats>::iterator ir =
-        type_stats_.find(msg_name);
-    if (ir == type_stats_.end()) {
-        std::string name(msg_name);
-        SandeshMessageTypeBasicStats *nmtstats = new SandeshMessageTypeBasicStats;
-        nmtstats->message_type = name;
-        ir = (type_stats_.insert(name, nmtstats)).first;
-    }
-    SandeshMessageTypeBasicStats *mtstats = ir->second;
-    if (is_tx) {
-        if (dropped) {
-            UpdateSandeshMessageStatsDrops(&mtastats->stats, &mtstats->stats, is_tx,
-                bytes, send_dreason, recv_dreason);
-            UpdateSandeshMessageStatsDrops(&agg_all_stats_, &agg_stats_, is_tx,
-                bytes, send_dreason, recv_dreason);
-        } else {
-            mtastats->stats.messages_sent++;
-            mtastats->stats.bytes_sent += bytes;
-            agg_all_stats_.messages_sent++;
-            agg_all_stats_.bytes_sent += bytes;
-            mtstats->stats.messages_sent++;
-            mtstats->stats.bytes_sent += bytes;
-            agg_stats_.messages_sent++;
-            agg_stats_.bytes_sent += bytes;
-        }
+    SandeshMessageTypeStats *detail_mtstats = it->second;
+    if (dropped) {
+        UpdateDetailStatsDrops(&detail_mtstats->stats, is_tx,
+            bytes, send_dreason, recv_dreason);
+        UpdateDetailStatsDrops(&detail_agg_stats_, is_tx,
+            bytes, send_dreason, recv_dreason);
     } else {
-        if (dropped) {
-            UpdateSandeshMessageStatsDrops(&mtastats->stats, &mtstats->stats, is_tx,
-                bytes, send_dreason, recv_dreason);
-            UpdateSandeshMessageStatsDrops(&agg_all_stats_, &agg_stats_, is_tx,
-                bytes, send_dreason, recv_dreason);
+        if (is_tx) {
+            detail_mtstats->stats.messages_sent++;
+            detail_mtstats->stats.bytes_sent += bytes;
+            detail_agg_stats_.messages_sent++;
+            detail_agg_stats_.bytes_sent += bytes;
         } else {
-            mtastats->stats.messages_received++;
-            mtastats->stats.bytes_received += bytes;
-            agg_all_stats_.messages_received++;
-            agg_all_stats_.bytes_received += bytes;
-            mtstats->stats.messages_received++;
-            mtstats->stats.bytes_received += bytes;
-            agg_stats_.messages_received++;
-            agg_stats_.bytes_received += bytes;
+            detail_mtstats->stats.messages_received++;
+            detail_mtstats->stats.bytes_received += bytes;
+            detail_agg_stats_.messages_received++;
+            detail_agg_stats_.bytes_received += bytes;
         }
     }
 }

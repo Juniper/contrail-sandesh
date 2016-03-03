@@ -313,6 +313,40 @@ protected:
         return sm_->message_drop_level_;
     }
 
+    bool IsInvalidTypeSandeshMessageRecvStatIncremented() {
+        return SandeshMessageRecvDroppedStatIncremented(
+            SandeshRxDropReason::ControlMsgFailed);
+    }
+    bool IsDecodingFailedSandeshMessageRecvStatIncremented() {
+        return SandeshMessageRecvDroppedStatIncremented(
+            SandeshRxDropReason::DecodingFailed);
+    }
+    bool SandeshMessageRecvDroppedStatIncremented(
+        SandeshRxDropReason::type recv_dreason) {
+        SandeshStateMachineStats sm_stats;
+        SandeshGeneratorStats msg_stats;
+        EXPECT_TRUE(sm_->GetStatistics(sm_stats, msg_stats));
+        const std::vector<SandeshMessageTypeStats> &mtype_stats(
+            msg_stats.get_type_stats());
+        BOOST_FOREACH(const SandeshMessageTypeStats &smts, mtype_stats) {
+            switch (recv_dreason) {
+              case SandeshRxDropReason::ControlMsgFailed:
+                if (smts.stats.messages_received_dropped_control_msg_failed == 1) {
+                    return true;
+                }
+                break;
+              case SandeshRxDropReason::DecodingFailed:
+                if (smts.stats.messages_received_dropped_decoding_failed == 1) {
+                    return true;
+                }
+                break;
+              default:
+                break;
+            }
+        }
+        return false;
+    }
+
     bool IdleHoldTimerRunning() { return sm_->idle_hold_timer_->running(); }
 
     EventManager evm_;
@@ -384,21 +418,7 @@ TEST_F(SandeshServerStateMachineTest, ReadInvalidTypeMessage) {
     GetToState(ssm::SERVER_INIT);
     // Enqueue 1 message with type i128
     EvInvalidTypeSandeshMessageRecv();
-    SandeshStateMachineStats sm_stats;
-    SandeshGeneratorStats msg_stats;
-    int error = 0;
-    if(sm_->GetStatistics(sm_stats, msg_stats)) {
-	std::vector<SandeshMessageTypeStats> mtype_stats;
-	mtype_stats = msg_stats.get_type_stats();
-	for(int i =0; i < mtype_stats.size(); i++) {
-	    SandeshMessageTypeStats stat = mtype_stats[i];
-	    if(stat.stats.messages_received_dropped_control_msg_failed) {
-		error = 1;
-		break;
-	    }
-	}
-    }
-    EXPECT_EQ(1, error);
+    EXPECT_TRUE(IsInvalidTypeSandeshMessageRecvStatIncremented());
     task_util::WaitForIdle();
 }
 
@@ -407,21 +427,7 @@ TEST_F(SandeshServerStateMachineTest, ReadMalformedXmlMessage) {
     GetToState(ssm::SERVER_INIT);
     // Enqueue 1 message with type i128
     EvMalformedXmlSandeshMessageRecv();
-    SandeshStateMachineStats sm_stats;
-    SandeshGeneratorStats msg_stats;
-    int error = 0;
-    if(sm_->GetStatistics(sm_stats, msg_stats)) {
-	std::vector<SandeshMessageTypeStats> mtype_stats;
-	mtype_stats = msg_stats.get_type_stats();
-	for(int i =0; i < mtype_stats.size(); i++) {
-	    SandeshMessageTypeStats stat = mtype_stats[i];
-	    if(stat.stats.messages_received_dropped_decoding_failed) {
-		error = 1;
-		break;
-	    }
-	}
-    }
-    EXPECT_EQ(1, error);
+    EXPECT_TRUE(IsDecodingFailedSandeshMessageRecvStatIncremented());
     task_util::WaitForIdle();
 }
 

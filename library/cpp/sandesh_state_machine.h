@@ -151,10 +151,14 @@ public:
     void ResetQueueWaterMarkInfo();
     bool GetQueueCount(uint64_t &queue_count) const;
     bool GetMessageDropLevel(std::string &drop_level) const;
-    bool GetStatistics(SandeshStateMachineStats &stats, 
-                       SandeshGeneratorBasicStats &msg_stats);
-    bool GetStatistics(SandeshStateMachineStats &stats, 
-                       SandeshGeneratorStats &msg_stats);
+    bool GetStatistics(SandeshStateMachineStats &sm_stats,
+        SandeshGeneratorBasicStats &basic_msg_stats);
+    bool GetBasicStatistics(SandeshStateMachineStats *sm_stats,
+        SandeshGeneratorBasicStats *basic_msg_stats);
+    bool GetStatistics(SandeshStateMachineStats &sm_stats,
+                       SandeshGeneratorStats &detail_msg_stats);
+    bool GetDetailStatistics(SandeshStateMachineStats *sm_stats,
+        SandeshGeneratorStats *detail_msg_stats);
 
 private:
     friend class SandeshServerStateMachineTest;
@@ -184,9 +188,13 @@ private:
     void UpdateEventEnqueue(const sc::event_base &event);
     void UpdateEventEnqueueFail(const sc::event_base &event);
     void UpdateEventStats(const sc::event_base &event, bool enqueue, bool fail);
+    void GetEventStatistics(SandeshStateMachineStats *sm_stats);
+    void GetDetailMessageStatistics(SandeshGeneratorStats *detail_msg_stats);
+    void GetBasicMessageStatistics(SandeshGeneratorBasicStats *basic_msg_stats);
     void SetSandeshMessageDropLevel(size_t queue_count,
         SandeshLevel::type level, boost::function<void (void)> cb);
     void SetDeferSessionReader(bool defer_reader);
+    bool IsValid() const;
 
     const char *prefix_;
     typedef WorkQueue<EventContainer> EventQueue;
