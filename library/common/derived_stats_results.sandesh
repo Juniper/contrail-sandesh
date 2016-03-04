@@ -12,6 +12,7 @@ struct NullResult {
     2: optional string listkey   // for non-inline derived stats only
     3: u64 samples 
     4: u64 uptime                // In milliseconds
+    5: i32 value
 }
 
 struct EWMResult {

@@ -13,6 +13,7 @@
 #define __SANDESH_UVE_H__
 
 #include <map>
+#include <vector>
 #include <boost/ptr_container/ptr_map.hpp>
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
@@ -91,7 +92,10 @@ template<typename T, typename U>
 class SandeshUVEPerTypeMapImpl : public SandeshUVEPerTypeMap {
 public:
     struct UVEMapEntry {
-        UVEMapEntry(const U & d, uint32_t s): data(d), seqno(s) {}
+        UVEMapEntry(T* tsnh): data(tsnh->get_data().table_) {
+            tsnh->UpdateUVE(data);
+            seqno = tsnh->seqnum();
+        }
         U data;
         uint32_t seqno;
     };
@@ -118,14 +122,12 @@ public:
         typename uve_type_map::iterator imapentry =
             omapentry->second.find(s);
         if (imapentry == omapentry->second.end()) {
-            std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(
-                tsnh->get_data(), tsnh->seqnum()));
+            std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(tsnh));
             omapentry->second.insert(s, ume);
         } else {
             if (imapentry->second->data.get_deleted()) {
                 omapentry->second.erase(imapentry);
-                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(
-                    tsnh->get_data(), tsnh->seqnum()));
+                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(tsnh));
                 omapentry->second.insert(s, ume);
             } else {
                 tsnh->UpdateUVE(imapentry->second->data);
@@ -193,5 +195,42 @@ private:
     const std::string uve_name_;
     mutable tbb::mutex uve_mutex_;
 };
+
+template <typename ChildT>
+void
+SandeshUVECacheListMerge(std::vector<ChildT>& src, std::vector<ChildT>& dest) {
+    std::map<std::string, std::pair<size_t, bool> > srcmap;
+    for (size_t idx=0; idx!=src.size(); idx++) {
+        srcmap[src[idx].__listkey()] = std::make_pair(idx, false);
+    }
+
+    // For all cache entries that are staying, do an update
+    typename std::vector<ChildT>::iterator dt = dest.begin();
+    while (dt != dest.end()) {
+        std::map<std::string, std::pair<size_t, bool> >::iterator st =
+            srcmap.find(dt->__listkey());
+        if (st != srcmap.end()) {
+            // This cache entry IS in the new vector
+            st->second.second = true;
+            dt->__update(src[st->second.first]);
+            src[st->second.first] = *dt;
+            ++dt;
+        } else {
+            // This cache entry IS NOT in the new vector
+            dt = dest.erase(dt);
+        }
+    }
+
+    // Now add all new entries
+    std::map<std::string, std::pair<size_t, bool> >::iterator mt;
+    for (mt = srcmap.begin(); mt != srcmap.end(); mt++) {
+        if (mt->second.second == false) {
+            typename std::vector<ChildT>::iterator nt =
+                dest.insert(dest.end(), src[mt->second.first]);
+            nt->__update(src[mt->second.first]);
+            src[mt->second.first] = *nt;
+        }
+    }
+}
 
 #endif
