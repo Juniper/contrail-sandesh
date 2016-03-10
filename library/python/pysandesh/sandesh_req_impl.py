@@ -131,7 +131,7 @@ class SandeshReqImpl(object):
             else:
                 count = uve_type_map.sync_uve(None, 0, sandesh_req.context(),
                             True, self._sandesh)
-        uve_cache_res = SandeshUVECacheResp(count)
+        uve_cache_res = SandeshUVECacheResp(count, -1)
         uve_cache_res.response(sandesh_req.context(), sandesh=self._sandesh)
     # end sandesh_uve_cache_req_handle_request
 
@@ -142,7 +142,7 @@ class SandeshReqImpl(object):
             if uve_type_map.sandesh_type() is SandeshType.UVE:
                 uve_type_info = SandeshUVETypeInfo(
                     uve_type_map.uve_data_type_name(),
-                    uve_type_map.uve_type_seqnum())
+                    uve_type_map.uve_type_seqnum(), -1)
                 uve_type_info_list.append(uve_type_info)
         uve_types_res = SandeshUVETypesResp(uve_type_info_list)
         uve_types_res.response(sandesh_req.context(), sandesh=self._sandesh)

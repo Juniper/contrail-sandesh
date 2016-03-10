@@ -412,7 +412,8 @@ protected:
     bool ReceiveSandeshMsg(SandeshSession* session,
                            const SandeshMessage* msg) {
         std::vector<std::string> message_types =
-            boost::assign::list_of("SandeshUVETest")("SandeshAlarmTest");
+            boost::assign::list_of(
+                "SandeshUVETest")("SandeshAlarmTest")("SandeshPeriodicTest");
         const SandeshHeader &header(msg->GetHeader());
         const SandeshXMLMessage *xmsg =
             dynamic_cast<const SandeshXMLMessage *>(msg);
@@ -567,6 +568,15 @@ protected:
             }
             case 15:
             {
+                EXPECT_EQ(2, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshPeriodicTest::sversionsig(), header.get_VersionSig());
+                const char* expected_xml = "<SandeshPeriodicTest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshPeriodicData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name><x type=\"i32\" identifier=\"3\">98</x><null_x type=\"struct\" identifier=\"4\" stats=\"x:\"><NullResult><samples type=\"u64\" identifier=\"3\">2</samples><uptime type=\"u64\" identifier=\"4\">100</uptime><value type=\"i32\" identifier=\"5\">98</value></NullResult></null_x><ts type=\"struct\" identifier=\"5\"><TestStat><sname type=\"string\" identifier=\"1\" aggtype=\"listkey\">j1</sname><s type=\"i32\" identifier=\"2\">87</s><null_s type=\"struct\" identifier=\"3\" stats=\"s:\"><NullResult><samples type=\"u64\" identifier=\"3\">2</samples><uptime type=\"u64\" identifier=\"4\">100</uptime><value type=\"i32\" identifier=\"5\">87</value></NullResult></null_s></TestStat></ts><tsl type=\"list\" identifier=\"6\"><list type=\"struct\" size=\"2\"><TestStat><sname type=\"string\" identifier=\"1\" aggtype=\"listkey\">j2</sname><s type=\"i32\" identifier=\"2\">37</s><null_s type=\"struct\" identifier=\"3\" stats=\"s:\"><NullResult><samples type=\"u64\" identifier=\"3\">2</samples><uptime type=\"u64\" identifier=\"4\">100</uptime><value type=\"i32\" identifier=\"5\">37</value></NullResult></null_s></TestStat><TestStat><sname type=\"string\" identifier=\"1\" aggtype=\"listkey\">j4</sname><s type=\"i32\" identifier=\"2\">47</s><null_s type=\"struct\" identifier=\"3\" stats=\"s:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><uptime type=\"u64\" identifier=\"4\">100</uptime><value type=\"i32\" identifier=\"5\">47</value></NullResult></null_s></TestStat></list></tsl></SandeshPeriodicData></data></SandeshPeriodicTest>";
+                EXPECT_STREQ(expected_xml, message.c_str());
+                break;
+            }
+            case 16:
+            {
                 EXPECT_EQ(6, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
                 EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
@@ -574,7 +584,7 @@ protected:
                 EXPECT_STREQ(expected_xml, message.c_str());
                 break;
             }
-            case 16:
+            case 17:
             {
                 EXPECT_EQ(2, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
@@ -583,7 +593,7 @@ protected:
                 EXPECT_STREQ(expected_xml, message.c_str());
                 break;
             }
-            case 17:
+            case 18:
             {
                 EXPECT_EQ(4, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
@@ -592,7 +602,7 @@ protected:
                 EXPECT_STREQ(expected_xml, message.c_str());
                 break;
             }
-            case 18:
+            case 19:
             {
                 EXPECT_EQ(7, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
@@ -601,7 +611,7 @@ protected:
                 EXPECT_STREQ(expected_xml, message.c_str());
                 break;
             }
-            case 19:
+            case 20:
             {
                 EXPECT_EQ(8, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
@@ -610,7 +620,7 @@ protected:
                 EXPECT_STREQ(expected_xml, message.c_str());
                 break;
             }
-            case 20:
+            case 21:
             {
                 EXPECT_EQ(9, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
@@ -619,7 +629,7 @@ protected:
                 EXPECT_STREQ(expected_xml, message.c_str());
                 break;
             }
-            case 21:
+            case 22:
             {
                 EXPECT_EQ(10, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
@@ -676,6 +686,53 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     uve_data2.set_tsl(vts);
 
     SandeshUVETest::Send(uve_data2);
+    // PeriodicCache
+    {
+        SandeshPeriodicData uve_data2;
+        uve_data2.set_name("uve1");
+        uve_data2.set_x(99);
+
+        TestStat ts;
+        ts.set_sname("j1");
+        ts.set_s(7);
+        uve_data2.set_ts(ts);
+
+        TestStat ts1;
+        ts1.set_sname("j2");
+        ts1.set_s(17);
+        TestStat ts2;
+        ts2.set_sname("j3");
+        ts2.set_s(27);
+        std::vector<TestStat> vts;
+        vts.push_back(ts1);
+        vts.push_back(ts2);
+        uve_data2.set_tsl(vts);
+        SandeshPeriodicTest::Send(uve_data2);
+
+    }    
+    {
+        SandeshPeriodicData uve_data10;
+        uve_data10.set_name("uve1");
+        uve_data10.set_x(98);
+
+        TestStat ts10;
+        ts10.set_sname("j1");
+        ts10.set_s(87);
+        uve_data10.set_ts(ts10);
+
+        TestStat ts11;
+        ts11.set_sname("j2");
+        ts11.set_s(37);
+        TestStat ts12;
+        ts12.set_sname("j4");
+        ts12.set_s(47);
+        std::vector<TestStat> vts10;
+        vts10.push_back(ts11);
+        vts10.push_back(ts12);
+        uve_data10.set_tsl(vts10);
+
+        SandeshPeriodicTest::Send(uve_data10);
+    }
 
     // add another uve (override key @ run time)
     // case 2
@@ -818,7 +875,7 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
         SandeshUVETest::Send(uve_data2);
     }
 
-    TASK_UTIL_EXPECT_TRUE(msg_num_ == 22);
+    TASK_UTIL_EXPECT_TRUE(msg_num_ == 23);
 }
 
 class SandeshBaseFactoryTest : public ::testing::Test {
