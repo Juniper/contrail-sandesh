@@ -170,6 +170,7 @@ request sandesh SandeshUVECacheReq {
 
 response sandesh SandeshUVECacheResp {
     1: u32 returned;
+    2: i32 period;
 }
 
 request sandesh SandeshUVETypesReq {
@@ -178,6 +179,7 @@ request sandesh SandeshUVETypesReq {
 struct SandeshUVETypeInfo {
     1: string type_name (link="SandeshUVECacheReq")
     2: u32 seq_num;
+    3: i32 period
 }
 
 response sandesh SandeshUVETypesResp {

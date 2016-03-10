@@ -157,6 +157,7 @@ void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, b
     map<string,tuple<string,string,string> >& dsmap,
     // val is set of ds attributes
     map<string,set<string> >& rawmap);
+  string derived_stats_child(t_type * type);
 #endif
 
   void generate_cpp_struct(t_struct* tstruct, bool is_exception);
@@ -1707,6 +1708,45 @@ void t_cpp_generator::generate_sandesh_default_ctor(ofstream& out,
     scope_down(out);
 }
 
+/**
+ * Examine the type to check if its either
+ * a struct with derived stats, 
+ * of a list of struct with derived stat.
+ *
+ * If so, return the name of the struct
+ * Otherwise, return empty string
+ */
+string t_cpp_generator::derived_stats_child(t_type* type) {
+
+  string dst_name;
+
+  t_type* etype = NULL;
+  if (type->is_struct()) {
+    etype = type;
+  } else {
+    if (type->is_list()) {
+      t_type* stype = get_true_type(((t_list*)type)->get_elem_type());
+      if (stype->is_struct()) {
+        etype = stype;
+      }
+    }       
+  }
+
+  // Is there is list-of-structs with derived stats
+  // or just a structs with derived stats ?
+  string dsstruct;
+  if (etype) {
+    t_struct* es = (t_struct*)etype;
+    map<string,tuple<string,string,string> > dsinfo2;
+    map<string,set<string> > rawmap2;
+    derived_stats_info(es, dsinfo2, rawmap2);
+    if (!dsinfo2.empty()) {
+        dst_name = type_name(etype);
+    }
+  }
+
+  return dst_name;
+}
 
 /**
  * Writes the sandesh definition into the header file
@@ -1993,9 +2033,11 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
         const vector<t_field*>& fields = tsandesh->get_members();
         vector<t_field*>::const_iterator f_iter = fields.begin();
         assert((*f_iter)->get_name() == "data");
-
-        out << indent() << "void UpdateUVE(" <<  type_name((*f_iter)->get_type()) <<
+        string dtype = type_name((*f_iter)->get_type());
+        out << indent() << "static void UpdateUVE(" <<  dtype <<
+            " & _data, " << dtype <<
             " & tdata);" << endl;
+        out << indent() << "void LoadUVE(void);" << endl;
     }
 
     out << indent() << "std::string ToString() const;" << endl;
@@ -2005,7 +2047,6 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
     // Private members
     out << endl;
     out << "private:" << endl << endl;
-
     if (((t_base_type *)t)->is_sandesh_buffer()) {
         indent(out) << "virtual void Process(SandeshContext *context);" << endl << endl;
     } else if (!((t_base_type *)t)->is_sandesh_response()) {
@@ -2425,35 +2466,31 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
     ds_iter = dsinfo.find((*m_iter)->get_name());
     if (ds_iter == dsinfo.end()) {
       out << endl << indent() << type_name((*m_iter)->get_type(), false, true)
-              << " get_" << (*m_iter)->get_name() <<
-              "() const {" << endl;
-      out << indent() << indent() << "return " << (*m_iter)->get_name() << ";" << endl;
-      out << indent() << "}" << endl;
+              << " get_"; 
     } else {
-      out << endl << indent() << type_name((*m_iter)->get_type(), false, false)
-              << " __get_dsobj_" << (*m_iter)->get_name() <<
-              "() {" << endl;
-      
-      out << indent() << indent() << "__set_" << (*m_iter)->get_name() <<
-        "(__dsobj_" << (*m_iter)->get_name() <<
-        "->GetResult());" << endl;
-      out << indent() << indent() << "return " << (*m_iter)->get_name() << ";" << endl;
-      out << indent() << "}" << endl;
-
       string rawtype = ds_iter->second.get<0>();
       out << indent() << "void __update_dsobj_" << (*m_iter)->get_name() <<
-              "(" << rawtype << " raw) {" << endl;
-      out << indent() << indent() << "__dsobj_" << (*m_iter)->get_name() <<
+              "(" << rawtype << " raw, bool _load, bool _store) {" << endl;
+      out << indent() << indent() << "if (_store) __dsobj_" << (*m_iter)->get_name() <<
               "->Update(raw);" << endl;
+      out << indent() << indent() << "if (_load) __set_" << (*m_iter)->get_name() <<
+        "(__dsobj_" << (*m_iter)->get_name() << "->GetResult());" << endl;
       out << indent() << "}" << endl;
+
+      out << endl << indent() << type_name((*m_iter)->get_type(), false, true)
+              << " __get_"; 
     }
+    out << (*m_iter)->get_name() << "() const {" << endl;
+    out << indent() << indent() << "return " << (*m_iter)->get_name() << ";" << endl;
+    out << indent() << "}" << endl;
+
 #endif
   }
   out << endl;
 #if SANDESH
   if (!is_table) {
-    indent(out) << "void __update(const " << tstruct->get_name() <<
-      "& tdata) {" << endl;
+    indent(out) << "void __update(" << tstruct->get_name() <<
+      "& tdata, bool _load) {" << endl;
     indent_up();
     for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
       if (((*m_iter)->get_type())->is_static_const_string()) {
@@ -2467,18 +2504,33 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
         }
         indent(out) << "{" << endl;
         indent_up();
+
+        indent(out) << "if (this != &tdata) {" << endl;
+        indent_up();
+
         indent(out) << "set_" << nm << "(tdata.get_" << nm << "());" << endl;
         map<string,set<string> >::const_iterator r_iter = rawmap.find(nm);
         if (r_iter != rawmap.end()) {
           set<string>::const_iterator d_iter;
           for (d_iter = r_iter->second.begin(); d_iter != r_iter->second.end(); ++d_iter) {
               indent(out) << "__update_dsobj_" << *d_iter << "(get_" <<
-                nm << "());" << endl;
-
-              indent(out) << "__get_dsobj_" << *d_iter << "();" << endl;
+                nm << "(), _load, true);" << endl;
+              indent(out) << "if (_load) tdata.__set_" << *d_iter <<
+                "(__get_" << *d_iter << "());" << endl;
+          }
+          indent_down();
+          indent(out) << "} else {" << endl;
+          indent_up();
+          indent(out) << "assert(_load);" <<  endl;
+          for (d_iter = r_iter->second.begin(); d_iter != r_iter->second.end(); ++d_iter) {
+              indent(out) << "__update_dsobj_" << *d_iter << "(get_" <<
+                nm << "(), _load, false);" << endl;
           }
         }
         indent_down();
+        indent(out) << "}" << endl;
+        indent_down();
+
         if ((*m_iter)->get_req() == t_field::T_OPTIONAL) {
           indent(out) << "} else __isset." << nm << " = false;" << endl;
         } else {
@@ -3253,10 +3305,7 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
   vector<t_field*>::const_iterator f_iter = fields.begin();
   assert((*f_iter)->get_name() == "data");
 
-  indent(out) << "void " << tsandesh->get_name() << 
-    "::UpdateUVE(" << type_name((*f_iter)->get_type()) << " & tdata) {" << endl;
-  indent_up();
-
+  string dtype = type_name((*f_iter)->get_type());
   t_type* t = get_true_type((*f_iter)->get_type());
   assert(t->is_struct());
 
@@ -3269,6 +3318,28 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
   const vector<t_field*>& sfields = ts->get_members();
   vector<t_field*>::const_iterator s_iter;
 
+  indent(out) << "void " << tsandesh->get_name() << 
+    "::LoadUVE(void) {" << endl; 
+  indent_up();
+
+#if 0
+  void SandeshUVETest::LoadUVE(void) {
+      if (data.__isset.x)
+      {
+        data.__update_dsobj_null_x(data.get_x(), true, false);
+      }
+      if (data.__isset.ts)
+      {
+        const_cast<TestStat &>(data.get_ts()).__update(const_cast<TestStat &>(data.get_ts()), true);
+      }
+
+      if (data.__isset.tsl)
+      {
+        SandeshUVECacheListMerge<TestStat>(const_cast<std::vector<TestStat>  &>(data.get_tsl()), const_cast<std::vector<TestStat>  &>(data.get_tsl()), true);
+      }
+  }
+  
+#endif
   for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
     string snm = (*s_iter)->get_name(); 
     // Only set those attributes that are NOT derived stats results 
@@ -3281,48 +3352,92 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
       indent_up();
 
       t_type* type = get_true_type((*s_iter)->get_type());
+      // Is there is list-of-structs with derived stats
+      // or just a structs with derived stats ?
+      string dsstruct = derived_stats_child(get_true_type((*s_iter)->get_type()));
 
-      // Is there is list-of-structs with derived stats inside?
-      string substruct;
-      if (type->is_list()) {
-          t_type *etype = get_true_type(((t_list*)type)->get_elem_type());
-          if (etype->is_struct()) {
-            t_struct* es = (t_struct*)etype;
-            map<string,tuple<string,string,string> > dsinfo2;
-            map<string,set<string> > rawmap2;
-            derived_stats_info(es, dsinfo2, rawmap2);
-            if (!dsinfo2.empty()) {
-                substruct = type_name(etype);
-            }
+      if (!dsstruct.empty() && type->is_struct()) {
+        indent(out) << "const_cast<" << dsstruct <<
+          " &>(data.get_" << snm << "()).__update(const_cast<" <<
+          dsstruct << " &>(data.get_" << snm << "()), true);" << endl;
+      } else if (!dsstruct.empty() && type->is_list()) {
+        indent(out) << "SandeshUVECacheListMerge<" <<  dsstruct << 
+          ">(const_cast<std::vector<" << dsstruct << "> &>(data.get_" <<
+          snm << "()), const_cast<std::vector<" << dsstruct <<
+          "> &>(data.get_" << snm << "()), true);" << endl;
+      } else {
+        map<string,set<string> >::const_iterator r_iter = rawmap.find(snm);
+        // Update all derivied stats of this raw attribute
+        if (r_iter != rawmap.end()) {
+          set<string>::const_iterator d_iter;
+          for (d_iter = r_iter->second.begin(); d_iter != r_iter->second.end(); ++d_iter) {
+            indent(out) << "data.__update_dsobj_" << *d_iter << "(data.get_" <<
+              snm << "(), true, false);" << endl; 
           }
+        }
       }
-    
-      if (type->is_struct()) {
-        indent(out) << "const_cast<" << type_name((*s_iter)->get_type()) <<
-          " &>(tdata.get_" << snm << "()).__update(data.get_" << snm << "());" << endl;
-        indent(out) << "data.set_" << snm << "(tdata.get_" << snm << "());" << endl;
+      indent_down();
+      indent(out) <<  "}" << endl << endl;
+    }
+  }
+
+  indent_down();
+  indent(out) <<  "}" << endl << endl;
+
+  indent(out) << "void " << tsandesh->get_name() << 
+    "::UpdateUVE(" <<  dtype <<
+      " & _data, " << dtype <<
+      " & tdata) {" << endl;
+
+  indent_up();
+  
+  indent(out) << "const bool _load = uvemap" << tsandesh->get_name() <<
+    ".kLoad;" << endl;
+  indent(out) << "(void)_load;" << endl << endl;
+
+
+  for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
+    string snm = (*s_iter)->get_name(); 
+    // Only set those attributes that are NOT derived stats results 
+    if (dsinfo.find(snm) == dsinfo.end()) {
+      if ((*s_iter)->get_req() == t_field::T_OPTIONAL) {
+        indent(out) << "if (_data.__isset." << snm << ")" << endl;
+      }
+      indent(out) << "{" << endl;
+
+      indent_up();
+
+      t_type* type = get_true_type((*s_iter)->get_type());
+      // Is there is list-of-structs with derived stats
+      // or just a structs with derived stats ?
+      string dsstruct = derived_stats_child(get_true_type((*s_iter)->get_type()));
+
+      if (!dsstruct.empty() && type->is_struct()) {
+        indent(out) << "const_cast<" << dsstruct <<
+          " &>(tdata.get_" << snm << "()).__update(const_cast<" <<
+          dsstruct << " &>(_data.get_" << snm << "()), _load);" << endl;
         if ((*s_iter)->get_req() == t_field::T_OPTIONAL) {
           indent(out) << "tdata.__isset." << snm << " = true;" << endl;
         }
-      } else if (!substruct.empty()) {
-        indent(out) << "SandeshUVECacheListMerge<" <<  substruct << 
-          ">(const_cast<" << type_name((*s_iter)->get_type()) << " &>(data.get_" <<
-          snm << "()), const_cast<" <<
-          type_name((*s_iter)->get_type()) << " &>(tdata.get_" << snm << "()));" << endl;
+      } else if (!dsstruct.empty() && type->is_list()) {
+        indent(out) << "SandeshUVECacheListMerge<" <<  dsstruct << 
+          ">(const_cast<std::vector<" << dsstruct << "> &>(_data.get_" <<
+          snm << "()), const_cast<std::vector<" << dsstruct <<
+          "> &>(tdata.get_" << snm << "()), _load);" << endl;
         if ((*s_iter)->get_req() == t_field::T_OPTIONAL) {
           indent(out) << "tdata.__isset." << snm << " = true;" << endl;
         }
       } else {
-        indent(out) << "tdata.set_" << snm << "(data.get_" <<
+        indent(out) << "tdata.set_" << snm << "(_data.get_" <<
           snm << "());" << endl; 
         map<string,set<string> >::const_iterator r_iter = rawmap.find(snm);
         // Update all derivied stats of this raw attribute
         if (r_iter != rawmap.end()) {
           set<string>::const_iterator d_iter;
           for (d_iter = r_iter->second.begin(); d_iter != r_iter->second.end(); ++d_iter) {
-            indent(out) << "tdata.__update_dsobj_" << *d_iter << "(data.get_" <<
-              snm << "());" << endl; 
-            indent(out) << "data.__set_" << *d_iter << "(tdata.__get_dsobj_" <<
+            indent(out) << "tdata.__update_dsobj_" << *d_iter << "(_data.get_" <<
+              snm << "(), _load, true);" << endl; 
+            indent(out) << "if (_load) _data.__set_" << *d_iter << "(tdata.__get_" <<
               *d_iter << "());" << endl;
           }
         }
@@ -3375,7 +3490,7 @@ void t_cpp_generator::generate_sandesh_reader(ofstream& out,
 	for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
 		if ((*f_iter)->get_req() == t_field::T_REQUIRED)
 			indent(out) << "bool isset_" << (*f_iter)->get_name() << " = false;" << endl;
-	}
+	 }
 	out << endl;
 
 
@@ -3607,11 +3722,19 @@ void t_cpp_generator::generate_sandesh_uve_creator(
     vector<t_field*>::const_iterator f_iter = fields.begin();
     assert((*f_iter)->get_name() == "data");
 
-    indent(out) << "SANDESH_UVE_DEF(" <<
-        tsandesh->get_name() << "," <<
-        type_name((*f_iter)->get_type()) << ");" << endl;
+    std::map<std::string, std::string>::iterator ait;
+    ait = ((*f_iter)->get_type())->annotations_.find("period");
 
-    indent(out) << "void " <<  tsandesh->get_name() <<
+    std::string sname = tsandesh->get_name();
+    indent(out) << "SANDESH_UVE_DEF(" << sname << "," <<
+        type_name((*f_iter)->get_type());
+    if (ait == ((*f_iter)->get_type())->annotations_.end()) {
+      indent(out) << ", -1);" << endl;
+    } else {
+      indent(out) << ", " << atoi(ait->second.c_str()) << ");" << endl;  
+    }
+
+    indent(out) << "void " << sname <<
         "::Send(const " << type_name((*f_iter)->get_type()) <<
         "& data, std::string table, bool seq, uint32_t seqno," <<
         " std::string ctx, bool more) {" << endl;
@@ -3621,18 +3744,23 @@ void t_cpp_generator::generate_sandesh_uve_creator(
         " & cdata = const_cast<" << type_name((*f_iter)->get_type()) <<
         " &>(data);" << endl;
     indent(out) << "if (!table.empty()) cdata.table_ = table;" << endl;
-    indent(out) << tsandesh->get_name() << " *snh;" << endl;
-    indent(out) << "if (seq) snh = new " << 
-        tsandesh->get_name() << "(seqno, cdata);" << endl;
-    indent(out) << "else snh = new " << 
-        tsandesh->get_name() << "(lseqnum_++, cdata);" << endl;
+
+    indent(out) << "uint32_t msg_seqno;" << endl << endl;
+    indent(out) << "if (!seq) uvemap" << sname <<
+      ".UpdateUVE(cdata, msg_seqno = lseqnum_++);" << endl;
+    indent(out) << "else msg_seqno = seqno;" << endl << endl;
+
+    indent(out) << "if (seq || uvemap" << sname <<
+      ".kLoad) {" << endl;
+    indent_up();
+    indent(out) << sname << " *snh = new " << sname << "(msg_seqno, cdata);" << endl;
+    indent(out) << "if (!uvemap" << sname << ".kLoad) snh->LoadUVE();" << endl;
     indent(out) << "snh->set_context(ctx); snh->set_more(more);" << endl;
-    indent(out) << "if (!seq) uvemap" << tsandesh->get_name() <<
-      ".UpdateUVE(snh);" << endl;
-    indent(out) << "else snh->set_hints(snh->hints() | " <<
+    indent(out) << "if (seq) snh->set_hints(snh->hints() | " <<
       "g_sandesh_constants.SANDESH_SYNC_HINT);" << endl;
     indent(out) << "snh->Dispatch();" << endl;
-
+    indent_down();
+    indent(out) << "}" << endl;
     indent_down();
     indent(out) << "}" << endl << endl;
 }

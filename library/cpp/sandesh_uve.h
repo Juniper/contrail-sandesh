@@ -29,15 +29,18 @@ class SandeshUVEPerTypeMap;
 //
 class SandeshUVETypeMaps {
 public:
-    typedef std::map<std::string, SandeshUVEPerTypeMap *> uve_global_map;
+    typedef std::pair<int, SandeshUVEPerTypeMap *> uve_global_elem;
+    typedef std::map<std::string, uve_global_elem> uve_global_map;
 
-    static void RegisterType(const std::string &s, SandeshUVEPerTypeMap *tmap) {
-        assert(GetMap()->insert(std::make_pair(s, tmap)).second);
+    static void RegisterType(const std::string &s, SandeshUVEPerTypeMap *tmap,
+            int period) {
+        assert(GetMap()->insert(std::make_pair(s,
+            std::make_pair(period, tmap))).second);
     }
-    static const SandeshUVEPerTypeMap * TypeMap(const std::string &s) {
+    static const uve_global_elem TypeMap(const std::string &s) {
         uve_global_map::const_iterator it = GetMap()->find(s);
         if (it == GetMap()->end()) 
-            return NULL;
+            return std::make_pair(-1, (SandeshUVEPerTypeMap *)(NULL));
         else
             return it->second;
     }
@@ -85,16 +88,18 @@ public:
 // - The UVE key is in a field called "name"
 //
 
-#define SANDESH_UVE_DEF(x,y) \
-    static SandeshUVEPerTypeMapImpl<x, y> uvemap ## x(#y)
+#define SANDESH_UVE_DEF(x,y,z) \
+    static SandeshUVEPerTypeMapImpl<x, y, z> uvemap ## x(#y)
 
-template<typename T, typename U>
+template<typename T, typename U, int P>
 class SandeshUVEPerTypeMapImpl : public SandeshUVEPerTypeMap {
 public:
+    static const bool kLoad = ((P==-1)?true:false);
+
     struct UVEMapEntry {
-        UVEMapEntry(T* tsnh): data(tsnh->get_data().table_) {
-            tsnh->UpdateUVE(data);
-            seqno = tsnh->seqnum();
+        UVEMapEntry(U& _data, uint32_t seqnum):
+                data(_data.table_), seqno(seqnum) {
+            T::UpdateUVE(_data, data);
         }
         U data;
         uint32_t seqno;
@@ -103,18 +108,18 @@ public:
     typedef std::map<std::string, uve_type_map> uve_map;
 
     SandeshUVEPerTypeMapImpl(char const * u_name) : uve_name_(u_name) {
-        SandeshUVETypeMaps::RegisterType(u_name, this);
+        SandeshUVETypeMaps::RegisterType(u_name, this, P);
     }
 
     // This function is called whenever a SandeshUVE is sent from
     // the generator to the collector.
     // It updates the cache.
-    void UpdateUVE(T *tsnh) {
+    void UpdateUVE(U& data, uint32_t seqnum) {
         tbb::mutex::scoped_lock lock(uve_mutex_);
 
-        const std::string &table = tsnh->get_data().table_;
+        const std::string &table = data.table_;
         assert(!table.empty());
-        const std::string &s = tsnh->get_data().get_name();
+        const std::string &s = data.get_name();
         typename uve_map::iterator omapentry = map_.find(table);
         if (omapentry == map_.end()) {
             omapentry = map_.insert(std::make_pair(table, uve_type_map())).first;
@@ -122,16 +127,16 @@ public:
         typename uve_type_map::iterator imapentry =
             omapentry->second.find(s);
         if (imapentry == omapentry->second.end()) {
-            std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(tsnh));
+            std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(data, seqnum));
             omapentry->second.insert(s, ume);
         } else {
             if (imapentry->second->data.get_deleted()) {
                 omapentry->second.erase(imapentry);
-                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(tsnh));
+                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(data, seqnum));
                 omapentry->second.insert(s, ume);
             } else {
-                tsnh->UpdateUVE(imapentry->second->data);
-                imapentry->second->seqno = tsnh->seqnum();
+                T::UpdateUVE(data, imapentry->second->data);
+                imapentry->second->seqno = seqnum;
             }
         }
     }
@@ -198,7 +203,8 @@ private:
 
 template <typename ChildT>
 void
-SandeshUVECacheListMerge(std::vector<ChildT>& src, std::vector<ChildT>& dest) {
+SandeshUVECacheListMerge(std::vector<ChildT>& src,
+        std::vector<ChildT>& dest, bool _load) {
     std::map<std::string, std::pair<size_t, bool> > srcmap;
     for (size_t idx=0; idx!=src.size(); idx++) {
         srcmap[src[idx].__listkey()] = std::make_pair(idx, false);
@@ -212,8 +218,7 @@ SandeshUVECacheListMerge(std::vector<ChildT>& src, std::vector<ChildT>& dest) {
         if (st != srcmap.end()) {
             // This cache entry IS in the new vector
             st->second.second = true;
-            dt->__update(src[st->second.first]);
-            src[st->second.first] = *dt;
+            dt->__update(src[st->second.first], _load);
             ++dt;
         } else {
             // This cache entry IS NOT in the new vector
@@ -227,8 +232,7 @@ SandeshUVECacheListMerge(std::vector<ChildT>& src, std::vector<ChildT>& dest) {
         if (mt->second.second == false) {
             typename std::vector<ChildT>::iterator nt =
                 dest.insert(dest.end(), src[mt->second.first]);
-            nt->__update(src[mt->second.first]);
-            src[mt->second.first] = *nt;
+            nt->__update(src[mt->second.first], _load);
         }
     }
 }
