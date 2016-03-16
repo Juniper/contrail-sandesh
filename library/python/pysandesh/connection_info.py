@@ -68,6 +68,7 @@ class ConnectionState(object):
                     message += ', ' + conn_info.type
                 if conn_info.name is not None and conn_info.name is not '':
                     message += ':' + conn_info.name
+                    message += "[" + str(conn_info.description) + "]"
                 is_cup = False
         if is_cup:
             return (ProcessState.FUNCTIONAL, '')
@@ -77,7 +78,7 @@ class ConnectionState(object):
     #end get_process_state_cb
 
     @staticmethod     
-    def update(conn_type, name, status, server_addrs = None, message = None):
+    def update(conn_type, name, status, server_addrs = [], message = None):
         conn_key = (conn_type, name)
         conn_info = ConnectionInfo(type = ConnectionTypeNames[conn_type],
                                    name = name,
