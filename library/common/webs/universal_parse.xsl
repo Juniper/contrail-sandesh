@@ -208,7 +208,6 @@
 
     <xsl:template match="@type[.='map']">
         <xsl:for-each select="../*">
-	  <table class="table table-bordered table-condensed" border="1">
 	    <thead>
 		<h4>
 		    <td> <xsl:text>key</xsl:text> </td>
@@ -233,7 +232,6 @@
 		    </xsl:if>
 		</xsl:for-each>
 	    </tbody>
-	  </table>
 	</xsl:for-each>
     </xsl:template>
 
