@@ -7,21 +7,28 @@
  *
  */
 
-struct NullResult {
-    1: optional string attribute // for non-inline derived stats only
-    2: optional string listkey   // for non-inline derived stats only
+struct SumResult {
     3: u64 samples 
-    4: u64 uptime                // In milliseconds
+    5: u64 value
+}
+
+struct NullResult {
+    3: u64 samples 
+    4: u64 uptime
     5: i32 value
 }
 
 struct EWMResult {
-    1: optional string attribute // for non-inline derived stats only
-    2: optional string listkey   // for non-inline derived stats only
     3: u64 samples 
-    4: u64 uptime                // In milliseconds
     5: double alpha
     6: double avg
     7: double stddev
 }
 
+struct PercentileResult {
+    3: u64 samples 
+    4: map<string,double> previous
+    5: u64 previous_count
+    6: map<string,double> current
+    7: u64 current_count
+}

@@ -66,7 +66,6 @@ request sandesh SandeshRequestEmptyTest {
 struct TestStat {
     1: string sname (aggtype="listkey")
     2: i32 s
-    3: derived_stats_results.NullResult null_s (stats="s:")
 }
 
 struct SandeshUVEData {
@@ -74,10 +73,10 @@ struct SandeshUVEData {
     2: optional bool deleted
     3: optional i32 x
     4: optional derived_stats_results.NullResult null_x (stats="x:")
-    5: optional TestStat ts
-    6: optional list<TestStat> tsl
     7: optional i32 y
-} 
+    8: optional map<string,i32> tsm
+    9: optional map<string,derived_stats_results.NullResult> null_tsm (stats="tsm:")
+}
 
 uve sandesh SandeshUVETest {
     1: SandeshUVEData data
@@ -86,10 +85,9 @@ uve sandesh SandeshUVETest {
 struct SandeshPeriodicData {
     1: string name (key="ObjectGeneratorInfo")
     2: optional bool deleted
-    3: optional i32 x
-    4: optional derived_stats_results.NullResult null_x (stats="x:")
-    5: optional TestStat ts
-    6: optional list<TestStat> tsl
+    3: optional i32 x (freq="never")
+    4: optional derived_stats_results.NullResult null_x (stats="x:",freq="periodic")
+    6: optional list<TestStat> tsl (freq="periodic")
 } (period="60")
 
 uve sandesh SandeshPeriodicTest {

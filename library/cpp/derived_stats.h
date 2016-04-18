@@ -18,94 +18,100 @@
 #include <boost/function.hpp>
 #include <base/time_util.h>
 
-// This is the interface to feed in all updates to the raw stat
-// on which the derived stat will be based.
-// It also has a factory method to create DerivedStats objects 
-template <typename ElemT>
-class DerivedStatsUpdateIf {
-  public:
-    virtual void Update(ElemT raw) = 0;
-
-    virtual ~DerivedStatsUpdateIf() {}
-};
-
-// This is the interface to retrieve the current value
-// of the DerivedStat object.
-template <typename ResultT>
-class DerivedStatsResultIf {
-  public:
-    // Get hold of the current results
-    // of the DerivedStats object
-    virtual ResultT GetResult(void) = 0;
-    virtual ~DerivedStatsResultIf() {}
-};
-
-// This is the base class for DerivedStats objects.
-// It fills this information in the result:
-// - how long has this object existed
-// - how many samples it has processed
-// - attribute and listkey (for non-inline derived stats)
-// Other fields in the results are filled in by the specific
-// Derived Stats algorithm.
+// This is the base class for all DerivedStats algorithm implementations
 template <typename ElemT, typename ResultT>
-class DerivedStatsBase: 
-        public DerivedStatsResultIf<ResultT>, 
-        public DerivedStatsUpdateIf<ElemT> {
-  private:
-    const std::string attribute_;
-    const std::string listkey_;
-    uint64_t samples_;
-    uint64_t start_time_; 
-
-    virtual void ResultImpl(ResultT &res) = 0;
-    virtual void UpdateImpl(ElemT raw, uint64_t tm) = 0;
-
-  protected:
-    // For inline DerivedStats, attribute and listkey
-    // will be empty strings
-    DerivedStatsBase(const std::string &attribute,
-          const std::string &listkey):
-        attribute_(attribute), listkey_(listkey),  
-        samples_(0), start_time_(UTCTimestampUsec()) {}
-
+class DerivedStatsImpl {
   public:
-    // Interface for DerivedStats Cache
-    ResultT GetResult(void) {
-        ResultT res;
-        if (!attribute_.empty()) {
-            res.set_listkey(listkey_);
-            res.set_attribute(attribute_);
-        }
-        res.set_samples(samples_);
-        res.set_uptime((UTCTimestampUsec()-start_time_)/1000);
-        ResultImpl(res);
-        return res; 
-    }
+    static boost::shared_ptr<DerivedStatsImpl<ElemT, ResultT> > Create(
+    std::string annotation);
 
-    // Interface for generated code (from DerivedStatsInterface)
+    void FillResult(ResultT &res, bool flush) {
+        res.set_samples(samples_);
+        ResultImpl(res, flush);
+        if (flush) samples_ = 0;
+    }
     void Update(ElemT raw) {
         samples_++;
-        UpdateImpl(raw, UTCTimestampUsec());
+        UpdateImpl(raw);
     }
 
-    enum DS_period { DSP_60s, DSP_3600s };
+  protected:
+    DerivedStatsImpl() : samples_(0) {}
+  private:
+    uint64_t samples_;
+    virtual void ResultImpl(ResultT &res, bool flush) = 0;
+    virtual void UpdateImpl(ElemT raw) = 0;
+};
 
-    // For non-inline derived stats.
-    // The function will register the DerivedStatsResultIf to 
-    // the DerivedStatsCache.
-    // TODO: Needs implementation
-    static boost::shared_ptr<DerivedStatsBase<ElemT, ResultT> > Create(
-            DS_period ds_period, 
-            std::string annotation,
-            const std::string &uve_table, const std::string &uve_key,
-            const std::string &attribute, const std::string &listkey) {
-        return boost::shared_ptr<DerivedStatsBase<ElemT, ResultT> >();
+template <typename ElemT, typename ResultT>
+class DerivedStatsIf {
+  private:
+    typedef std::map<std::string, boost::shared_ptr<DerivedStatsImpl<ElemT,ResultT> > > result_map;
+    result_map dsm_;
+    boost::shared_ptr<DerivedStatsImpl<ElemT,ResultT> > ds_;
+    std::string annotation_;
+
+  public:
+    DerivedStatsIf(std::string annotation):
+        annotation_(annotation),
+        ds_(DerivedStatsImpl<ElemT,ResultT>::Create(annotation)) {}
+
+    // This is the interface to retrieve the current value
+    // of the DerivedStat object.
+    void FillResult(ResultT &res, bool flush = false) {
+        ds_->FillResult(res, flush);
     }
 
-    // For inline derived stats. Call from generated sandesh code.
-    static boost::shared_ptr<DerivedStatsBase<ElemT, ResultT> > Create(
-            std::string annotation);
-  
+    void FillResult(std::map<std::string, ResultT> &mres, bool flush = false) {
+        mres.clear(); 
+        for (typename result_map::const_iterator dit = dsm_.begin(); dit != dsm_.end(); dit++) {
+            ResultT res;
+            dit->second->FillResult(res, flush);
+            mres.insert(std::make_pair(dit->first, res));
+        }
+    }
+
+    // This is the interface to feed in all updates to the raw stat
+    // on which the derived stat will be based.
+    void Update(ElemT raw) {
+        ds_->Update(raw);
+    }
+    
+    void Update(const std::map<std::string, ElemT> & raw) {
+        std::map<std::string, bool> srcmap;
+        typename std::map<std::string, ElemT>::const_iterator rit;
+        for(rit=raw.begin(); rit!= raw.end(); rit++) {
+            srcmap[rit->first] = false;
+        }
+        // For all cache entries that are staying, do an update
+        typename result_map::iterator dt = dsm_.begin();
+        while (dt != dsm_.end()) {
+            std::map<std::string, bool>::iterator st =
+                srcmap.find(dt->first);
+            if (st != srcmap.end()) {
+                // This cache entry IS in the new vector
+                st->second = true;
+                //dt->second->Update(raw[st->first]);
+                dt->second->Update((raw.find(st->first))->second);
+                ++dt;
+            } else {
+                // This cache entry IS NOT in the new vector
+                typename result_map::iterator et = dt;
+                dt++;
+                dsm_.erase(et);
+            }
+        }
+
+        // Now add all new entries
+        std::map<std::string, bool>::iterator mt;
+        for (mt = srcmap.begin(); mt != srcmap.end(); mt++) {
+            if (mt->second == false) {
+                dsm_[mt->first] = DerivedStatsImpl<ElemT,ResultT>::Create(annotation_);
+                //dsm_[mt->first]->Update(raw[mt->first]);
+                dsm_[mt->first]->Update((raw.find(mt->first))->second);
+            }
+        }
+    }
 };
 
 #endif
