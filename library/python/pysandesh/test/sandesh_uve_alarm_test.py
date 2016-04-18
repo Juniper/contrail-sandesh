@@ -231,11 +231,12 @@ class SandeshUVEAlarmTest(unittest.TestCase):
     def _create_uve_alarm_info(self):
         uve_alarm_info = UVEAlarmInfo()
         uve_alarm_info.type = 'ProcessStatus'
-        uve_alarm_info.description = [[AlarmElement(\
-            rule=AlarmTemplate(oper="!=",
-                operand1=Operand1(keys=["attr1"]),
-                operand2=Operand2(json_value='null')),
-            json_operand1_value="'xx-yy'")]]
+        condition = AlarmCondition(operation='==',
+            operand1='NodeStatus.process_info.process_state',
+            operand2=json.dumps('null'))
+        match1 = AlarmMatch(json_operand1_value=json.dumps('null'))
+        condition_match = AlarmConditionMatch(condition, [match1])
+        uve_alarm_info.rules = [AlarmRuleMatch(rule=[condition_match])]
         uve_alarm_info.ack = False
         uve_alarm_info.timestamp = UTCTimestampUsec()
         uve_alarm_info.severity = 1
