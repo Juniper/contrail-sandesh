@@ -52,7 +52,7 @@ const std::vector<Sandesh::QueueWaterMarkInfo>
                                                (2500, SandeshLevel::INVALID, false, false);
 
 SandeshClient::SandeshClient(EventManager *evm,
-        Endpoint primary, Endpoint secondary, Sandesh::CollectorSubFn csf)
+        Endpoint primary, Endpoint secondary, Sandesh::CollectorSubFn csf, bool periodicuve)
     :   TcpServer(evm),
         sm_task_instance_(kSMTaskInstance),
         sm_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSMTask)),
@@ -62,7 +62,7 @@ SandeshClient::SandeshClient(EventManager *evm,
         primary_(primary),
         secondary_(secondary),
         csf_(csf),
-        sm_(SandeshClientSM::CreateClientSM(evm, this, sm_task_instance_, sm_task_id_)),
+        sm_(SandeshClientSM::CreateClientSM(evm, this, sm_task_instance_, sm_task_id_, periodicuve)),
         session_wm_info_(kSessionWaterMarkInfo) {
     SANDESH_LOG(INFO,"primary  " << primary_);
     SANDESH_LOG(INFO,"secondary  " << secondary_);

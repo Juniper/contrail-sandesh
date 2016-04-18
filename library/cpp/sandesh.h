@@ -181,7 +181,7 @@ public:
             unsigned short http_port,
             SandeshContext *client_context = NULL);
     static bool ConnectToCollector(const std::string &collector_ip,
-            int collector_port);
+            int collector_port, bool periodicuve = false);
     static void Uninit();
 
     // Disable flow collection
@@ -354,8 +354,8 @@ private:
     typedef std::map<std::string, SandeshContext *> ModuleContextMap;
 
     static void InitReceive(int recv_task_inst = -1);
-    static void InitClient(EventManager *evm, Endpoint server);
-    static bool InitClient(EventManager *evm, 
+    static void InitClient(EventManager *evm, Endpoint server, bool periodicuve);
+    static bool InitClient(EventManager *evm,
                            const std::vector<std::string> &collectors,
                            CollectorSubFn csf);
     static bool ProcessRecv(SandeshRequest *);
@@ -516,6 +516,13 @@ protected:
 class SandeshUVE : public Sandesh {
 public:
     const bool get_more() const { return more_; }
+    typedef enum {
+        ST_SYNC = 0,
+        ST_INTROSPECT = 1,
+        ST_PERIODIC = 2,
+        ST_MAX = 3
+    } SendType;
+    virtual std::string DataLog(void) { return std::string(); }
 protected:
     SandeshUVE(const std::string& name, uint32_t seqno,
                SandeshType::type t = SandeshType::UVE) :

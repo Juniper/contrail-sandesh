@@ -40,7 +40,8 @@ public:
     
     SandeshClient(EventManager *evm, Endpoint primary,
              Endpoint secondary = Endpoint(),
-             Sandesh::CollectorSubFn csf = 0);
+             Sandesh::CollectorSubFn csf = 0,
+             bool periodicuve = false);
 
     virtual ~SandeshClient();
 

@@ -28,6 +28,7 @@
 #include <sandesh/sandesh_constants.h>
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
+#include <sandesh/sandesh_uve.h>
 #include <sandesh/sandesh_uve_types.h>
 #include <sandesh/sandesh_statistics.h>
 #include "sandesh_client_sm_priv.h"
@@ -928,7 +929,7 @@ void SandeshClientSMImpl::Enqueue(const Ev &event) {
 
 
 SandeshClientSMImpl::SandeshClientSMImpl(EventManager *evm, Mgr *mgr,
-        int sm_task_instance, int sm_task_id)
+        int sm_task_instance, int sm_task_id, bool periodicuve)
     :   SandeshClientSM(mgr),
         active_(TcpServer::Endpoint()),
         backup_(TcpServer::Endpoint()),
@@ -936,9 +937,10 @@ SandeshClientSMImpl::SandeshClientSMImpl(EventManager *evm, Mgr *mgr,
                 boost::bind(&SandeshClientSMImpl::DequeueEvent, this, _1)),
         connect_timer_(TimerManager::CreateTimer(*evm->io_service(), "Client Connect timer", sm_task_id, sm_task_instance)),
         idle_hold_timer_(TimerManager::CreateTimer(*evm->io_service(), "Client Idle hold timer", sm_task_id, sm_task_instance)),
-        statistics_timer_(TimerManager::CreateTimer(*evm->io_service(), "Client Statistics timer", sm_task_id, sm_task_instance)),
+        statistics_timer_(TimerManager::CreateTimer(*evm->io_service(), "Client Tick and Statistics timer", sm_task_id, sm_task_instance)),
         idle_hold_time_(0),
-        statistics_timer_interval_(kStatisticsSendInterval),
+        statistics_timer_interval_(kTickInterval),
+        periodicuve_(periodicuve),
         attempts_(0),
         deleted_(false),
         in_dequeue_(false),
@@ -1030,6 +1032,10 @@ bool SandeshClientSMImpl::StatisticsTimerExpired() {
     }
     SandeshModuleClientTrace::Send(mcs);
     SendUVE();
+    // TODO: Hookup for Periodic UVEs
+    //map<string,uint32_t> inpMap;
+    //SandeshUVETypeMaps::SyncAllMaps(inpMap, true);
+    
     return true;
 }
 
@@ -1081,8 +1087,8 @@ bool SandeshClientSMImpl::DiscUpdate(State from_state, bool update,
 
 SandeshClientSM * SandeshClientSM::CreateClientSM(
         EventManager *evm, Mgr *mgr, int sm_task_instance,
-        int sm_task_id) {
-    return new SandeshClientSMImpl(evm, mgr, sm_task_instance, sm_task_id);
+        int sm_task_id, bool periodicuve) {
+    return new SandeshClientSMImpl(evm, mgr, sm_task_instance, sm_task_id, periodicuve);
 }
 
 

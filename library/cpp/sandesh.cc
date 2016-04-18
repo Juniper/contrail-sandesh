@@ -93,13 +93,13 @@ void Sandesh::InitReceive(int recv_task_inst) {
             &Sandesh::ProcessRecv));
 }
 
-void Sandesh::InitClient(EventManager *evm, Endpoint server) {
+void Sandesh::InitClient(EventManager *evm, Endpoint server, bool periodicuve) {
     connect_to_collector_ = true;
     SANDESH_LOG(INFO, "SANDESH: CONNECT TO COLLECTOR: " <<
         connect_to_collector_);
     // Create and initialize the client
     assert(client_ == NULL);
-    client_ = new SandeshClient(evm, server);
+    client_ = new SandeshClient(evm, server, Endpoint(), 0, periodicuve);
     client_->Initiate();
 }
 
@@ -182,7 +182,7 @@ void Sandesh::RecordPort(const std::string& name, const std::string& module,
 }
 
 bool Sandesh::ConnectToCollector(const std::string &collector_ip,
-                                 int collector_port) {
+                                 int collector_port, bool periodicuve) {
     boost::system::error_code ec;
     address collector_addr = address::from_string(collector_ip, ec);
     if (ec) {
@@ -195,7 +195,7 @@ bool Sandesh::ConnectToCollector(const std::string &collector_ip,
     SANDESH_LOG(INFO, "SANDESH: COLLECTOR PORT : " << collector_port);
 
     tcp::endpoint collector(collector_addr, collector_port);
-    InitClient(event_manager_, collector);
+    InitClient(event_manager_, collector, periodicuve);
     return true;
 }
 
@@ -248,7 +248,7 @@ bool Sandesh::InitClient(EventManager *evm,
     }
 
     client_ = new SandeshClient(evm,
-            primary, secondary, csf);
+            primary, secondary, csf, true);
     client_->Initiate();
     return true;
 }
@@ -295,7 +295,7 @@ bool Sandesh::InitCollector(const std::string &module,
     if (!success) {
         return false;
     }
-    return ConnectToCollector(collector_ip, collector_port);
+    return ConnectToCollector(collector_ip, collector_port, true);
 }
 
 bool Sandesh::InitGeneratorTest(const std::string &module,

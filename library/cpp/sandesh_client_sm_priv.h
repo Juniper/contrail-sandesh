@@ -47,7 +47,7 @@ public:
     static const int kIdleHoldTime = 5000; //5 sec .. specified in milliseconds
 
     SandeshClientSMImpl(EventManager *evm, Mgr *mgr, int sm_task_instance,
-            int sm_task_id);
+            int sm_task_id, bool periodicuve);
     virtual ~SandeshClientSMImpl();
 
     Mgr * const GetMgr() { return mgr_; }
@@ -167,6 +167,7 @@ private:
     Timer *statistics_timer_;
     int idle_hold_time_;
     int statistics_timer_interval_;
+    bool periodicuve_;
     int attempts_;
     bool deleted_;
     bool in_dequeue_;
