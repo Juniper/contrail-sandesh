@@ -7,18 +7,6 @@
  *
  */
 
-struct AlarmOperand {
-    1: optional string name
-    2: string json_value
-}
-
-struct AlarmRule {
-    1: string oper
-    2: AlarmOperand operand1
-    3: optional AlarmOperand operand2
-}
-
-
 struct Operand1 {
     1: list<string> keys
     2: optional map<byte, string> vars
@@ -64,6 +52,28 @@ struct AlarmTemplate {
     3: Operand2 operand2
 }
 
+struct AlarmCondition {
+    1: string operation
+    2: string operand1
+    3: string operand2
+    4: optional list<string> vars
+}
+
+struct AlarmMatch {
+    1: string json_operand1_value
+    2: optional string json_operand2_value
+    3: optional map<string, string> json_vars
+}
+
+struct AlarmConditionMatch {
+    1: AlarmCondition condition
+    2: list<AlarmMatch> match
+}
+
+struct AlarmRuleMatch {
+    1: list<AlarmConditionMatch> rule
+}
+
 /**
  * AlarmElement is used to explain why an Alarm was raised.
  * It contains:
@@ -101,9 +111,9 @@ struct AllOf {
  */
 struct UVEAlarmInfo {
     1: string type
+    /** "any_of" is deprecated */
     8: optional list<AllOf> any_of
-    /** TODO: "rules" is deprecated */
-    7: optional list<AlarmRule> rules
+    9: list<AlarmRuleMatch> rules
     3: bool ack
     4: u64 timestamp
     5: byte severity
