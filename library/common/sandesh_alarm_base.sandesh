@@ -110,41 +110,12 @@ struct UVEAlarmInfo {
     6: string token
 }
 
-enum UVEAlarmState {
-    Idle,
-    Soak_Active,
-    Active,
-    Soak_Idle
-}
-
 struct UVEAlarmConfig {
     1: u32  ActiveTimer
     2: u32  IdleTimer
     3: bool FreqExceededCheck
     4: u16  FreqCheck_Times
     5: u16  FreqCheck_Seconds
-}
-
-struct UVEAlarmOperState {
-    1: UVEAlarmState state
-    2: u64           delete_timestamp
-    3: list<u64>     alarm_timestamp
-    4: u32           head_timestamp
-}
-
-struct UVEAlarmStateMachineInfo {
-    1: UVEAlarmInfo      uai
-    2: UVEAlarmConfig    uac
-    3: UVEAlarmOperState uas
-}
-
-trace sandesh AlarmStateChangeTrace {
-    1: "State change info for alarm:"
-    2: string		table
-    3: string		uv
-    4: string		alarm_type
-    5: UVEAlarmState	old_state
-    6: UVEAlarmState	new_state
 }
 
 struct UVEAlarms {
