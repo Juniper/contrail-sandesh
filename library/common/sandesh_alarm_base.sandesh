@@ -116,6 +116,14 @@ struct UVEAlarms {
     3: optional bool deleted
 }
 
+struct UVEAlarmConfig {
+    1: u32  ActiveTimer
+    2: u32  IdleTimer
+    3: bool FreqExceededCheck
+    4: u16  FreqCheck_Times
+    5: u16  FreqCheck_Seconds
+}
+
 alarm sandesh AlarmTrace {
     1: UVEAlarms data
 }
