@@ -14,33 +14,60 @@
 #include <iostream>
 
 template <typename ElemT>
-class DerivedStatsNull: public DerivedStatsBase<ElemT, NullResult> {
+class DerivedStatsSum: public DerivedStatsImpl<ElemT, SumResultElem> {
   public:
-    DerivedStatsNull(const std::string &annotation,
-            const std::string &attribute, const std::string &listkey) :
-                DerivedStatsBase<ElemT, NullResult>(attribute,listkey) {}
+    DerivedStatsSum(const std::string &annotation):
+                DerivedStatsImpl<ElemT, SumResultElem>(), value_(0) {}
     ElemT value_;
   protected:
-    void ResultImpl(NullResult &res) {
-        res.set_uptime(100);
+    void ResultImpl(SumResultElem &res) const {
         res.set_value(value_);
     }
-    void UpdateImpl(ElemT raw, uint64_t tm) {
+    void UpdateImpl(ElemT raw) {
+        value_ += raw;
+    }
+};
+
+template <typename ElemT>
+class DerivedStatsNull: public DerivedStatsImpl<ElemT, NullResult> {
+  public:
+    DerivedStatsNull(const std::string &annotation):
+                DerivedStatsImpl<ElemT, NullResult>(), value_(0) {}
+    ElemT value_;
+  protected:
+    void ResultImpl(NullResult &res) const {
+        res.set_value(value_);
+    }
+    void UpdateImpl(ElemT raw) {
         value_ = raw;
     }
 };
 
 template<>
-boost::shared_ptr<DerivedStatsBase<int, NullResult> >
-DerivedStatsBase<int, NullResult>::Create(std::string annotation) {
-    return boost::shared_ptr<DerivedStatsBase<int, NullResult> >(
-        new DerivedStatsNull<int>(annotation, "",""));
+boost::shared_ptr<DerivedStatsImpl<int, SumResultElem> >
+DerivedStatsImpl<int, SumResultElem>::Create(std::string annotation) {
+    return boost::shared_ptr<DerivedStatsImpl<int, SumResultElem> >(
+        new DerivedStatsSum<int>(annotation));
 }
 
 template<>
-boost::shared_ptr<DerivedStatsBase<unsigned int, NullResult> >
-DerivedStatsBase<unsigned int, NullResult>::Create(std::string annotation) {
-    return boost::shared_ptr<DerivedStatsBase<unsigned int, NullResult> >(
-        new DerivedStatsNull<unsigned int>(annotation, "",""));
+boost::shared_ptr<DerivedStatsImpl<unsigned int, SumResultElem> >
+DerivedStatsImpl<unsigned int, SumResultElem>::Create(std::string annotation) {
+    return boost::shared_ptr<DerivedStatsImpl<unsigned int, SumResultElem> >(
+        new DerivedStatsSum<unsigned int>(annotation));
+}
+
+template<>
+boost::shared_ptr<DerivedStatsImpl<int, NullResult> >
+DerivedStatsImpl<int, NullResult>::Create(std::string annotation) {
+    return boost::shared_ptr<DerivedStatsImpl<int, NullResult> >(
+        new DerivedStatsNull<int>(annotation));
+}
+
+template<>
+boost::shared_ptr<DerivedStatsImpl<unsigned int, NullResult> >
+DerivedStatsImpl<unsigned int, NullResult>::Create(std::string annotation) {
+    return boost::shared_ptr<DerivedStatsImpl<unsigned int, NullResult> >(
+        new DerivedStatsNull<unsigned int>(annotation));
 }
 

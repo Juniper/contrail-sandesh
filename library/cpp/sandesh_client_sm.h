@@ -59,9 +59,9 @@ public:
         CLIENT_INIT = 3,
         ESTABLISHED = 4
     } State;
-
+    static const int kTickInterval = 30000; // 30 sec .. specified in milliseconds
     static SandeshClientSM * CreateClientSM(EventManager *evm, Mgr *mgr,
-            int sm_task_instance, int sm_task_id);
+            int sm_task_instance, int sm_task_id, bool periodicuve);
     State state() const { return state_; }
     virtual const std::string &StateName() const = 0;
     SandeshSession *session() {
