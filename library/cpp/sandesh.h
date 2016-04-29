@@ -534,11 +534,12 @@ protected:
 };
 
 template<>
-struct WorkQueueDelete<Sandesh *> {
+struct WorkQueueDelete<SandeshElement> {
     template <typename QueueT>
     void operator()(QueueT &q, bool delete_entry) {
-        Sandesh *sandesh;
-        while (q.try_pop(sandesh)) {
+        SandeshElement element;
+        while (q.try_pop(element)) {
+            Sandesh *sandesh(element.snh_);
             sandesh->Release();
         }
     }
