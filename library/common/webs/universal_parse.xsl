@@ -225,7 +225,29 @@
 		    <xsl:if test="$count mod 2 = 0">
 			<td>
 			    <table class="table table-bordered table-condensed" border="1">
-				<xsl:apply-templates select="."/>
+                                <xsl:choose>
+                                    <xsl:when test="name() = 'element'">
+                                        <xsl:value-of select="."/>
+                                    </xsl:when>
+                                    <xsl:when test="name() = 'list'">
+                                        <xsl:apply-templates select="@type"/>
+                                    </xsl:when>
+                                    <xsl:otherwise>
+					<xsl:for-each select="*">
+                                            <xsl:choose>
+                                                <xsl:when test="@type[.='struct'] | @type[.='list'] | @type[.='map']">
+                                                    <xsl:apply-templates select="@type[.='struct'] | @type[.='list'] | @type[.='map']"/>
+                                                </xsl:when>
+                                                <xsl:otherwise>
+                                                    <xsl:value-of select="name()"/>
+                                                    <xsl:text>=</xsl:text>
+                                                    <xsl:value-of select="."/>
+                                                    <xsl:text>,</xsl:text>
+                                                </xsl:otherwise>
+                                            </xsl:choose>
+					</xsl:for-each>
+                                    </xsl:otherwise>
+                                </xsl:choose>
 			    </table>
 			</td>
 			<tr/>

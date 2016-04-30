@@ -9,6 +9,7 @@
  */
 
 include "io/io.sandesh"
+include "sandesh/library/common/derived_stats_results.sandesh"
 
 struct SandeshMessageStats {
     1: u64 messages_sent;
@@ -21,42 +22,42 @@ struct SandeshMessageStats {
     8: u64 bytes_received_dropped;
     // Send
     // Messages
-    51: u64 messages_sent_dropped_no_queue;
-    52: u64 messages_sent_dropped_no_client;
-    53: u64 messages_sent_dropped_no_session;
-    54: u64 messages_sent_dropped_queue_level;
-    55: u64 messages_sent_dropped_client_send_failed;
-    56: u64 messages_sent_dropped_session_not_connected;
-    57: u64 messages_sent_dropped_header_write_failed;
-    58: u64 messages_sent_dropped_write_failed;
-    59: u64 messages_sent_dropped_wrong_client_sm_state;
-    60: u64 messages_sent_dropped_validation_failed;
-    61: u64 messages_sent_dropped_rate_limited;
+    51: optional u64 messages_sent_dropped_no_queue;
+    52: optional u64 messages_sent_dropped_no_client;
+    53: optional u64 messages_sent_dropped_no_session;
+    54: optional u64 messages_sent_dropped_queue_level;
+    55: optional u64 messages_sent_dropped_client_send_failed;
+    56: optional u64 messages_sent_dropped_session_not_connected;
+    57: optional u64 messages_sent_dropped_header_write_failed;
+    58: optional u64 messages_sent_dropped_write_failed;
+    59: optional u64 messages_sent_dropped_wrong_client_sm_state;
+    60: optional u64 messages_sent_dropped_validation_failed;
+    61: optional u64 messages_sent_dropped_rate_limited;
     // Bytes
-    81: u64 bytes_sent_dropped_no_queue;
-    82: u64 bytes_sent_dropped_no_client;
-    83: u64 bytes_sent_dropped_no_session;
-    84: u64 bytes_sent_dropped_queue_level;
-    85: u64 bytes_sent_dropped_client_send_failed;
-    86: u64 bytes_sent_dropped_session_not_connected;
-    87: u64 bytes_sent_dropped_header_write_failed;
-    88: u64 bytes_sent_dropped_write_failed;
-    89: u64 bytes_sent_dropped_wrong_client_sm_state;
-    90: u64 bytes_sent_dropped_validation_failed;
-    91: u64 bytes_sent_dropped_rate_limited;
+    81: optional u64 bytes_sent_dropped_no_queue;
+    82: optional u64 bytes_sent_dropped_no_client;
+    83: optional u64 bytes_sent_dropped_no_session;
+    84: optional u64 bytes_sent_dropped_queue_level;
+    85: optional u64 bytes_sent_dropped_client_send_failed;
+    86: optional u64 bytes_sent_dropped_session_not_connected;
+    87: optional u64 bytes_sent_dropped_header_write_failed;
+    88: optional u64 bytes_sent_dropped_write_failed;
+    89: optional u64 bytes_sent_dropped_wrong_client_sm_state;
+    90: optional u64 bytes_sent_dropped_validation_failed;
+    91: optional u64 bytes_sent_dropped_rate_limited;
     // Receive
     // Messages
-    101: u64 messages_received_dropped_no_queue;
-    102: u64 messages_received_dropped_queue_level;
-    103: u64 messages_received_dropped_create_failed;
-    104: u64 messages_received_dropped_control_msg_failed;
-    105: u64 messages_received_dropped_decoding_failed;
+    101: optional u64 messages_received_dropped_no_queue;
+    102: optional u64 messages_received_dropped_queue_level;
+    103: optional u64 messages_received_dropped_create_failed;
+    104: optional u64 messages_received_dropped_control_msg_failed;
+    105: optional u64 messages_received_dropped_decoding_failed;
     // Bytes
-    131: u64 bytes_received_dropped_no_queue;
-    132: u64 bytes_received_dropped_queue_level;
-    133: u64 bytes_received_dropped_create_failed;
-    134: u64 bytes_received_dropped_control_msg_failed;
-    135: u64 bytes_received_dropped_decoding_failed;
+    131: optional u64 bytes_received_dropped_no_queue;
+    132: optional u64 bytes_received_dropped_queue_level;
+    133: optional u64 bytes_received_dropped_create_failed;
+    134: optional u64 bytes_received_dropped_control_msg_failed;
+    135: optional u64 bytes_received_dropped_decoding_failed;
 }
 
 struct SandeshMessageBasicStats {
@@ -232,12 +233,17 @@ struct ModuleClientState {
     1: string                              name (key="ObjectGeneratorInfo")
     2: optional bool                       deleted
     3: optional SandeshClientInfo          client_info
-    4: optional SandeshGeneratorBasicStats msg_stats
     5: optional u64                        sm_queue_count
     6: optional SandeshStateMachineStats   sm_stats
     7: optional SandeshSessionStats        session_stats
     8: optional io.SocketIOStats           session_rx_socket_stats
     9: optional io.SocketIOStats           session_tx_socket_stats
+
+    10: optional map<string, SandeshMessageStats> msg_type_agg (hidden="yes")
+    11: optional map<string, SandeshMessageStats> msg_type_diff (stats="msg_type_agg:DSDiff:")
+
+    12: optional list<derived_stats_results.CategoryResultSubElem> tx_msg_agg (hidden="yes")
+    13: optional derived_stats_results.CategoryResult tx_msg_agg_diff (stats="tx_msg_agg:DSCategoryCount:", tags="")
 }
 
 uve sandesh SandeshModuleClientTrace {

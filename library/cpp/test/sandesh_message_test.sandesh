@@ -63,14 +63,19 @@ response sandesh SandeshResponseTest {
 request sandesh SandeshRequestEmptyTest {
 }
 
+struct TestAggStruct {
+    1: i32 count
+}
+
 struct SandeshUVEData {
     1: string name (key="ObjectGeneratorInfo")
     2: optional bool deleted
-    3: optional i32 x
-    4: optional derived_stats_results.NullResult null_x (stats="x:")
+    3: optional TestAggStruct x
+    4: optional TestAggStruct null_x (stats="x:DSDiff:")
     7: optional i32 y
     8: optional map<string,i32> tsm
-    9: optional map<string,derived_stats_results.NullResult> null_tsm (stats="tsm:")
+    9: optional map<string,derived_stats_results.NullResult> null_tsm (stats="tsm:DSNull:")
+   10: optional derived_stats_results.EWMResult ewm_y (stats="y:DSEWM:0.2")
 }
 
 uve sandesh SandeshUVETest {
@@ -81,9 +86,9 @@ struct SandeshPeriodicData {
     1: string name (key="ObjectGeneratorInfo")
     2: optional bool deleted
     3: optional i32 x (hidden="yes")
-    4: optional derived_stats_results.SumResult null_x (stats="x:")
+    4: optional derived_stats_results.SumResult null_x (stats="x:DSSum:")
     5: optional map<string,i32> tsm
-    6: optional map<string,derived_stats_results.SumResult> null_tsm (stats="tsm:")
+    6: optional map<string,derived_stats_results.SumResult> null_tsm (stats="tsm:DSSum:")
 } (period="60")
 
 uve sandesh SandeshPeriodicTest {
