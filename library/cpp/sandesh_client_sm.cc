@@ -1032,9 +1032,9 @@ bool SandeshClientSMImpl::StatisticsTimerExpired() {
     }
     SandeshModuleClientTrace::Send(mcs);
     SendUVE();
-    // TODO: Hookup for Periodic UVEs
-    //map<string,uint32_t> inpMap;
-    //SandeshUVETypeMaps::SyncAllMaps(inpMap, true);
+
+    map<string,uint32_t> inpMap;
+    SandeshUVETypeMaps::SyncAllMaps(inpMap, true);
     
     return true;
 }

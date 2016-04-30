@@ -462,11 +462,11 @@ protected:
                 EXPECT_STREQ(mm["x"].c_str(),
 "<x type=\"i32\" identifier=\"3\">55</x>");
                 EXPECT_STREQ(mm["null_x"].c_str(),
-"<null_x type=\"struct\" identifier=\"4\" stats=\"x:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">55</value></NullResult></null_x>");
+"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSNull:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">55</value></NullResult></null_x>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>20</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
-"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">20</value></NullResult></map></null_tsm>");
+"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:DSNull:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">20</value></NullResult></map></null_tsm>");
                 break;
             }
             case 2:
@@ -474,8 +474,12 @@ protected:
                 EXPECT_EQ(3, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
                 EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
-                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectCollectorInfo\">uve2</name><y type=\"i32\" identifier=\"7\">1</y></SandeshUVEData></data></SandeshUVETest>";
-                EXPECT_STREQ(expected_xml, message.c_str());
+                EXPECT_STREQ(mm["y"].c_str(),
+"<y type=\"i32\" identifier=\"7\">1</y>");
+                EXPECT_STREQ(mm["name"].c_str(),
+"<name type=\"string\" identifier=\"1\" key=\"ObjectCollectorInfo\">uve2</name>");
+                EXPECT_STREQ(mm["ewm_y"].c_str(),
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSEWM:0.2\"><EWMResult><samples type=\"u64\" identifier=\"3\">1</samples><mean type=\"double\" identifier=\"6\">0.2</mean><stddev type=\"double\" identifier=\"7\">0.4</stddev></EWMResult></ewm_y>");
                 break;
             }
             case 3:
@@ -483,8 +487,12 @@ protected:
                 EXPECT_EQ(4, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
                 EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
-                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name><y type=\"i32\" identifier=\"7\">11</y></SandeshUVEData></data></SandeshUVETest>";
-                EXPECT_STREQ(expected_xml, message.c_str());
+                EXPECT_STREQ(mm["y"].c_str(),
+"<y type=\"i32\" identifier=\"7\">11</y>");
+                EXPECT_STREQ(mm["name"].c_str(),
+"<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name>");
+                EXPECT_STREQ(mm["ewm_y"].c_str(),
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSEWM:0.2\"><EWMResult><samples type=\"u64\" identifier=\"3\">1</samples><mean type=\"double\" identifier=\"6\">2.2</mean><stddev type=\"double\" identifier=\"7\">4.4</stddev></EWMResult></ewm_y>");
                 break;
             }
             case 4:
@@ -636,11 +644,11 @@ protected:
                 EXPECT_STREQ(mm["x"].c_str(),
 "<x type=\"i32\" identifier=\"3\">55</x>");
                 EXPECT_STREQ(mm["null_x"].c_str(),
-"<null_x type=\"struct\" identifier=\"4\" stats=\"x:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">55</value></NullResult></null_x>");
+"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSNull:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">55</value></NullResult></null_x>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>20</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
-"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">20</value></NullResult></map></null_tsm>");
+"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:DSNull:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">20</value></NullResult></map></null_tsm>");
                 break;
             }
             case 19:
@@ -667,11 +675,11 @@ protected:
                 EXPECT_STREQ(mm["x"].c_str(),
 "<x type=\"i32\" identifier=\"3\">56</x>");
                 EXPECT_STREQ(mm["null_x"].c_str(),
-"<null_x type=\"struct\" identifier=\"4\" stats=\"x:\"><NullResult><samples type=\"u64\" identifier=\"3\">2</samples><value type=\"i32\" identifier=\"5\">56</value></NullResult></null_x>");
+"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSNull:\"><NullResult><samples type=\"u64\" identifier=\"3\">2</samples><value type=\"i32\" identifier=\"5\">56</value></NullResult></null_x>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"2\"><element>i2</element><element>21</element><element>i3</element><element>31</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
-"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">2</samples><value type=\"i32\" identifier=\"5\">21</value></NullResult><element>i3</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">31</value></NullResult></map></null_tsm>");
+"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:DSNull:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">2</samples><value type=\"i32\" identifier=\"5\">21</value></NullResult><element>i3</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">31</value></NullResult></map></null_tsm>");
                 break;
             }
             case 21:
@@ -684,7 +692,7 @@ protected:
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>22</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
-"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">3</samples><value type=\"i32\" identifier=\"5\">22</value></NullResult></map></null_tsm>");
+"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:DSNull:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">3</samples><value type=\"i32\" identifier=\"5\">22</value></NullResult></map></null_tsm>");
                 break;
             }
             case 22:
@@ -708,11 +716,11 @@ protected:
                 EXPECT_STREQ(mm["x"].c_str(),
 "<x type=\"i32\" identifier=\"3\">55</x>");
                 EXPECT_STREQ(mm["null_x"].c_str(),
-"<null_x type=\"struct\" identifier=\"4\" stats=\"x:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">55</value></NullResult></null_x>");
+"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSNull:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">55</value></NullResult></null_x>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>20</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
-"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">20</value></NullResult></map></null_tsm>");
+"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:DSNull:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">20</value></NullResult></map></null_tsm>");
                 break;
             }
             case 24:
@@ -724,9 +732,9 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
                 EXPECT_STREQ(mm["null_x"].c_str(),
-"<null_x type=\"struct\" identifier=\"4\" stats=\"x:\"><SumResult><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">2</samples><value type=\"u64\" identifier=\"5\">197</value></SumResultElem></previous></SumResult></null_x>");
+"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSSum:\"><SumResult><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">2</samples><value type=\"u64\" identifier=\"5\">197</value></SumResultElem></previous></SumResult></null_x>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
-"<null_tsm type=\"map\" identifier=\"6\" stats=\"tsm:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><SumResult><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"u64\" identifier=\"5\">17</value></SumResultElem></previous></SumResult><element>j3</element><SumResult><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"u64\" identifier=\"5\">27</value></SumResultElem></previous></SumResult></map></null_tsm>");
+"<null_tsm type=\"map\" identifier=\"6\" stats=\"tsm:DSSum:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><SumResult><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"u64\" identifier=\"5\">17</value></SumResultElem></previous></SumResult><element>j3</element><SumResult><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"u64\" identifier=\"5\">27</value></SumResultElem></previous></SumResult></map></null_tsm>");
                 break;
             }
             case 25:
@@ -737,13 +745,13 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
                 EXPECT_STREQ(mm["null_x"].c_str(),
-"<null_x type=\"struct\" identifier=\"4\" stats=\"x:\"><SumResult><current type=\"struct\" identifier=\"1\"><SumResultElem><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"u64\" identifier=\"5\">97</value></SumResultElem></current><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">2</samples><value type=\"u64\" identifier=\"5\">197</value></SumResultElem></previous></SumResult></null_x>");
+"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSSum:\"><SumResult><current type=\"struct\" identifier=\"1\"><SumResultElem><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"u64\" identifier=\"5\">97</value></SumResultElem></current><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">2</samples><value type=\"u64\" identifier=\"5\">197</value></SumResultElem></previous></SumResult></null_x>");
                 EXPECT_STREQ(mm["x"].c_str(),
 "<x type=\"i32\" identifier=\"3\" hidden=\"yes\">97</x>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"5\"><map key=\"string\" value=\"i32\" size=\"2\"><element>j2</element><element>17</element><element>j3</element><element>27</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
-"<null_tsm type=\"map\" identifier=\"6\" stats=\"tsm:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><SumResult><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"u64\" identifier=\"5\">17</value></SumResultElem></previous></SumResult><element>j3</element><SumResult><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"u64\" identifier=\"5\">27</value></SumResultElem></previous></SumResult></map></null_tsm>");
+"<null_tsm type=\"map\" identifier=\"6\" stats=\"tsm:DSSum:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><SumResult><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"u64\" identifier=\"5\">17</value></SumResultElem></previous></SumResult><element>j3</element><SumResult><previous type=\"struct\" identifier=\"2\"><SumResultElem><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"u64\" identifier=\"5\">27</value></SumResultElem></previous></SumResult></map></null_tsm>");
                 break;
             }
             default:

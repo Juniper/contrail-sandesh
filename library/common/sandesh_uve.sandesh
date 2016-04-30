@@ -9,6 +9,7 @@
  */
 
 include "io/io.sandesh"
+include "sandesh/library/common/derived_stats_results.sandesh"
 
 struct SandeshMessageStats {
     1: u64 messages_sent;
@@ -232,12 +233,18 @@ struct ModuleClientState {
     1: string                              name (key="ObjectGeneratorInfo")
     2: optional bool                       deleted
     3: optional SandeshClientInfo          client_info
-    4: optional SandeshGeneratorBasicStats msg_stats
     5: optional u64                        sm_queue_count
     6: optional SandeshStateMachineStats   sm_stats
     7: optional SandeshSessionStats        session_stats
     8: optional io.SocketIOStats           session_rx_socket_stats
     9: optional io.SocketIOStats           session_tx_socket_stats
+
+    10: optional map<string, list<derived_stats_results.CategoryResultSubElem> > tx_msg_type (hidden="yes")
+    // TODO
+    //11: optional map<string, derived_stats_results.CategoryResult> tx_msg_type_diff (stats="tx_msg_type:DSCategoryCount:")
+
+    12: optional list<derived_stats_results.CategoryResultSubElem> tx_msg_agg (hidden="yes")
+    13: optional derived_stats_results.CategoryResult tx_msg_agg_diff (stats="tx_msg_agg:DSCategoryCount:", tags="")
 }
 
 uve sandesh SandeshModuleClientTrace {
