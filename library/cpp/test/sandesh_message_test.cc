@@ -474,8 +474,12 @@ protected:
                 EXPECT_EQ(3, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
                 EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
-                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectCollectorInfo\">uve2</name><y type=\"i32\" identifier=\"7\">1</y></SandeshUVEData></data></SandeshUVETest>";
-                EXPECT_STREQ(expected_xml, message.c_str());
+                EXPECT_STREQ(mm["y"].c_str(),
+"<y type=\"i32\" identifier=\"7\">1</y>");
+                EXPECT_STREQ(mm["name"].c_str(),
+"<name type=\"string\" identifier=\"1\" key=\"ObjectCollectorInfo\">uve2</name>");
+                EXPECT_STREQ(mm["ewm_y"].c_str(),
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:0.2\"><EWMResult><samples type=\"u64\" identifier=\"3\">1</samples><mean type=\"double\" identifier=\"6\">0.2</mean><stddev type=\"double\" identifier=\"7\">0.4</stddev></EWMResult></ewm_y>");
                 break;
             }
             case 3:
@@ -483,8 +487,12 @@ protected:
                 EXPECT_EQ(4, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
                 EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
-                const char* expected_xml = "<SandeshUVETest type=\"sandesh\"><data type=\"struct\" identifier=\"1\"><SandeshUVEData><name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name><y type=\"i32\" identifier=\"7\">11</y></SandeshUVEData></data></SandeshUVETest>";
-                EXPECT_STREQ(expected_xml, message.c_str());
+                EXPECT_STREQ(mm["y"].c_str(),
+"<y type=\"i32\" identifier=\"7\">11</y>");
+                EXPECT_STREQ(mm["name"].c_str(),
+"<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name>");
+                EXPECT_STREQ(mm["ewm_y"].c_str(),
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:0.2\"><EWMResult><samples type=\"u64\" identifier=\"3\">1</samples><mean type=\"double\" identifier=\"6\">2.2</mean><stddev type=\"double\" identifier=\"7\">4.4</stddev></EWMResult></ewm_y>");
                 break;
             }
             case 4:

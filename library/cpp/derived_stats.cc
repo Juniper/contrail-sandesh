@@ -12,6 +12,56 @@
 #include <sandesh/derived_stats.h>
 #include <sandesh/derived_stats_results_types.h>
 #include <iostream>
+#include <cstdlib>
+#include <cmath>
+using std::vector;
+using std::map;
+using std::make_pair;
+using std::string;
+
+class DerivedStatsCategoryCounter:
+      public DerivedStatsImpl< vector<CategoryResultSubElem>, CategoryResult> {
+  public:
+    DerivedStatsCategoryCounter(const std::string &annotation):
+            DerivedStatsImpl< vector<CategoryResultSubElem>, CategoryResult>() {}
+  private:
+    map<string, CategoryResultSubElem> agg_counts_;
+    vector<CategoryResultSubElem> diff_counts_;
+
+  protected:
+    bool ResultImpl(CategoryResult &res) const {
+        res.set_results(diff_counts_);
+        return !diff_counts_.empty();
+    }
+    void UpdateImpl(vector<CategoryResultSubElem> raw) {
+        diff_counts_.clear();
+        for (vector<CategoryResultSubElem>::const_iterator it = raw.begin();
+                it != raw.end(); it++) {
+
+            // Is there anything to count?
+            if (!it->get_count()) continue;
+            
+            map<string, CategoryResultSubElem>::iterator mit = agg_counts_.find(it->category);
+            if (mit==agg_counts_.end()) {
+                // This is a new category
+                diff_counts_.push_back(*it);
+                agg_counts_.insert(make_pair(it->get_category(), *it)); 
+            } else {
+                assert(it->get_count() >= mit->second.get_count());
+                uint64_t diff = it->get_count() - mit->second.get_count();
+                if (diff) {
+                    // If the count for this category has changed,
+                    // report the diff and update the aggregate
+                    CategoryResultSubElem se;
+                    se.set_category(it->get_category());
+                    se.set_count(diff);
+                    diff_counts_.push_back(se);
+                    mit->second.set_count(it->get_count());
+                }
+            }
+        }
+    }
+};
 
 template <typename ElemT>
 class DerivedStatsSum: public DerivedStatsImpl<ElemT, SumResultElem> {
@@ -20,11 +70,37 @@ class DerivedStatsSum: public DerivedStatsImpl<ElemT, SumResultElem> {
                 DerivedStatsImpl<ElemT, SumResultElem>(), value_(0) {}
     ElemT value_;
   protected:
-    void ResultImpl(SumResultElem &res) const {
+    bool ResultImpl(SumResultElem &res) const {
         res.set_value(value_);
+        return true;
     }
     void UpdateImpl(ElemT raw) {
         value_ += raw;
+    }
+};
+
+template <typename ElemT>
+class DerivedStatsEWM: public DerivedStatsImpl<ElemT, EWMResult> {
+  public:
+    DerivedStatsEWM(const std::string &annotation):
+                DerivedStatsImpl<ElemT, EWMResult>(),
+                mean_(0), variance_(0)  { 
+        alpha_ = (double) strtod(annotation.c_str(), NULL);
+        assert(alpha_ > 0);
+        assert(alpha_ < 1);
+    }
+    double alpha_;
+    double mean_;
+    double variance_;
+  protected:
+    bool ResultImpl(EWMResult &res) const {
+        res.set_mean(mean_);
+        res.set_stddev(sqrt(variance_));
+        return true;
+    }
+    void UpdateImpl(ElemT raw) {
+        variance_ = (1-alpha_)*(variance_ + (alpha_*pow(raw-mean_,2)));
+        mean_ = ((1-alpha_)*mean_) + (alpha_*raw);
     }
 };
 
@@ -35,8 +111,9 @@ class DerivedStatsNull: public DerivedStatsImpl<ElemT, NullResult> {
                 DerivedStatsImpl<ElemT, NullResult>(), value_(0) {}
     ElemT value_;
   protected:
-    void ResultImpl(NullResult &res) const {
+    bool ResultImpl(NullResult &res) const {
         res.set_value(value_);
+        return true;
     }
     void UpdateImpl(ElemT raw) {
         value_ = raw;
@@ -71,3 +148,30 @@ DerivedStatsImpl<unsigned int, NullResult>::Create(std::string annotation) {
         new DerivedStatsNull<unsigned int>(annotation));
 }
 
+template<>
+boost::shared_ptr<DerivedStatsImpl<vector<CategoryResultSubElem>, CategoryResult> >
+DerivedStatsImpl<vector<CategoryResultSubElem>, CategoryResult>::Create(std::string annotation) {
+    return boost::shared_ptr<DerivedStatsImpl<vector<CategoryResultSubElem>, CategoryResult> >(
+        new DerivedStatsCategoryCounter(annotation));
+}
+
+template<>
+boost::shared_ptr<DerivedStatsImpl<int, EWMResult> >
+DerivedStatsImpl<int, EWMResult>::Create(std::string annotation) {
+    return boost::shared_ptr<DerivedStatsImpl<int, EWMResult> >(
+        new DerivedStatsEWM<int>(annotation));
+}
+
+template<>
+boost::shared_ptr<DerivedStatsImpl<unsigned int, EWMResult> >
+DerivedStatsImpl<unsigned int, EWMResult>::Create(std::string annotation) {
+    return boost::shared_ptr<DerivedStatsImpl<unsigned int, EWMResult> >(
+        new DerivedStatsEWM<unsigned int>(annotation));
+}
+
+template<>
+boost::shared_ptr<DerivedStatsImpl<double, EWMResult> >
+DerivedStatsImpl<double, EWMResult>::Create(std::string annotation) {
+    return boost::shared_ptr<DerivedStatsImpl<double, EWMResult> >(
+        new DerivedStatsEWM<double>(annotation));
+}

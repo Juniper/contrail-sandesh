@@ -71,6 +71,7 @@ struct SandeshUVEData {
     7: optional i32 y
     8: optional map<string,i32> tsm
     9: optional map<string,derived_stats_results.NullResult> null_tsm (stats="tsm:")
+   10: optional derived_stats_results.EWMResult ewm_y (stats="y:0.2")
 }
 
 uve sandesh SandeshUVETest {
