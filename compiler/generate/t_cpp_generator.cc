@@ -2458,10 +2458,6 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
       declare_field(*m_iter, false, pointers && !(*m_iter)->get_type()->is_xception(), !read) << endl;
   }
 #ifdef SANDESH
-  if (is_table) {
-    indent(out) << "std::string table_;" << endl;
-  }
-
   for (ds_iter = dsinfo.begin(); ds_iter != dsinfo.end(); ++ds_iter) {
     CacheAttribute cat = (cache_attrs.find(ds_iter->first))->second;
   
@@ -2477,6 +2473,10 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
     }
 
   }
+  if (is_table) {
+    indent(out) << "std::string table_;" << endl;
+  }
+
 #endif
 
   // Add the __isset data member if we need it, using the definition from above
@@ -3745,7 +3745,7 @@ void t_cpp_generator::generate_sandesh_uve_creator(
       "g_sandesh_constants.SANDESH_SYNC_HINT);" << endl;
     indent(out) << "snh->Dispatch();" << endl;
     indent_down();
-    indent(out) << "}" << endl;
+    indent(out) << "} else snh->Release();" << endl;
     indent_down();
     indent(out) << "}" << endl << endl; 
     
