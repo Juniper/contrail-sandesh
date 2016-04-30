@@ -153,8 +153,8 @@ void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, b
   void generate_sandesh_static_rate_limit_mutex_def(ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_static_rate_limit_buffer_def(ofstream& out, t_sandesh* tsandesh);
   void derived_stats_info(t_struct* tstruct,
-    // val is rawtype,resulttype,annotation
-    map<string,tuple<string,string,string> >& dsmap,
+    // val is rawtype,resulttype,algo,annotation
+    map<string,tuple<string,string,string,string> >& dsmap,
     // val is set of ds attributes
     map<string,set<string> >& rawmap);
 
@@ -472,6 +472,7 @@ void t_cpp_generator::init_generator() {
 #else
     "#include <boost/shared_ptr.hpp>" << endl <<
     "#include <sandesh/derived_stats.h>" << endl <<
+    "#include <sandesh/derived_stats_algo.h>" << endl <<
     "#include <boost/pointer_cast.hpp>" << endl <<
 #endif
     "#include <base/trace.h>" << endl;
@@ -2184,8 +2185,8 @@ void t_cpp_generator::cache_attr_info(t_struct* tstruct,
 
 
 void t_cpp_generator::derived_stats_info(t_struct* tstruct,
-    // val is rawtype,resulttype,annotation
-    map<string,tuple<string,string,string> >& dsmap,
+    // val is rawtype,resulttype,algo,annotation
+    map<string,tuple<string,string,string,string> >& dsmap,
     // val is set of ds attributes
     map<string,set<string> >& rawmap) {
   const vector<t_field*>& members = tstruct->get_members();
@@ -2208,7 +2209,11 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
       const string &tstr = jt->second;
       size_t pos = tstr.find(':');
       string rawattr = tstr.substr(0,pos);
-      string anno = tstr.substr(pos+1, string::npos);
+
+      string residual = tstr.substr(pos+1, string::npos);
+      size_t rpos = residual.find(':');
+      string algo = residual.substr(0,rpos);
+      string anno = residual.substr(rpos+1, string::npos);
 
       string rawtype;
       vector<t_field*>::const_iterator s_iter;
@@ -2231,7 +2236,7 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
       }
       // map of derived stats
       dsmap.insert(make_pair((*m_iter)->get_name(),
-        make_tuple(rawtype, restype, anno)));
+        make_tuple(rawtype, restype, algo, anno)));
 
       // map of raw attributes
       map<string,set<string> >::iterator r_iter = rawmap.find(rawattr);
@@ -2332,10 +2337,10 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   std::map<string, CacheAttribute> cache_attrs;
   cache_attr_info(tstruct, cache_attrs);
 
-  map<string,tuple<string,string,string> > dsinfo;
+  map<string,tuple<string,string,string,string> > dsinfo;
   map<string,set<string> > rawmap;
   derived_stats_info(tstruct, dsinfo, rawmap);
-  map<string,tuple<string,string,string> >::iterator ds_iter;
+  map<string,tuple<string,string,string,string> >::iterator ds_iter;
 #endif
 
   if (!pointers) {
@@ -2406,16 +2411,18 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
     
       if (cat == PERIODIC) {
         out << ", __dsobj_" << ds_iter->first << 
-          "(new DerivedStatsPeriodicIf<" << 
+          "(new ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" <<
+          ds_iter->second.get<2>() << ", " << 
           ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
           "Elem, " << ds_iter->second.get<1>() <<
-          ">(\"" << ds_iter->second.get<2>() << "\"))";
+          ">(\"" << ds_iter->second.get<3>() << "\"))";
       } else {
 
         out << ", __dsobj_" << ds_iter->first << 
-          "(new DerivedStatsIf<" << 
+          "(new ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" <<
+          ds_iter->second.get<2>() << ", " <<
           ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
-          ">(\"" << ds_iter->second.get<2>() << "\"))";
+          ">(\"" << ds_iter->second.get<3>() << "\"))";
       }
     }
     if (is_table) {
@@ -2458,25 +2465,27 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
       declare_field(*m_iter, false, pointers && !(*m_iter)->get_type()->is_xception(), !read) << endl;
   }
 #ifdef SANDESH
-  if (is_table) {
-    indent(out) << "std::string table_;" << endl;
-  }
-
   for (ds_iter = dsinfo.begin(); ds_iter != dsinfo.end(); ++ds_iter) {
     CacheAttribute cat = (cache_attrs.find(ds_iter->first))->second;
   
     if (cat == PERIODIC) {
-      indent(out) << "boost::shared_ptr<DerivedStatsPeriodicIf<" << 
+      indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" << 
+        ds_iter->second.get<2>() << ", " <<
         ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
         "Elem, " << ds_iter->second.get<1>() <<
         "> > __dsobj_" << ds_iter->first << ";" << endl;
     } else {
-      indent(out) << "boost::shared_ptr<DerivedStatsIf<" << 
+      indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" << 
+        ds_iter->second.get<2>() << ", " <<
         ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
         "> > __dsobj_" << ds_iter->first << ";" << endl;
     }
 
   }
+  if (is_table) {
+    indent(out) << "std::string table_;" << endl;
+  }
+
 #endif
 
   // Add the __isset data member if we need it, using the definition from above
@@ -2529,15 +2538,11 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
       indent()<< "}" << endl;
 
 #ifdef SANDESH
-    ds_iter = dsinfo.find((*m_iter)->get_name());
-    if (ds_iter == dsinfo.end()) {
-      out << endl << indent() << type_name((*m_iter)->get_type(), false, true)
-              << " get_"; 
-      out << (*m_iter)->get_name() << "() const {" << endl;
-      out << indent() << indent() << "return " << (*m_iter)->get_name() << ";" << endl;
-      out << indent() << "}" << endl;
-    }
-
+    out << endl << indent() << type_name((*m_iter)->get_type(), false, true)
+	    << " get_"; 
+    out << (*m_iter)->get_name() << "() const {" << endl;
+    out << indent() << indent() << "return " << (*m_iter)->get_name() << ";" << endl;
+    out << indent() << "}" << endl;
 #endif
   }
   out << endl;
@@ -2607,6 +2612,99 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   }
 #ifdef SANDESH
   out << indent() << "std::string log() const;" << endl;
+  if (!pointers) {
+    out <<  indent() << 
+      tstruct->get_name() << " operator+(const " << tstruct->get_name() <<
+      "& right) const" << endl;
+    scope_up(out);
+    out << indent() << tstruct->get_name() << " result;" << endl;
+    for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+      std::string nn = (*m_iter)->get_name();
+      ds_iter = dsinfo.find((*m_iter)->get_name());
+      std::string sn;
+      if (ds_iter == dsinfo.end()) sn = std::string("set_");
+      else sn = std::string("__set_");
+
+      t_type* type = get_true_type((*m_iter)->get_type());
+      if (type->is_base_type()) {
+        t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
+        switch (tbase) {
+	case t_base_type::TYPE_BYTE:
+	case t_base_type::TYPE_I16:
+	case t_base_type::TYPE_I32:
+	case t_base_type::TYPE_I64:
+	case t_base_type::TYPE_DOUBLE:
+	case t_base_type::TYPE_U16:
+	case t_base_type::TYPE_U32:
+	case t_base_type::TYPE_U64:
+	  if ((*m_iter)->get_req() != t_field::T_OPTIONAL) {
+	    out << 
+              indent() << "result." << sn << nn << "(get_" << nn << 
+                "() + right.get_" << nn << "());" << endl << endl;
+          } else {
+            out <<
+	      indent() << "if ((__isset." << nn << ") && (right.__isset." <<
+                nn << ")) result." << sn << nn << "(get_" << nn <<
+                "() + right.get_" << nn << "());" << endl <<
+              indent() << "else if (__isset." << nn << ") result." << sn << 
+                nn << "(get_" << nn << "());" << endl <<
+              indent() << "else if (right.__isset." << nn << ") result." << sn <<
+                nn << "(right.get_" << nn << "());" << endl << endl;
+          }
+        default:
+          continue;
+        }
+      }
+    }
+    indent(out) << "return result;" << endl;
+    scope_down(out);
+
+    out <<  indent() << 
+      tstruct->get_name() << " operator-(const " << tstruct->get_name() <<
+      "& right) const" << endl;
+    scope_up(out);
+    out << indent() << tstruct->get_name() << " result;" << endl;
+    for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+      std::string nn = (*m_iter)->get_name();
+      ds_iter = dsinfo.find((*m_iter)->get_name());
+      std::string sn;
+      if (ds_iter == dsinfo.end()) sn = std::string("set_");
+      else sn = std::string("__set_");
+      t_type* type = get_true_type((*m_iter)->get_type());
+      if (type->is_base_type()) {
+        t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
+        switch (tbase) {
+	case t_base_type::TYPE_BYTE:
+	case t_base_type::TYPE_I16:
+	case t_base_type::TYPE_I32:
+	case t_base_type::TYPE_I64:
+	case t_base_type::TYPE_DOUBLE:
+	case t_base_type::TYPE_U16:
+	case t_base_type::TYPE_U32:
+	case t_base_type::TYPE_U64:
+	  if ((*m_iter)->get_req() != t_field::T_OPTIONAL) {
+	    out << 
+              indent() << "result." << sn <<  nn << "(get_" << nn << 
+                "() - right.get_" << nn << "());" << endl << endl;
+          } else {
+            out <<
+              indent() << "if ((__isset." << nn << ") && (right.__isset." <<
+                nn << ")) {" << endl <<
+              indent() << "  result." << sn << nn << "(get_" << nn <<
+                "() - right.get_" << nn << "()); }" << endl <<
+              indent() << "else if (__isset." << nn << ") result." << sn <<
+                nn << "(get_" << nn << "());" << endl <<
+              indent() << "if (!result.get_" << nn << "()) result.__isset." <<
+                nn << " = false;" << endl;
+          }
+        default:
+          continue;
+        }
+      }
+    }
+    indent(out) << "return result;" << endl;
+    scope_down(out);
+  }
   out << indent() << "size_t GetSize() const;" << endl;
   out << indent() << "std::string __listkey(void) {" << endl;
   out << indent() << "    std::string __result;" << endl;
@@ -3316,7 +3414,7 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
 
   t_struct* ts = (t_struct*)t;
 
-  map<string,tuple<string,string,string> > dsinfo;
+  map<string,tuple<string,string,string,string> > dsinfo;
   map<string,set<string> > rawmap;
   derived_stats_info(ts, dsinfo, rawmap);
 
@@ -3745,7 +3843,7 @@ void t_cpp_generator::generate_sandesh_uve_creator(
       "g_sandesh_constants.SANDESH_SYNC_HINT);" << endl;
     indent(out) << "snh->Dispatch();" << endl;
     indent_down();
-    indent(out) << "}" << endl;
+    indent(out) << "} else snh->Release();" << endl;
     indent_down();
     indent(out) << "}" << endl << endl; 
     

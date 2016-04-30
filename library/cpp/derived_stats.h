@@ -15,37 +15,17 @@
 
 #include <string>
 #include <boost/shared_ptr.hpp>
+#include <boost/make_shared.hpp>
 #include <boost/function.hpp>
 #include <base/time_util.h>
 
-// This is the base class for all DerivedStats algorithm implementations
-template <typename ElemT, typename ResultT>
-class DerivedStatsImpl {
-  public:
-    static boost::shared_ptr<DerivedStatsImpl<ElemT, ResultT> > Create(
-    std::string annotation);
+namespace contrail {
+namespace sandesh {
 
-    void FillResult(ResultT &res) const {
-        res.set_samples(samples_);
-        ResultImpl(res);
-    }
-    void Update(ElemT raw) {
-        samples_++;
-        UpdateImpl(raw);
-    }
-
-  protected:
-    DerivedStatsImpl() : samples_(0) {}
-  private:
-    uint64_t samples_;
-    virtual void ResultImpl(ResultT &res) const = 0;
-    virtual void UpdateImpl(ElemT raw) = 0;
-};
-
-template<typename ElemT, typename ResultT> void DerivedStatsMerge(
-        const std::map<std::string, ElemT> & raw,
-        std::map<std::string, boost::shared_ptr<DerivedStatsImpl<ElemT,ResultT> > > & dsm,
-        std::string annotation) {
+template<template<class,class> class DSTT, typename ElemT, typename ResultT>
+void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
+        std::map<std::string, boost::shared_ptr<DSTT<ElemT,ResultT> > > & dsm,
+        std::string annotation, bool periodic) {
 
     std::map<std::string, bool> srcmap;
     typename std::map<std::string, ElemT>::const_iterator rit;
@@ -55,7 +35,7 @@ template<typename ElemT, typename ResultT> void DerivedStatsMerge(
     }
     // For all cache entries that are staying, do an update
     typename std::map<std::string,
-            boost::shared_ptr<DerivedStatsImpl<
+            boost::shared_ptr<DSTT<
             ElemT,ResultT> > >::iterator dt = dsm.begin();
     while (dt != dsm.end()) {
         std::map<std::string, bool>::iterator st =
@@ -68,10 +48,12 @@ template<typename ElemT, typename ResultT> void DerivedStatsMerge(
         } else {
             // This cache entry IS NOT in the new vector
             typename std::map<std::string,
-                    boost::shared_ptr<DerivedStatsImpl<
+                    boost::shared_ptr<DSTT<
                     ElemT,ResultT> > >::iterator et = dt;
             dt++;
-            dsm.erase(et);
+            // For peridoic stats, un-updated cache entries
+            // will get removed during flush
+            if (!periodic) dsm.erase(et);
         }
     }
 
@@ -79,19 +61,19 @@ template<typename ElemT, typename ResultT> void DerivedStatsMerge(
     std::map<std::string, bool>::iterator mt;
     for (mt = srcmap.begin(); mt != srcmap.end(); mt++) {
         if (mt->second == false) {
-            dsm[mt->first] = DerivedStatsImpl<ElemT,ResultT>::Create(annotation);
+            dsm[mt->first] = boost::make_shared<DSTT<ElemT,ResultT> >(annotation);
             dsm[mt->first]->Update((raw.find(mt->first))->second);
         }
     }
 }
 
-template <typename ElemT, typename ResultT>
+template <template<class,class> class DSTT, typename ElemT, typename ResultT>
 class DerivedStatsIf {
   private:
-    typedef std::map<std::string, boost::shared_ptr<DerivedStatsImpl<ElemT,ResultT> > > result_map;
+    typedef std::map<std::string, boost::shared_ptr<DSTT<ElemT,ResultT> > > result_map;
     boost::shared_ptr<result_map> dsm_;
 
-    boost::shared_ptr<DerivedStatsImpl<ElemT,ResultT> > ds_;
+    boost::shared_ptr<DSTT<ElemT,ResultT> > ds_;
     
     std::string annotation_;
 
@@ -110,49 +92,50 @@ class DerivedStatsIf {
         if (!ds_) {
             isset = false;
             return;
-        } else isset = true;
-        ds_->FillResult(res);
+        } else isset = ds_->FillResult(res);
     }
 
     void FillResult(std::map<std::string, ResultT> &mres, bool& isset) const {
-        if (!dsm_) {
-            isset = false;
-            return;
-        } else isset = true;
-
         mres.clear(); 
-        for (typename result_map::const_iterator dit = (*dsm_).begin(); dit != (*dsm_).end(); dit++) {
-            ResultT res;
-            dit->second->FillResult(res);
-            mres.insert(std::make_pair(dit->first, res));
+        if (dsm_) {
+            for (typename result_map::const_iterator dit = dsm_->begin();
+                    dit != dsm_->end(); dit++) {
+                ResultT res;
+                if (dit->second->FillResult(res)) {
+                    mres.insert(std::make_pair(dit->first, res));
+                }
+            }
         }
+        isset = !mres.empty();
+        return;
     }
 
     // This is the interface to feed in all updates to the raw stat
     // on which the derived stat will be based.
     void Update(ElemT raw) {
         if (!ds_) {
-            ds_ = DerivedStatsImpl<ElemT,ResultT>::Create(annotation_);
+            ds_ = boost::make_shared<DSTT<ElemT,ResultT> >(annotation_);
         }
         ds_->Update(raw);
     }
     
     void Update(const std::map<std::string, ElemT> & raw) {
         if (!dsm_) {
-            dsm_.reset(new result_map());
+            dsm_ = boost::make_shared<result_map>();
         }
-        DerivedStatsMerge<ElemT,ResultT>(raw, *dsm_, annotation_);
+        DerivedStatsMerge<DSTT,ElemT,ResultT>(raw, *dsm_, annotation_, false);
     }
 };
 
-template <typename ElemT, typename SubResultT, typename ResultT>
+template <template<class,class> class DSTT, typename ElemT,
+typename SubResultT, typename ResultT>
 class DerivedStatsPeriodicIf {
   private:
-    typedef std::map<std::string, boost::shared_ptr<DerivedStatsImpl<ElemT,SubResultT> > > result_map;
+    typedef std::map<std::string, boost::shared_ptr<DSTT<ElemT,SubResultT> > > result_map;
     boost::shared_ptr<result_map> dsm_;
     boost::shared_ptr< std::map<std::string,ResultT> > dsm_cache_;
 
-    boost::shared_ptr<DerivedStatsImpl<ElemT,SubResultT> > ds_;
+    boost::shared_ptr<DSTT<ElemT,SubResultT> > ds_;
     boost::shared_ptr<ResultT> ds_cache_;
     
     std::string annotation_;
@@ -171,16 +154,16 @@ class DerivedStatsPeriodicIf {
     // on which the derived stat will be based.
     void Update(ElemT raw) {
         if (!ds_) {
-            ds_ = DerivedStatsImpl<ElemT,SubResultT>::Create(annotation_);
+            ds_ = boost::make_shared<DSTT<ElemT,SubResultT> >(annotation_);
         }
         ds_->Update(raw);
     }
 
     void Update(const std::map<std::string, ElemT> & raw) {
         if (!dsm_) {
-            dsm_.reset(new result_map());
+            dsm_ = boost::make_shared<result_map >();
         }
-        DerivedStatsMerge<ElemT,SubResultT>(raw, *dsm_, annotation_);
+        DerivedStatsMerge<DSTT,ElemT,SubResultT>(raw, *dsm_, annotation_, true);
     }
 
     bool Flush(const ResultT &res) {
@@ -189,16 +172,17 @@ class DerivedStatsPeriodicIf {
             // There were no updates to the DerivedStat
             // since the last flush
             ds_cache_.reset();
-            return false;
+            return ds_cache_;
         }
-        ds_cache_.reset(new ResultT());
-        ds_->FillResult(ds_cache_->previous);
-        ds_cache_->__isset.previous = true;
+        ds_cache_ = boost::make_shared<ResultT>();
+        if (ds_->FillResult(ds_cache_->previous)) {
+            ds_cache_->__isset.previous = true;
+        } else ds_cache_.reset();
 
         // Clear the DerivedStat
         ds_.reset();
 
-        return true;
+        return ds_cache_;
     }
 
     // This is the interface to retrieve the current value
@@ -213,9 +197,10 @@ class DerivedStatsPeriodicIf {
         }
         if (ds_) {
             // Fill in current information
-            ds_->FillResult(res.current);
-            res.__isset.current = true;
-            isset = true;
+            if (ds_->FillResult(res.current)) {
+                res.__isset.current = true;
+                isset = true;
+            }
         }
     }
 
@@ -225,37 +210,37 @@ class DerivedStatsPeriodicIf {
             // There were no updates to the DerivedStats
             // since the last flush
             dsm_cache_.reset();
-            return false;
+            return dsm_cache_;
         }
-        dsm_cache_.reset(new std::map<std::string,ResultT>());
-        for (typename result_map::const_iterator dit = (*dsm_).begin();
-                dit != (*dsm_).end(); dit++) {
+        dsm_cache_ = boost::make_shared<std::map<std::string,ResultT> >();
+        for (typename result_map::const_iterator dit = dsm_->begin();
+                dit != dsm_->end(); dit++) {
             ResultT res;
-            dit->second->FillResult(res.previous);
-            res.__isset.previous = true;
-            (*dsm_cache_).insert(std::make_pair(dit->first, res));
+            if (dit->second->FillResult(res.previous)) {
+                res.__isset.previous = true;
+                dsm_cache_->insert(std::make_pair(dit->first, res));
+            }
         }
+        if (dsm_cache_->empty()) dsm_cache_.reset();
 
         // Clear the DerivedStats
         dsm_.reset();
-        return true;
+        return dsm_cache_;
     }
 
     // This is the interface to retrieve the current value
     // of the DerivedStat object.
     void FillResult(std::map<std::string, ResultT> &mres, bool& isset) const {
         mres.clear();
-        isset = false;
         if (dsm_cache_) {
             // Fill in previous information
-            for (typename std::map<std::string,ResultT>::const_iterator dit = (*dsm_cache_).begin();
-                    dit != (*dsm_cache_).end(); dit++) {
+            for (typename std::map<std::string,ResultT>::const_iterator dit = dsm_cache_->begin();
+                    dit != dsm_cache_->end(); dit++) {
                 ResultT res;
                 res.previous = dit->second.previous;
                 res.__isset.previous = true;
                 mres.insert(std::make_pair(dit->first, res));
             }
-            isset = true;
         }
         if (dsm_) {
             for (typename result_map::const_iterator dit = (*dsm_).begin();
@@ -265,20 +250,24 @@ class DerivedStatsPeriodicIf {
                 typename std::map<std::string, ResultT>::iterator wit =
                         mres.find(dit->first);
                 if (wit != mres.end()) {
-                    dit->second->FillResult(wit->second.current);
-                    wit->second.__isset.current = true;
+                    if (dit->second->FillResult(wit->second.current)) {
+                        wit->second.__isset.current = true;
+                    }
                 } else {
                     ResultT res;
-                    dit->second->FillResult(res.current);
-                    res.__isset.current = true;
-                    mres.insert(std::make_pair(dit->first, res));
+                    if (dit->second->FillResult(res.current)) {
+                        res.__isset.current = true;
+                        mres.insert(std::make_pair(dit->first, res));
+                    }
                 }
             }
-            isset = true;
         }
+        isset = !mres.empty();
     }
 
 };
 
+} // namespace sandesh
+} // namespace contrail
 #endif
 

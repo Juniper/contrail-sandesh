@@ -101,7 +101,6 @@ libsandesh = env.Library(target = 'sandesh',
                                    'sandesh_connection.cc',
                                    'sandesh_server.cc',
                                    'sandesh_uve.cc',
-                                   'derived_stats.cc',
                                    'sandesh_message_builder.cc',
                                    'sandesh_statistics.cc',
                                    'protocol/TXMLProtocol.cpp',
@@ -116,6 +115,7 @@ env.Install(env['TOP_LIB'], libsandesh)
 env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh.h')
 env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_uve.h')
 env.Install(env['TOP_INCLUDE'] + '/sandesh', 'derived_stats.h') 
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'derived_stats_algo.h') 
 env.Install(env['TOP_INCLUDE'] + '/sandesh', 'Thrift.h')
 env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_client.h')
 env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_client_sm.h')
