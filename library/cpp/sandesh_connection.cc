@@ -75,10 +75,12 @@ void SandeshConnection::ReceiveMsg(const std::string &msg, SandeshSession *sessi
 
 bool SandeshConnection::SendSandesh(Sandesh *snh) {
     if (!session_) {
+        snh->Release();
         return false;
     }
     ssm::SsmState state = state_machine_->get_state();
     if (state != ssm::SERVER_INIT && state != ssm::ESTABLISHED) {
+        snh->Release();
         return false;
     }
     // XXX No bounded work queue
