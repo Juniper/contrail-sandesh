@@ -291,6 +291,12 @@ void SandeshClient::SendUVE(int count,
     sci.set_tx_socket_stats(tx_stats);
 
     mcs.set_client_info(sci);
+
+    std::vector<SandeshMessageTypeStats> mtype_stats;
+    SandeshMessageStats magg_stats;
+    Sandesh::GetMsgStats(&mtype_stats, &magg_stats);
+    mcs.set_msg_agg(magg_stats);
+
     SandeshModuleClientTrace::Send(mcs);
 }
 

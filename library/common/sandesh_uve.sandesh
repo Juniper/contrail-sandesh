@@ -230,7 +230,7 @@ struct ModuleClientState {
     1: string                              name (key="ObjectGeneratorInfo")
     2: optional bool                       deleted
     3: optional SandeshClientInfo          client_info
-    4: optional SandeshGeneratorBasicStats msg_stats
+    4: optional SandeshMessageStats        msg_agg
     5: optional u64                        sm_queue_count
     6: optional SandeshStateMachineStats   sm_stats
     7: optional SandeshSessionStats        session_stats
