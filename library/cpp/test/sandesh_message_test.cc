@@ -573,7 +573,7 @@ protected:
 "<tsm type=\"map\" identifier=\"5\"><map key=\"string\" value=\"i32\" size=\"2\"><element>j2</element><element>17</element><element>j3</element><element>27</element></map></tsm>");
                 break;
             }
-            case 13:
+            case 14:
             {
                 EXPECT_EQ(3, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::ALARM, header.get_Type());
@@ -582,7 +582,7 @@ protected:
                 EXPECT_STREQ(expected_xml, message.c_str());
                 break;
             }
-            case 14:
+            case 13:
             {
                 EXPECT_EQ(2, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::ALARM, header.get_Type());
@@ -614,7 +614,7 @@ protected:
 "<tsm type=\"map\" identifier=\"5\"><map key=\"string\" value=\"i32\" size=\"2\"><element>j2</element><element>17</element><element>j3</element><element>27</element></map></tsm>");
                 break;
             }
-            case 17:
+            case 18:
             {
                 EXPECT_EQ(6, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
@@ -626,7 +626,7 @@ protected:
 "<name type=\"string\" identifier=\"1\" key=\"ObjectCollectorInfo\">uve2</name>");
                 break;
             }
-            case 18:
+            case 17:
             {
                 EXPECT_EQ(2, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());

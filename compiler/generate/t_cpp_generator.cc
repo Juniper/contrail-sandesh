@@ -470,6 +470,7 @@ void t_cpp_generator::init_generator() {
 #ifndef SANDESH
     "#include <TApplicationException.h>" << endl <<
 #else
+    "#include <tbb/atomic.h>" << endl <<
     "#include <boost/shared_ptr.hpp>" << endl <<
     "#include <sandesh/derived_stats.h>" << endl <<
     "#include <boost/pointer_cast.hpp>" << endl <<
@@ -1603,7 +1604,12 @@ void t_cpp_generator::generate_sandesh_member_init_list(ofstream& out,
  */
 void t_cpp_generator::generate_sandesh_seqnum(ofstream& out,
                                               t_sandesh* tsandesh) {
-    indent(out) << "static uint32_t lseqnum_;" << endl;
+    if (((t_base_type *)tsandesh->get_type())->is_sandesh_uve() ||
+        ((t_base_type *)tsandesh->get_type())->is_sandesh_alarm()) {
+      indent(out) << "static tbb::atomic<uint32_t> lseqnum_;" << endl;
+    } else {
+      indent(out) << "static uint32_t lseqnum_;" << endl;
+    }
 }
 
 /**
@@ -3178,7 +3184,12 @@ void t_cpp_generator::generate_static_const_string_definition(ofstream& out,
 
 void t_cpp_generator::generate_sandesh_static_seqnum_def(ofstream& out,
                                                               t_sandesh* tsandesh) {
-    out << "uint32_t " << tsandesh->get_name() << "::lseqnum_ = 1;" << endl;
+    if (((t_base_type *)tsandesh->get_type())->is_sandesh_uve() ||
+        ((t_base_type *)tsandesh->get_type())->is_sandesh_alarm()) {
+      out << "tbb::atomic<uint32_t> " << tsandesh->get_name() << "::lseqnum_;" << endl;
+    } else {
+      out << "uint32_t " << tsandesh->get_name() << "::lseqnum_ = 1;" << endl;
+    }
 }
 
 void t_cpp_generator::generate_sandesh_static_versionsig_def(ofstream& out,
@@ -3757,11 +3768,11 @@ void t_cpp_generator::generate_sandesh_uve_creator(
     indent(out) << type_name((*f_iter)->get_type()) <<
         " & cdata = const_cast<" << type_name((*f_iter)->get_type()) <<
         " &>(data);" << endl;
-    indent(out) << "uint32_t msg_seqno;" << endl;
+    indent(out) << "uint32_t msg_seqno = lseqnum_.fetch_and_increment() + 1;" << endl;
     indent(out) << "if (!table.empty()) cdata.table_ = table;" << endl;
 
     indent(out) << "if (uvemap" << sname <<
-      ".UpdateUVE(cdata, msg_seqno = lseqnum_++)) {" << endl;
+      ".UpdateUVE(cdata, msg_seqno)) {" << endl;
     indent_up();
     indent(out) << sname << " *snh = new " << sname << "(msg_seqno, cdata);" << endl;
     indent(out) << "snh->Dispatch();" << endl;
