@@ -26,6 +26,7 @@
 #include <sandesh/protocol/TXMLProtocol.h>
 #include <sandesh/sandesh_ctrl_types.h>
 #include <sandesh/sandesh_uve_types.h>
+#include <sandesh/derived_stats_results_types.h>
 #include <sandesh/common/vns_constants.h>
 #include "sandesh_client.h"
 #include "sandesh_uve.h"
@@ -34,6 +35,7 @@ using namespace boost::asio;
 using boost::system::error_code;
 using std::string;
 using std::map;
+using std::make_pair;
 using std::vector;
 
 using boost::system::error_code;
@@ -291,6 +293,73 @@ void SandeshClient::SendUVE(int count,
     sci.set_tx_socket_stats(tx_stats);
 
     mcs.set_client_info(sci);
+
+    std::vector<SandeshMessageTypeStats> mtype_stats;
+    SandeshMessageStats magg_stats;
+    Sandesh::GetMsgStats(&mtype_stats, &magg_stats);
+
+    vector<CategoryResultSubElem> csev;
+    CategoryResultSubElem cse;
+    cse.set_count(magg_stats.get_messages_sent());
+    cse.set_category("ok");
+    csev.push_back(cse);
+    cse.set_count(magg_stats.get_messages_sent_dropped_no_queue());
+    cse.set_category("no_queue");
+    csev.push_back(cse);
+    cse.set_count(magg_stats.get_messages_sent_dropped_no_client());
+    cse.set_category("no_client");
+    csev.push_back(cse);
+    cse.set_count(magg_stats.get_messages_sent_dropped_no_session());
+    cse.set_category("no_session");
+    csev.push_back(cse);
+    cse.set_count(magg_stats.get_messages_sent_dropped_queue_level());
+    cse.set_category("queue_level");
+    csev.push_back(cse);
+    cse.set_count(magg_stats.get_messages_sent_dropped_client_send_failed());
+    cse.set_category("client_send_failed");
+    csev.push_back(cse);
+    cse.set_count(magg_stats.get_messages_sent_dropped_session_not_connected());
+    cse.set_category("session_not_connected");
+    csev.push_back(cse);
+    cse.set_count(magg_stats.get_messages_sent_dropped_header_write_failed());
+    cse.set_category("header_write_failed");
+    csev.push_back(cse);
+    cse.set_count(magg_stats.get_messages_sent_dropped_write_failed());
+    cse.set_category("write_failed");
+    csev.push_back(cse);
+    cse.set_count(magg_stats.get_messages_sent_dropped_wrong_client_sm_state());
+    cse.set_category("wrong_client_sm_state");
+    csev.push_back(cse);
+    cse.set_count(magg_stats.get_messages_sent_dropped_validation_failed());
+    cse.set_category("validation_failed");
+    csev.push_back(cse);
+    cse.set_count(magg_stats.get_messages_sent_dropped_rate_limited());
+    cse.set_category("rate_limited");
+    csev.push_back(cse);
+    mcs.set_tx_msg_agg(csev);
+
+    map <string,SandeshMessageStats> csevm;
+    for (vector<SandeshMessageTypeStats>::const_iterator smit = mtype_stats.begin();
+            smit != mtype_stats.end(); smit++) {
+        SandeshMessageStats res_sms;
+        const SandeshMessageStats& src_sms = smit->get_stats();
+        res_sms.set_messages_sent(src_sms.get_messages_sent());
+        res_sms.set_messages_sent_dropped_no_queue(src_sms.get_messages_sent_dropped_no_queue());
+        res_sms.set_messages_sent_dropped_no_client(src_sms.get_messages_sent_dropped_no_client());
+        res_sms.set_messages_sent_dropped_no_session(src_sms.get_messages_sent_dropped_no_session());
+        res_sms.set_messages_sent_dropped_queue_level(src_sms.get_messages_sent_dropped_queue_level());
+        res_sms.set_messages_sent_dropped_client_send_failed(src_sms.get_messages_sent_dropped_client_send_failed());
+        res_sms.set_messages_sent_dropped_session_not_connected(src_sms.get_messages_sent_dropped_session_not_connected());
+        res_sms.set_messages_sent_dropped_header_write_failed(src_sms.get_messages_sent_dropped_header_write_failed());
+        res_sms.set_messages_sent_dropped_write_failed(src_sms.get_messages_sent_dropped_write_failed());
+        res_sms.set_messages_sent_dropped_wrong_client_sm_state(src_sms.get_messages_sent_dropped_wrong_client_sm_state());
+        res_sms.set_messages_sent_dropped_validation_failed(src_sms.get_messages_sent_dropped_validation_failed());
+        res_sms.set_messages_sent_dropped_rate_limited(src_sms.get_messages_sent_dropped_rate_limited());
+      
+        csevm.insert(make_pair(smit->get_message_type(), res_sms));
+    }
+    mcs.set_msg_type_agg(csevm);
+
     SandeshModuleClientTrace::Send(mcs);
 }
 

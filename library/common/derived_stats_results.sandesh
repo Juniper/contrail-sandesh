@@ -24,12 +24,20 @@ struct NullResult {
 
 struct EWMResult {
     3: u64 samples 
-    5: double alpha
-    6: double avg
+    6: double mean
     7: double stddev
 }
 
 struct PercentileResult {
     3: u64 samples 
     4: map<string,double> percentiles;
+}
+
+struct CategoryResultSubElem {
+    1: string category
+    2: u64 count
+}
+struct CategoryResult {
+    1: u64 samples 
+    2: list<CategoryResultSubElem> results (tags=".category")
 }
