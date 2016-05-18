@@ -33,6 +33,7 @@ void SandeshMessageStatsReq::HandleRequest() const {
         SandeshQueueStats qstats;
         qstats.set_enqueues(client->session()->send_queue()->NumEnqueues());
         qstats.set_count(client->session()->send_queue()->Length());
+        qstats.set_max_count(client->session()->send_queue()->max_queue_len());
         sandesh_stats.set_send_queue_stats(qstats);
     }
 
