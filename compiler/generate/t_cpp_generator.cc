@@ -2151,6 +2151,7 @@ void t_cpp_generator::cache_attr_info(t_struct* tstruct,
       // or be of hidden/periodic type
       assert(jt == (*m_iter)->annotations_.end());
       assert((*m_iter)->annotations_.find("stats") == (*m_iter)->annotations_.end());
+      assert((*m_iter)->annotations_.find("mstats") == (*m_iter)->annotations_.end());
       attrs.insert(std::make_pair((*m_iter)->get_name(),
         MANDATORY)); 
       continue;
@@ -2158,7 +2159,8 @@ void t_cpp_generator::cache_attr_info(t_struct* tstruct,
 
     if (tstruct->annotations_.find("period") != tstruct->annotations_.end()) {
       // Periodic
-      if ((*m_iter)->annotations_.find("stats") != (*m_iter)->annotations_.end()) {
+      if (((*m_iter)->annotations_.find("stats") != (*m_iter)->annotations_.end()) ||
+          ((*m_iter)->annotations_.find("mstats") != (*m_iter)->annotations_.end())) {
         if (jt!=(*m_iter)->annotations_.end()) {
             // Periodic stats cannot be hidden
             assert(0);
@@ -2192,21 +2194,31 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
   const vector<t_field*>& members = tstruct->get_members();
   vector<t_field*>::const_iterator m_iter;
   for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
-    std::map<std::string, std::string>::iterator jt;
+    std::map<std::string, std::string>::iterator jt,mt;
     jt = (*m_iter)->annotations_.find("stats");
-    if (jt != (*m_iter)->annotations_.end()) {
+    mt = (*m_iter)->annotations_.find("mstats");
+    if ((jt != (*m_iter)->annotations_.end()) ||
+        (mt != (*m_iter)->annotations_.end())) {
       assert((*m_iter)->get_req() == t_field::T_OPTIONAL);
+
       t_type* retype = get_true_type((*m_iter)->get_type());
       string restype;
-      bool is_ds_map = retype->is_map();
-      if (is_ds_map) {
-        t_type* vtype = ((t_map*)retype)->get_val_type();
-        restype = type_name(get_true_type(vtype));
+
+      bool is_ds_map = false;
+      // for map derived-stats
+      if (mt!= (*m_iter)->annotations_.end()) {
+        // out of mstats and stats, only one should be specified
+        assert(jt == (*m_iter)->annotations_.end());
+        is_ds_map = true;
+        assert(retype->is_map());
+	t_type* vtype = ((t_map*)retype)->get_val_type();
+	restype = type_name(get_true_type(vtype));
       } else {
         restype = type_name(get_true_type((*m_iter)->get_type()));
       }
 
-      const string &tstr = jt->second;
+      const string &tstr = ((jt == (*m_iter)->annotations_.end()) ?
+              mt->second : jt->second);
       size_t pos = tstr.find(':');
       string rawattr = tstr.substr(0,pos);
 
@@ -2220,12 +2232,11 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
       for (s_iter = members.begin(); s_iter != members.end(); ++s_iter) {
         if (rawattr.compare((*s_iter)->get_name())==0) {
           t_type* ratype = get_true_type((*s_iter)->get_type());
-          if (ratype->is_map()) {
-            assert(is_ds_map);
+          if (is_ds_map) {
+            assert(ratype->is_map());
             t_type* vtype = ((t_map*)ratype)->get_val_type();
             rawtype = type_name(get_true_type(vtype));
           } else {
-            assert(!is_ds_map);
             rawtype = type_name(get_true_type((*s_iter)->get_type()));
           }
           break;
@@ -2283,6 +2294,7 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
       has_nonrequired_fields = true;
   }
 
+  bool del_support = false;
   if (has_nonrequired_fields && (!pointers || read)) {
 
     out <<
@@ -2296,6 +2308,13 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
       if ((*m_iter)->get_req() == t_field::T_REQUIRED) {
         continue;
       }
+      t_type* t = get_true_type((*m_iter)->get_type());
+      if (t->is_base_type() &&
+          ((*m_iter)->get_name().compare("deleted") == 0)) {
+	t_base_type::t_base tbase = ((t_base_type*)t)->get_base();
+        if (tbase == t_base_type::TYPE_BOOL) del_support = true;
+      }
+        
       if (first) {
         first = false;
         out <<
@@ -2312,12 +2331,13 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
         indent(out) <<
           "bool " << (*m_iter)->get_name() << ";" << endl;
         }
-      }
-
-      indent_down();
-      indent(out) <<
-        "} _" << tstruct->get_name() << "__isset;" << endl;
     }
+
+    indent_down();
+    indent(out) <<
+      "} _" << tstruct->get_name() << "__isset;" << endl << endl;
+
+  }
 
   out << endl;
 
@@ -2413,9 +2433,9 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
         out << ", __dsobj_" << ds_iter->first << 
           "(new ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" <<
           ds_iter->second.get<2>() << ", " << 
-          ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
-          "Elem, " << ds_iter->second.get<1>() <<
-          ">(\"" << ds_iter->second.get<3>() << "\"))";
+          ds_iter->second.get<0>() << ", " <<
+          ds_iter->second.get<1>().substr(0, ds_iter->second.get<1>().size() - 3) << ", " <<
+          ds_iter->second.get<1>() << ">(\"" << ds_iter->second.get<3>() << "\"))";
       } else {
 
         out << ", __dsobj_" << ds_iter->first << 
@@ -2470,9 +2490,10 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   
     if (cat == PERIODIC) {
       indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" << 
-        ds_iter->second.get<2>() << ", " <<
-        ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
-        "Elem, " << ds_iter->second.get<1>() <<
+        ds_iter->second.get<2>() << ", " << 
+        ds_iter->second.get<0>() << ", " <<
+        ds_iter->second.get<1>().substr(0, ds_iter->second.get<1>().size() - 3) << ", " <<
+        ds_iter->second.get<1>() <<
         "> > __dsobj_" << ds_iter->first << ";" << endl;
     } else {
       indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" << 
@@ -2660,6 +2681,46 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
     scope_down(out);
 
     out <<  indent() << 
+      tstruct->get_name() << " operator/(int div) const" << endl;
+    scope_up(out);
+    out << indent() << tstruct->get_name() << " result;" << endl;
+    for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+      std::string nn = (*m_iter)->get_name();
+      ds_iter = dsinfo.find((*m_iter)->get_name());
+      std::string sn;
+      if (ds_iter == dsinfo.end()) sn = std::string("set_");
+      else sn = std::string("__set_");
+
+      t_type* type = get_true_type((*m_iter)->get_type());
+      if (type->is_base_type()) {
+        t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
+        switch (tbase) {
+	case t_base_type::TYPE_BYTE:
+	case t_base_type::TYPE_I16:
+	case t_base_type::TYPE_I32:
+	case t_base_type::TYPE_I64:
+	case t_base_type::TYPE_DOUBLE:
+	case t_base_type::TYPE_U16:
+	case t_base_type::TYPE_U32:
+	case t_base_type::TYPE_U64:
+	  if ((*m_iter)->get_req() != t_field::T_OPTIONAL) {
+	    out << 
+              indent() << "result." << sn << nn << "(get_" << nn << 
+                "() / div);" << endl << endl;
+          } else {
+            out <<
+              indent() << "if (__isset." << nn << ") result." << sn << nn << "(get_" <<
+                nn << "() / div);" << endl << endl;
+          }
+        default:
+          continue;
+        }
+      }
+    }
+    indent(out) << "return result;" << endl;
+    scope_down(out);
+
+    out <<  indent() << 
       tstruct->get_name() << " operator-(const " << tstruct->get_name() <<
       "& right) const" << endl;
     scope_up(out);
@@ -2726,6 +2787,17 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   indent(out) <<
     "};" << endl <<
     endl;
+
+  if (del_support) {
+    out <<
+      indent() << "template <>" << endl <<
+      indent() << "struct SandeshStructDeleteTrait<" <<
+	tstruct->get_name() << "> {" << endl <<
+      indent() << "  static bool get(const " <<  
+	tstruct->get_name() << "& s) { return s.get_deleted(); }" <<
+        endl <<
+      indent() << "};" << endl;
+  }
 }
 
 /**
