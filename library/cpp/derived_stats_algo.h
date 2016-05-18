@@ -27,7 +27,7 @@ class DSCategoryCount {
   public: 
     DSCategoryCount(const std::string &annotation): samples_(0) {}
 
-    map<string, CatSubElemVT> agg_counts_;
+    map<string, typename CatSubElemVT::value_type> agg_counts_;
     CatSubElemVT diff_counts_;
     uint64_t samples_;
 
@@ -45,21 +45,25 @@ class DSCategoryCount {
             // Is there anything to count?
             if (!it->get_count()) continue;
             
-            typename map<string, CatSubElemVT>::iterator mit = agg_counts_.find(it->category);
+            typename map<string,
+                    typename CatSubElemVT::value_type>::iterator mit =
+                    agg_counts_.find(it->get_category());
             if (mit==agg_counts_.end()) {
                 // This is a new category
                 diff_counts_.push_back(*it);
-                CatSubElemVT csev;
-                csev.push_back(*it);
-                agg_counts_.insert(make_pair(it->get_category(), csev)); 
+                agg_counts_.insert(make_pair(it->get_category(), *it)); 
             } else {
-                assert(it->get_count() >= mit->second[0].get_count());
-                uint64_t diff = it->get_count() - mit->second[0].get_count();
+                assert(it->get_count() >= mit->second.get_count());
+                uint64_t diff = it->get_count() - mit->second.get_count();
                 if (diff) {
                     // If the count for this category has changed,
                     // report the diff and update the aggregate
-                    mit->second[0].set_count(it->get_count());
-                    diff_counts_.push_back(mit->second[0]);
+                    typename CatSubElemVT::value_type el;
+                    el.set_category(it->get_category());
+                    el.set_count(diff);
+                    diff_counts_.push_back(el);
+
+                    mit->second.set_count(it->get_count());
                 }
             }
         }
@@ -137,6 +141,8 @@ class DSDiff {
     ElemT diff_;
 
     bool FillResult(DiffResT &res) const {
+        ElemT empty;
+        if (diff_ == empty) return false;
         res = diff_;
         return true;
     }

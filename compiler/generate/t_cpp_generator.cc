@@ -2283,6 +2283,7 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
       has_nonrequired_fields = true;
   }
 
+  bool del_support = false;
   if (has_nonrequired_fields && (!pointers || read)) {
 
     out <<
@@ -2296,6 +2297,13 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
       if ((*m_iter)->get_req() == t_field::T_REQUIRED) {
         continue;
       }
+      t_type* t = get_true_type((*m_iter)->get_type());
+      if (t->is_base_type() &&
+          ((*m_iter)->get_name().compare("deleted") == 0)) {
+	t_base_type::t_base tbase = ((t_base_type*)t)->get_base();
+        if (tbase == t_base_type::TYPE_BOOL) del_support = true;
+      }
+        
       if (first) {
         first = false;
         out <<
@@ -2312,12 +2320,13 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
         indent(out) <<
           "bool " << (*m_iter)->get_name() << ";" << endl;
         }
-      }
-
-      indent_down();
-      indent(out) <<
-        "} _" << tstruct->get_name() << "__isset;" << endl;
     }
+
+    indent_down();
+    indent(out) <<
+      "} _" << tstruct->get_name() << "__isset;" << endl << endl;
+
+  }
 
   out << endl;
 
@@ -2726,6 +2735,17 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   indent(out) <<
     "};" << endl <<
     endl;
+
+  if (del_support) {
+    out <<
+      indent() << "template <>" << endl <<
+      indent() << "struct SandeshStructDeleteTrait<" <<
+	tstruct->get_name() << "> {" << endl <<
+      indent() << "  static bool get(const " <<  
+	tstruct->get_name() << "& s) { return s.get_deleted(); }" <<
+        endl <<
+      indent() << "};" << endl;
+  }
 }
 
 /**

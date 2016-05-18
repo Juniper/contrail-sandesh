@@ -459,10 +459,10 @@ protected:
                 EXPECT_EQ(2, header.get_SequenceNum());
                 EXPECT_EQ(SandeshType::UVE, header.get_Type());
                 EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
-                EXPECT_STREQ(mm["x"].c_str(),
-"<x type=\"struct\" identifier=\"3\"><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct></x>");
-                EXPECT_STREQ(mm["null_x"].c_str(),
-"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSDiff:\"><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct></null_x>");
+                EXPECT_STREQ(mm["z"].c_str(),
+"<z type=\"map\" identifier=\"3\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct><element>idx2</element><TestAggStruct><count type=\"i32\" identifier=\"1\">20</count></TestAggStruct></map></z>");
+                EXPECT_STREQ(mm["diff_z"].c_str(),
+"<diff_z type=\"map\" identifier=\"4\" stats=\"z:DSDiff:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct><element>idx2</element><TestAggStruct><count type=\"i32\" identifier=\"1\">20</count></TestAggStruct></map></diff_z>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>20</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
@@ -641,10 +641,10 @@ protected:
                 EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
-                EXPECT_STREQ(mm["x"].c_str(),
-"<x type=\"struct\" identifier=\"3\"><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct></x>");
-                EXPECT_STREQ(mm["null_x"].c_str(),
-"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSDiff:\"><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct></null_x>");
+                EXPECT_STREQ(mm["z"].c_str(),
+"<z type=\"map\" identifier=\"3\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct><element>idx2</element><TestAggStruct><count type=\"i32\" identifier=\"1\">20</count></TestAggStruct></map></z>");
+                EXPECT_STREQ(mm["diff_z"].c_str(),
+"<diff_z type=\"map\" identifier=\"4\" stats=\"z:DSDiff:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct><element>idx2</element><TestAggStruct><count type=\"i32\" identifier=\"1\">20</count></TestAggStruct></map></diff_z>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>20</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
@@ -672,10 +672,10 @@ protected:
                 EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
-                EXPECT_STREQ(mm["x"].c_str(),
-"<x type=\"struct\" identifier=\"3\"><TestAggStruct><count type=\"i32\" identifier=\"1\">111</count></TestAggStruct></x>");
-                EXPECT_STREQ(mm["null_x"].c_str(),
-"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSDiff:\"><TestAggStruct><count type=\"i32\" identifier=\"1\">56</count></TestAggStruct></null_x>");
+                EXPECT_STREQ(mm["z"].c_str(),
+"<z type=\"map\" identifier=\"3\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">111</count></TestAggStruct><element>idx2</element><TestAggStruct><count type=\"i32\" identifier=\"1\">111</count><deleted type=\"bool\" identifier=\"2\">true</deleted></TestAggStruct></map></z>");
+                EXPECT_STREQ(mm["diff_z"].c_str(),
+"<diff_z type=\"map\" identifier=\"4\" stats=\"z:DSDiff:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">56</count></TestAggStruct></map></diff_z>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"2\"><element>i2</element><element>21</element><element>i3</element><element>31</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
@@ -692,7 +692,7 @@ protected:
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>22</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
-"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:DSNull:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">3</samples><value type=\"i32\" identifier=\"5\">22</value></NullResult></map></null_tsm>");
+"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:DSNull:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">3</samples><value type=\"i32\" identifier=\"5\">22</value></NullResult><element>i3</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">31</value></NullResult></map></null_tsm>");
                 break;
             }
             case 22:
@@ -713,10 +713,7 @@ protected:
                 EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
-                EXPECT_STREQ(mm["x"].c_str(),
-"<x type=\"struct\" identifier=\"3\"><TestAggStruct><count type=\"i32\" identifier=\"1\">59</count></TestAggStruct></x>");
-                EXPECT_STREQ(mm["null_x"].c_str(),
-"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSDiff:\"><TestAggStruct><count type=\"i32\" identifier=\"1\">59</count></TestAggStruct></null_x>");
+                if (mm.find("diff_z")!=mm.end()) EXPECT_TRUE(false);
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>20</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
@@ -787,9 +784,13 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     // case 1
     SandeshUVEData uve_data2;
     uve_data2.set_name("uve1");
+    std::map<std::string,TestAggStruct> mtas2;
     TestAggStruct tas2;
     tas2.set_count(55);
-    uve_data2.set_x(tas2);
+    mtas2.insert(std::make_pair("idx1", tas2));
+    tas2.set_count(20);
+    mtas2.insert(std::make_pair("idx2", tas2));
+    uve_data2.set_z(mtas2);
 
     std::map<string,int32_t> my;
     my.insert(std::make_pair("i2",20));
@@ -898,9 +899,13 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     // case 20
     SandeshUVEData uve_data10;
     uve_data10.set_name("uve1");
+    std::map<std::string,TestAggStruct> mtas10;
     TestAggStruct tas10;
     tas10.set_count(111);
-    uve_data10.set_x(tas10);
+    mtas10.insert(std::make_pair("idx1",tas10));
+    tas10.set_deleted(true);
+    mtas10.insert(std::make_pair("idx2",tas10));
+    uve_data10.set_z(mtas10);
 
     std::map<string,int32_t> my2;
     my2.insert(std::make_pair("i2",21));
@@ -933,9 +938,6 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     {
         SandeshUVEData uve_data2;
         uve_data2.set_name("uve1");
-	TestAggStruct tas10;
-	tas10.set_count(59);
-	uve_data2.set_x(tas10);
 
         std::map<string,int32_t> my3;
         my3.insert(std::make_pair("i2",20));
