@@ -298,45 +298,33 @@ void SandeshClient::SendUVE(int count,
     SandeshMessageStats magg_stats;
     Sandesh::GetMsgStats(&mtype_stats, &magg_stats);
 
-    vector<CategoryResultSubElem> csev;
-    CategoryResultSubElem cse;
-    cse.set_count(magg_stats.get_messages_sent());
-    cse.set_category("ok");
-    csev.push_back(cse);
-    cse.set_count(magg_stats.get_messages_sent_dropped_no_queue());
-    cse.set_category("no_queue");
-    csev.push_back(cse);
-    cse.set_count(magg_stats.get_messages_sent_dropped_no_client());
-    cse.set_category("no_client");
-    csev.push_back(cse);
-    cse.set_count(magg_stats.get_messages_sent_dropped_no_session());
-    cse.set_category("no_session");
-    csev.push_back(cse);
-    cse.set_count(magg_stats.get_messages_sent_dropped_queue_level());
-    cse.set_category("queue_level");
-    csev.push_back(cse);
-    cse.set_count(magg_stats.get_messages_sent_dropped_client_send_failed());
-    cse.set_category("client_send_failed");
-    csev.push_back(cse);
-    cse.set_count(magg_stats.get_messages_sent_dropped_session_not_connected());
-    cse.set_category("session_not_connected");
-    csev.push_back(cse);
-    cse.set_count(magg_stats.get_messages_sent_dropped_header_write_failed());
-    cse.set_category("header_write_failed");
-    csev.push_back(cse);
-    cse.set_count(magg_stats.get_messages_sent_dropped_write_failed());
-    cse.set_category("write_failed");
-    csev.push_back(cse);
-    cse.set_count(magg_stats.get_messages_sent_dropped_wrong_client_sm_state());
-    cse.set_category("wrong_client_sm_state");
-    csev.push_back(cse);
-    cse.set_count(magg_stats.get_messages_sent_dropped_validation_failed());
-    cse.set_category("validation_failed");
-    csev.push_back(cse);
-    cse.set_count(magg_stats.get_messages_sent_dropped_rate_limited());
-    cse.set_category("rate_limited");
-    csev.push_back(cse);
-    mcs.set_tx_msg_agg(csev);
+    map<string,uint64_t> csev;
+    csev.insert(make_pair("sent", magg_stats.get_messages_sent()));
+    csev.insert(make_pair("dropped_no_queue",
+             magg_stats.get_messages_sent_dropped_no_queue()));
+    csev.insert(make_pair("dropped_no_client",
+             magg_stats.get_messages_sent_dropped_no_client()));
+    csev.insert(make_pair("dropped_no_session",
+             magg_stats.get_messages_sent_dropped_no_session()));
+    csev.insert(make_pair("dropped_queue_level",
+             magg_stats.get_messages_sent_dropped_queue_level()));
+    csev.insert(make_pair("dropped_client_send_failed",
+             magg_stats.get_messages_sent_dropped_client_send_failed()));
+    csev.insert(make_pair("dropped_session_not_connected",
+             magg_stats.get_messages_sent_dropped_session_not_connected()));
+    csev.insert(make_pair("dropped_header_write_failed",
+             magg_stats.get_messages_sent_dropped_header_write_failed()));
+    csev.insert(make_pair("dropped_write_failed",
+             magg_stats.get_messages_sent_dropped_write_failed()));
+    csev.insert(make_pair("dropped_wrong_client_sm_state",
+             magg_stats.get_messages_sent_dropped_wrong_client_sm_state()));
+    csev.insert(make_pair("dropped_validation_failed",
+             magg_stats.get_messages_sent_dropped_validation_failed()));
+    csev.insert(make_pair("dropped_rate_limited",
+             magg_stats.get_messages_sent_dropped_rate_limited()));
+    CategoryResult cr;
+    cr.set_counters(csev); 
+    mcs.set_tx_msg_agg(cr);
 
     map <string,SandeshMessageStats> csevm;
     for (vector<SandeshMessageTypeStats>::const_iterator smit = mtype_stats.begin();

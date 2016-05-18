@@ -623,4 +623,8 @@ bool DoDropSandeshMessage(const SandeshHeader &header,
 log4cplus::LogLevel SandeshLevelTolog4Level(
     SandeshLevel::type slevel);
 
+template <typename T>
+struct SandeshStructDeleteTrait {
+    static bool get(const T& s) { return false; } 
+};
 #endif // __SANDESH_H__

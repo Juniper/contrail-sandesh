@@ -7,15 +7,6 @@
  *
  */
 
-struct SumResultElem {
-    3: u64 samples 
-    5: u64 value
-}
-
-struct SumResult {
-    1: optional SumResultElem current
-    2: optional SumResultElem previous
-}
 
 struct NullResult {
     3: u64 samples 
@@ -33,11 +24,7 @@ struct PercentileResult {
     4: map<string,double> percentiles;
 }
 
-struct CategoryResultSubElem {
-    1: string category
-    2: u64 count
-}
 struct CategoryResult {
-    1: u64 samples 
-    2: list<CategoryResultSubElem> results (tags=".category")
+    1: map<string, u64> counters (tags=".__key")
 }
+

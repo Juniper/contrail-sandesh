@@ -14,6 +14,8 @@
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
+#include <sandesh/derived_stats_results_types.h>
+
 using std::vector;
 using std::map;
 using std::make_pair;
@@ -22,67 +24,53 @@ using std::string;
 namespace contrail {
 namespace sandesh {
 
-template<class CatSubElemVT, class CatResT>
+template<class CatElemT, class CatResT>
 class DSCategoryCount {
+};
+
+template<>
+class DSCategoryCount<CategoryResult,CategoryResult> {
   public: 
-    DSCategoryCount(const std::string &annotation): samples_(0) {}
+    DSCategoryCount(const std::string &annotation) {}
 
-    map<string, CatSubElemVT> agg_counts_;
-    CatSubElemVT diff_counts_;
-    uint64_t samples_;
+    typedef map<std::string, uint64_t> CatResT;
+    CatResT agg_counts_;
+    CatResT diff_counts_;
 
-    bool FillResult(CatResT &res) const {
-        res.set_samples(samples_);
-        res.set_results(diff_counts_);
+    bool FillResult(CategoryResult &res) const {
+        res.set_counters(diff_counts_);
         return !diff_counts_.empty();
     }
-    void Update(const CatSubElemVT& raw) {
-        samples_++;
+
+    void Update(const CategoryResult& raw) {
         diff_counts_.clear();
-        for (typename CatSubElemVT::const_iterator it = raw.begin();
-                it != raw.end(); it++) {
+        for (CatResT::const_iterator it = raw.get_counters().begin();
+                it != raw.get_counters().end(); it++) {
 
             // Is there anything to count?
-            if (!it->get_count()) continue;
-            
-            typename map<string, CatSubElemVT>::iterator mit = agg_counts_.find(it->category);
+            if (!it->second) continue;
+          
+            CatResT::iterator mit =
+                    agg_counts_.find(it->first);
+ 
             if (mit==agg_counts_.end()) {
                 // This is a new category
-                diff_counts_.push_back(*it);
-                CatSubElemVT csev;
-                csev.push_back(*it);
-                agg_counts_.insert(make_pair(it->get_category(), csev)); 
+                diff_counts_.insert(make_pair(it->first, it->second));
+                agg_counts_.insert(make_pair(it->first, it->second));
             } else {
-                assert(it->get_count() >= mit->second[0].get_count());
-                uint64_t diff = it->get_count() - mit->second[0].get_count();
+                assert(it->second >= mit->second);
+                uint64_t diff = it->second - mit->second;
                 if (diff) {
                     // If the count for this category has changed,
                     // report the diff and update the aggregate
-                    mit->second[0].set_count(it->get_count());
-                    diff_counts_.push_back(mit->second[0]);
+                    diff_counts_.insert(make_pair(it->first, diff));
+                    mit->second = it->second;
                 }
             }
         }
     }
 };
 
-template <typename ElemT, class SumResT> 
-class DSSum {
-  public:
-    DSSum(const std::string &annotation): value_(0), samples_(0) {}
-    ElemT value_;
-    uint64_t samples_;
-
-    bool FillResult(SumResT &res) const {
-        res.set_samples(samples_);
-        res.set_value(value_);
-        return true;
-    }
-    void Update(const ElemT& raw) {
-        samples_++;
-        value_ += raw;
-    }
-};
 
 template <typename ElemT, class EWMResT>
 class DSEWM {
@@ -132,19 +120,92 @@ class DSNull {
 template <typename ElemT, class DiffResT>
 class DSDiff {
   public:
-    DSDiff(const std::string &annotation) {}
+    DSDiff(const std::string &annotation) : init_(false) {}
+    bool init_;
     ElemT agg_;
     ElemT diff_;
 
     bool FillResult(DiffResT &res) const {
+        ElemT empty;
+        if (!init_) return false;
+        if (diff_ == empty) return false;
         res = diff_;
         return true;
     }
     void Update(const ElemT& raw) {
-        diff_ = raw - agg_;
-        agg_ = agg_ + diff_;
+        if (!init_) {
+            diff_ = raw;
+            agg_ = raw;
+        } else {
+            diff_ = raw - agg_;
+            agg_ = agg_ + diff_;
+        }
+        init_ = true;
     }
 };
+
+template <typename ElemT, class SumResT> 
+class DSSum {
+  public:
+    DSSum(const std::string &annotation): samples_(0) {
+        if (annotation.empty()) {
+            history_count_ = 0;
+        } else {
+            history_count_ = (uint64_t) strtoul(annotation.c_str(), NULL, 10);
+        }
+    }
+    uint64_t samples_;
+    SumResT value_;
+    vector<ElemT> history_buf_;
+    uint64_t history_count_;
+
+    virtual bool FillResult(SumResT &res) const {
+        if (!samples_) return false;
+        res = value_;
+        return true;
+    }
+
+    virtual void Update(const ElemT& raw) {
+        if (!samples_) {
+            value_ = raw;
+        } else {
+            value_ = value_ + raw;
+        }
+        if (history_count_) {
+            // if 'history_count_' is non-0, we need to aggregate only
+            // the last 'history_count_' elements
+            if (samples_ >= history_count_) {
+                // We must substract the oldest entry, if it exists
+                value_ = value_ - history_buf_[samples_ % history_count_];
+                // Now record the latest update, so we can subtract when needed
+                history_buf_[samples_ % history_count_] = raw;
+            } else {
+                history_buf_.push_back(raw);
+            }
+        }
+        samples_++;
+    }
+};
+
+template <typename ElemT, class AvgResT>
+class DSAvg : public DSSum<ElemT,AvgResT> {
+  public:
+    DSAvg(const std::string &annotation): DSSum<ElemT,AvgResT>(annotation) {}
+
+    virtual bool FillResult(AvgResT &res) const {
+        if (!DSSum<ElemT,AvgResT>::samples_) return false;
+        if (DSSum<ElemT,AvgResT>::history_count_) {
+	    uint64_t div =
+                    ((DSSum<ElemT,AvgResT>::samples_ >=DSSum<ElemT,AvgResT>::history_count_) ?
+		     DSSum<ElemT,AvgResT>::history_count_ : DSSum<ElemT,AvgResT>::samples_);
+	    res = DSSum<ElemT,AvgResT>::value_ / div;
+        } else {
+            res = DSSum<ElemT,AvgResT>::value_ / DSSum<ElemT,AvgResT>::samples_;
+        }
+        return true;
+    }
+};
+
 } // namespace sandesh
 } // namespace contrail
 
