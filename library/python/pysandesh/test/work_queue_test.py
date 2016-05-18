@@ -454,6 +454,23 @@ class WorkQueueTest(unittest.TestCase):
         self.assertEqual((-1, 0), workq.watermark_indices())
     # end test_watermarks
 
+    def test_queue_params(self):
+        workq = WorkQueue(self.worker)
+        self.enqueue_entries(workq, 1)
+        self.assertEqual(1, workq.max_size_reached())
+        self.dequeue_entries(workq, 1)
+        self.enqueue_entries(workq, 4)
+        self.assertEqual(4, workq.max_size_reached())
+        self.dequeue_entries(workq, 4)
+        # check max_size for bounded queue
+        b_workq = WorkQueue(self.worker, max_qsize = 4)
+        b_workq.set_bounded(True);
+        self.enqueue_entries(b_workq,5)
+        self.assertEqual(4, b_workq.max_size_reached())
+        self.dequeue_entries(workq, 5)
+        
+    # end test_queue_params
+
 # end class WorkQueueTest
 
 

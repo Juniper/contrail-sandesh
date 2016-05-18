@@ -215,6 +215,7 @@ class SandeshReqImpl(object):
                 squeue.num_enqueues()
             send_queue_stats.count = \
                 squeue.num_enqueues() - squeue.num_dequeues()
+            send_queue_stats.max_count = squeue.max_size_reached()
             gen_stats.send_queue_stats = send_queue_stats
         stats_resp = SandeshMessageStatsResp(gen_stats)
         stats_resp.response(sandesh_req.context(), sandesh=self._sandesh)

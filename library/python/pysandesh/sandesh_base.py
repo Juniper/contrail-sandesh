@@ -440,7 +440,11 @@ class Sandesh(object):
                                              self._node_type + ':' +
                                              self._module + ':' +
                                              self._instance_id,
-                                             client_info=client_info)
+                                             client_info=client_info,
+                                             sm_queue_count=self._client.\
+                connection().statemachine()._event_queue.size(),
+                                             max_sm_queue_count=self._client.\
+                connection().statemachine()._event_queue.max_size_reached())
             generator_info = SandeshModuleClientTrace(
                 data=module_state, sandesh=self)
             generator_info.send(sandesh=self)

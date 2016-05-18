@@ -159,6 +159,7 @@ public:
                        SandeshGeneratorStats &detail_msg_stats);
     bool GetDetailStatistics(SandeshStateMachineStats *sm_stats,
         SandeshGeneratorStats *detail_msg_stats);
+    size_t GetMaxQueueCount() const { return work_queue_.max_queue_len(); }
 
 private:
     friend class SandeshServerStateMachineTest;

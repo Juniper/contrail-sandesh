@@ -95,6 +95,7 @@ class WorkQueue(object):
         self._hwm_index = -1
         self._lwm_index = -1
         self._runner = Runner(self, self._max_work_load)
+        self._max_qlen = 0
     # end __init__
 
     def set_bounded(self, bounded):
@@ -130,10 +131,12 @@ class WorkQueue(object):
     # end watermark_indices
 
     def enqueue(self, work_item):
-        self.increment_queue_size(work_item)
+        if self.increment_queue_size(work_item) > self._max_qlen:
+            self._max_qlen = self._qsize
         if self._bounded:
             if self._qsize > self._max_qsize:
                 self.decrement_queue_size(work_item)
+                self._max_qlen -= 1
                 self._drops += 1
                 return False
         self._num_enqueues += 1
@@ -157,6 +160,7 @@ class WorkQueue(object):
 
     def increment_queue_size(self, work_item):
         self._qsize += 1
+        return self._qsize
     # end increment_queue_size
 
     def decrement_queue_size(self, work_item):
@@ -166,6 +170,9 @@ class WorkQueue(object):
     def size(self):
         return self._qsize
     # end size
+
+    def max_size_reached(self):
+        return self._max_qlen
 
     def may_be_start_runner(self):
         if self._queue.empty() or \
