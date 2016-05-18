@@ -692,7 +692,7 @@ protected:
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>22</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
-"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:DSNull:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">3</samples><value type=\"i32\" identifier=\"5\">22</value></NullResult></map></null_tsm>");
+"<null_tsm type=\"map\" identifier=\"9\" stats=\"tsm:DSNull:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">3</samples><value type=\"i32\" identifier=\"5\">22</value></NullResult><element>i3</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">31</value></NullResult></map></null_tsm>");
                 break;
             }
             case 22:

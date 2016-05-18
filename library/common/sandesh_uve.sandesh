@@ -12,14 +12,14 @@ include "io/io.sandesh"
 include "sandesh/library/common/derived_stats_results.sandesh"
 
 struct SandeshMessageStats {
-    1: u64 messages_sent;
-    2: u64 bytes_sent;
-    3: u64 messages_received;
-    4: u64 bytes_received;
-    5: u64 messages_sent_dropped;
-    6: u64 bytes_sent_dropped;
-    7: u64 messages_received_dropped;
-    8: u64 bytes_received_dropped;
+    1: optional u64 messages_sent;
+    2: optional u64 bytes_sent;
+    3: optional u64 messages_received;
+    4: optional u64 bytes_received;
+    5: optional u64 messages_sent_dropped;
+    6: optional u64 bytes_sent_dropped;
+    7: optional u64 messages_received_dropped;
+    8: optional u64 bytes_received_dropped;
     // Send
     // Messages
     51: optional u64 messages_sent_dropped_no_queue;
