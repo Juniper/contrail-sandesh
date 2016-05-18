@@ -82,6 +82,7 @@ struct SandeshMessageTypeStats {
 struct SandeshQueueStats {
     1: u64 enqueues;
     2: u64 count;
+    3: u32 count_max;
 }
 
 struct SandeshGeneratorStats {
@@ -244,6 +245,7 @@ struct ModuleClientState {
 
     12: optional list<derived_stats_results.CategoryResultSubElem> tx_msg_agg (hidden="yes")
     13: optional derived_stats_results.CategoryResult tx_msg_agg_diff (stats="tx_msg_agg:DSCategoryCount:", tags="")
+    14: optional u32                       sm_queue_count_max
 }
 
 uve sandesh SandeshModuleClientTrace {
