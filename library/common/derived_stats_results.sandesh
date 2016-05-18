@@ -33,11 +33,11 @@ struct PercentileResult {
     4: map<string,double> percentiles;
 }
 
-struct CategoryResultSubElem {
-    1: string category
-    2: u64 count
+struct CounterResult {
+    1: u64 count
 }
+
 struct CategoryResult {
-    1: u64 samples 
-    2: list<CategoryResultSubElem> results (tags=".category")
+    1: map<string, CounterResult> counters (tags=".__key")
 }
+
