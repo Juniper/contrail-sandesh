@@ -1010,6 +1010,7 @@ bool SandeshClientSMImpl::StatisticsTimerExpired() {
     ModuleClientState mcs;
     mcs.set_name(generator_key_);
     mcs.set_sm_queue_count(work_queue_.Length());
+    mcs.set_sm_queue_count_max(work_queue_.max_queue_len());
     // Sandesh state machine statistics
     SandeshStateMachineStats sm_stats;
     sm_stats.set_ev_stats(ev_stats);
