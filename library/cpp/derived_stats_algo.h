@@ -14,6 +14,8 @@
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
+#include <sandesh/derived_stats_results_types.h>
+
 using std::vector;
 using std::map;
 using std::make_pair;
@@ -22,67 +24,55 @@ using std::string;
 namespace contrail {
 namespace sandesh {
 
-template<class CatSubElemVT, class CatResT>
+template<class CatElemT, class CatResT>
 class DSCategoryCount {
+};
+
+template<>
+class DSCategoryCount<CategoryResult,CategoryResult> {
   public: 
-    DSCategoryCount(const std::string &annotation): samples_(0) {}
+    DSCategoryCount(const std::string &annotation) {}
 
-    map<string, CatSubElemVT> agg_counts_;
-    CatSubElemVT diff_counts_;
-    uint64_t samples_;
+    typedef map<string, CounterResult> CatResT;
+    CatResT agg_counts_;
+    CatResT diff_counts_;
 
-    bool FillResult(CatResT &res) const {
-        res.set_samples(samples_);
-        res.set_results(diff_counts_);
+    bool FillResult(CategoryResult &res) const {
+        res.set_counters(diff_counts_);
         return !diff_counts_.empty();
     }
-    void Update(const CatSubElemVT& raw) {
-        samples_++;
+    void Update(const CategoryResult& raw) {
         diff_counts_.clear();
-        for (typename CatSubElemVT::const_iterator it = raw.begin();
-                it != raw.end(); it++) {
+        for (CatResT::const_iterator it =
+                raw.get_counters().begin();
+                it != raw.get_counters().end(); it++) {
 
             // Is there anything to count?
-            if (!it->get_count()) continue;
-            
-            typename map<string, CatSubElemVT>::iterator mit = agg_counts_.find(it->category);
+            if (!it->second.get_count()) continue;
+          
+            CatResT::iterator mit =
+                    agg_counts_.find(it->first);
+ 
             if (mit==agg_counts_.end()) {
                 // This is a new category
-                diff_counts_.push_back(*it);
-                CatSubElemVT csev;
-                csev.push_back(*it);
-                agg_counts_.insert(make_pair(it->get_category(), csev)); 
+                diff_counts_.insert(make_pair(it->first, it->second));
+                agg_counts_.insert(make_pair(it->first, it->second));
             } else {
-                assert(it->get_count() >= mit->second[0].get_count());
-                uint64_t diff = it->get_count() - mit->second[0].get_count();
+                assert(it->second.get_count() >= mit->second.get_count());
+                uint64_t diff = it->second.get_count() -
+                        mit->second.get_count();
                 if (diff) {
                     // If the count for this category has changed,
                     // report the diff and update the aggregate
-                    mit->second[0].set_count(it->get_count());
-                    diff_counts_.push_back(mit->second[0]);
+                    mit->second.set_count(diff); 
+                    diff_counts_.insert(make_pair(it->first, mit->second));
+                    mit->second.set_count(it->second.get_count());
                 }
             }
         }
     }
 };
 
-template <typename ElemT, class SumResT> 
-class DSSum {
-  public:
-    DSSum(const std::string &annotation): value_(0), samples_(0) {}
-    ElemT value_;
-    uint64_t samples_;
-
-    bool FillResult(SumResT &res) const {
-        res.set_samples(samples_);
-        res.set_value(value_);
-        return true;
-    }
-    void Update(const ElemT& raw) {
-        samples_++;
-        value_ += raw;
-    }
-};
 
 template <typename ElemT, class EWMResT>
 class DSEWM {
@@ -132,19 +122,75 @@ class DSNull {
 template <typename ElemT, class DiffResT>
 class DSDiff {
   public:
-    DSDiff(const std::string &annotation) {}
+    DSDiff(const std::string &annotation) : init_(false) {}
+    bool init_;
     ElemT agg_;
     ElemT diff_;
 
     bool FillResult(DiffResT &res) const {
+        ElemT empty;
+        if (!init_) return false;
+        if (diff_ == empty) return false;
         res = diff_;
         return true;
     }
     void Update(const ElemT& raw) {
-        diff_ = raw - agg_;
-        agg_ = agg_ + diff_;
+        if (!init_) {
+            diff_ = raw;
+            agg_ = raw;
+        } else {
+            diff_ = raw - agg_;
+            agg_ = agg_ + diff_;
+        }
+        init_ = true;
     }
 };
+
+template <typename ElemT, class SumResT> 
+class DSSum {
+  public:
+    DSSum(const std::string &annotation): init_(false) {}
+    bool init_;
+    ElemT value_;
+
+    bool FillResult(SumResT &res) const {
+        if (!init_) return false;
+        res = value_;
+        return true;
+    }
+    void Update(const ElemT& raw) {
+        if (!init_) {
+            value_ = raw;
+        } else {
+            value_ = value_ + raw;
+        }  
+        init_ = true;
+    }
+};
+
+
+template <typename ElemT, class AvgResT> 
+class DSAvg {
+  public:
+    DSAvg(const std::string &annotation): samples_(0) {}
+    uint64_t samples_;
+    ElemT value_;
+
+    bool FillResult(AvgResT &res) const {
+        if (!samples_) return false;
+        res = value_ / samples_ ;
+        return true;
+    }
+    void Update(const ElemT& raw) {
+        if (!samples_) {
+            value_ = raw;
+        } else {
+            value_ = value_ + raw;
+        }
+        samples_++;
+    }
+};
+
 } // namespace sandesh
 } // namespace contrail
 
