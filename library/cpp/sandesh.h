@@ -261,7 +261,7 @@ public:
     virtual int32_t ReadBinary(u_int8_t *buf, u_int32_t buf_len, int *error);
 
     bool IsLoggingAllowed() const;
-    bool IsLoggingDroppedAllowed() const;
+    static bool IsLoggingDroppedAllowed(SandeshType::type);
 
     // Accessors
     static void set_source(std::string &source) { source_ = source; }

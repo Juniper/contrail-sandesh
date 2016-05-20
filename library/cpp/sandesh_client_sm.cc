@@ -495,7 +495,7 @@ struct ClientInit : public sc::state<ClientInit, SandeshClientSMImpl> {
         SM_LOG(DEBUG, state_machine->StateName() << " : " << event.Name() <<
             " : " << snh->Name());
         if (dynamic_cast<SandeshUVE *>(snh)) {
-            if (snh->IsLoggingDroppedAllowed()) {
+            if (Sandesh::IsLoggingDroppedAllowed(snh->type())) {
                 SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " <<
                     snh->ToString());
             }
@@ -668,7 +668,7 @@ void SandeshClientSMImpl::OnIdle(const Ev &event) {
 template <class Ev>
 void SandeshClientSMImpl::ReleaseSandesh(const Ev &event) {
     Sandesh *snh(event.snh);
-    if (snh->IsLoggingDroppedAllowed()) {
+    if (Sandesh::IsLoggingDroppedAllowed(snh->type())) {
         SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " << snh->ToString());
     }
     Sandesh::UpdateTxMsgFailStats(snh->Name(), 0,
