@@ -355,7 +355,7 @@ bool SandeshSession::SendMsg(SandeshElement element) {
     Sandesh *sandesh = element.snh_;
     tbb::mutex::scoped_lock lock(send_mutex_);
     if (!IsEstablished()) {
-        if (sandesh->IsLoggingDroppedAllowed()) {
+        if (Sandesh::IsLoggingDroppedAllowed(sandesh->type())) {
             SANDESH_LOG(ERROR, __func__ << " Not Connected : Dropping Message: " <<
                 sandesh->ToString());
         }

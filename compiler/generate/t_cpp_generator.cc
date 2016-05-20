@@ -1401,17 +1401,22 @@ void t_cpp_generator::generate_sandesh_async_creator_helper(ofstream &out, t_san
     indent_up();
     out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
         "\", 0, SandeshTxDropReason::QueueLevel);" << endl;
-    if (!is_flow) {
-        out << indent() << "std::string drop_reason = \"SANDESH: Queue Drop:"
-            " \";" << endl;
-        out << indent() << "DropLog";
-        if(use_sandesh) {
-            out << "(drop_reason, category, level, snh);" << endl;
-            out << indent() << "snh->Release();" << endl;
-        } else {
-            out << generate_sandesh_async_creator(tsandesh, false, false, false, "",
-                                           "", false, false, true) << "; " << endl;
-        }
+    if (is_flow) {
+        out << indent() << "if (IsLoggingDroppedAllowed(SandeshType::FLOW)) {" << endl;
+        indent_up();
+    }
+    out << indent() << "std::string drop_reason = \"SANDESH: Queue Drop:"
+        " \";" << endl;
+    out << indent() << "DropLog";
+    if (use_sandesh) {
+        out << "(drop_reason, category, level, snh);" << endl;
+        out << indent() << "snh->Release();" << endl;
+    } else {
+        out << generate_sandesh_async_creator(tsandesh, false, false, false, "",
+                                       "", false, false, true) << "; " << endl;
+    }
+    if (is_flow) {
+        scope_down(out);
     }
     out << indent() << "return;" << endl;
     scope_down(out);
@@ -1469,15 +1474,13 @@ void t_cpp_generator::generate_sandesh_async_creators(ofstream &out, t_sandesh *
     generate_sandesh_async_creator_helper(out, tsandesh, false);
 
     // Generate DropLog
-    if (!is_flow) {
-        out << indent() << "static void DropLog" <<
-             generate_sandesh_async_creator(tsandesh, true, false, false, "", "", false, false, true) <<
-             " {" << endl;
-        indent_up();
-        generate_sandesh_logger(out, tsandesh, sandesh_logger::DROP_LOG);
-        indent_down();
-        indent(out) << "}" << endl << endl;
-    }
+    out << indent() << "static void DropLog" <<
+         generate_sandesh_async_creator(tsandesh, true, false, false, "", "", false, false, true) <<
+         " {" << endl;
+    indent_up();
+    generate_sandesh_logger(out, tsandesh, sandesh_logger::DROP_LOG);
+    indent_down();
+    indent(out) << "}" << endl << endl;
 
     // Generate WriteToBuffer
     if (is_system) {
