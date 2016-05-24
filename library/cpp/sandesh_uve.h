@@ -18,6 +18,8 @@
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
 #include <tbb/mutex.h>
+#include <tbb/concurrent_hash_map.h>
+#include <boost/functional/hash.hpp>
 
 class SandeshUVEPerTypeMap;
 
@@ -98,6 +100,11 @@ template<typename T, typename U, int P>
 class SandeshUVEPerTypeMapImpl : public SandeshUVEPerTypeMap {
 public:
 
+    struct HashCompare { 
+        static size_t hash( const std::string& key )                  { return boost::hash_value(key); } 
+        static bool   equal( const std::string& key1, const std::string& key2 ) { return ( key1 == key2 ); } 
+    }; 
+
     struct UVEMapEntry {
         UVEMapEntry(std::string table, uint32_t seqnum):
                 data(table), seqno(seqnum) {
@@ -105,8 +112,12 @@ public:
         U data;
         uint32_t seqno;
     };
-    typedef boost::ptr_map<std::string, UVEMapEntry> uve_type_map;
-    typedef std::map<std::string, uve_type_map> uve_map;
+
+    // The key is the table name
+    typedef boost::ptr_map<std::string, UVEMapEntry> uve_table_map;
+
+    // The key is the UVE-Key
+    typedef tbb::concurrent_hash_map<std::string, uve_table_map, HashCompare > uve_cmap;
 
     SandeshUVEPerTypeMapImpl(char const * u_name) : uve_name_(u_name) {
         SandeshUVETypeMaps::RegisterType(u_name, this, P);
@@ -116,40 +127,50 @@ public:
     // the generator to the collector.
     // It updates the cache.
     bool UpdateUVE(U& data, uint32_t seqnum) {
-        tbb::mutex::scoped_lock lock(uve_mutex_);
         bool send = false;
+        tbb::mutex::scoped_lock lock;
         const std::string &table = data.table_;
         assert(!table.empty());
         const std::string &s = data.get_name();
-        typename uve_map::iterator omapentry = map_.find(table);
-        if (omapentry == map_.end()) {
-            omapentry = map_.insert(std::make_pair(table, uve_type_map())).first;
+       
+        // If we are going to erase, we need a global lock
+        // to coordinate with iterators 
+        // To prevent deadlock, we always acquire global lock
+        // before accessor
+        if (data.get_deleted()) {
+            lock.acquire(uve_mutex_);
         }
-        typename uve_type_map::iterator imapentry =
-            omapentry->second.find(s);
-        if (imapentry == omapentry->second.end()) {
-            std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(data.table_, seqnum));
-            send = T::UpdateUVE(data, ume->data);
-            omapentry->second.insert(s, ume);
-        } else {
-            if (imapentry->second->data.get_deleted()) {
-                omapentry->second.erase(imapentry);
-                std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(
-                    data.table_, seqnum));
-                send = T::UpdateUVE(data, ume->data);
-                omapentry->second.insert(s, ume);
-            } else {
-                send = T::UpdateUVE(data, imapentry->second->data);
-                imapentry->second->seqno = seqnum;
+        typename uve_cmap::accessor a;
+
+        // Ensure that the entry exists, and we have an accessor to it
+        while (true) {
+            if (cmap_.find(a, s)) break;
+            else {
+                if (cmap_.insert(a, s)) break;
             }
         }
+
+        typename uve_table_map::iterator imapentry = a->second.find(table); 
+        if (imapentry == a->second.end()) {
+            std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(data.table_, seqnum));
+            send = T::UpdateUVE(data, ume->data);
+            imapentry = a->second.insert(table, ume).first;
+        } else {
+            send = T::UpdateUVE(data, imapentry->second->data);
+            imapentry->second->seqno = seqnum;
+        }
+        if (data.get_deleted()) {
+            a->second.erase(imapentry);
+            if (a->second.empty()) cmap_.erase(a);
+            lock.release();
+        }
+        
         return send;
     }
 
     // This function can be used by the Sandesh Session state machine
     // to get the seq num of the last message sent for this SandeshUVE type
     uint32_t TypeSeq(void) {
-        tbb::mutex::scoped_lock lock(uve_mutex_);
         return T::lseqnum();
     }
 
@@ -157,19 +178,20 @@ public:
             SandeshUVE::SendType st,
             const uint32_t seqno,
             const std::string &ctx) const {
+        // Global lock is needed for iterator
         tbb::mutex::scoped_lock lock(uve_mutex_);
         uint32_t count = 0;
-
-        for (typename uve_map::const_iterator oit = map_.begin();
-             oit != map_.end(); oit++) {
-            if (!table.empty() && oit->first != table)
-                continue;
-            // Send all entries that are newer than the given sequence number
-            for (typename uve_type_map::const_iterator uit =
-                 oit->second.begin(); uit != oit->second.end(); uit++) {
+        (const_cast<SandeshUVEPerTypeMapImpl<T,U,P> *>(this))->cmap_.rehash();
+        for (typename uve_cmap::const_iterator git = cmap_.begin();
+                git != cmap_.end(); git++) {
+            typename uve_cmap::const_accessor a;
+            if (!cmap_.find(a, git->first)) continue;
+            for (typename uve_table_map::const_iterator uit = a->second.begin();
+                    uit != a->second.end(); uit++) {
+                if (!table.empty() && uit->first != table) continue;
                 if ((seqno < uit->second->seqno) || (seqno == 0)) {
                     if (ctx.empty()) {
-                        SANDESH_LOG(DEBUG, __func__ << " Syncing " <<
+                        SANDESH_LOG(INFO, __func__ << " Syncing " << uit->first << 
                                     " val " << uit->second->data.log() <<
                                     " seq " << uit->second->seqno);
                     }
@@ -184,28 +206,24 @@ public:
 
     bool SendUVE(const std::string& table, const std::string& name,
                  const std::string& ctx) const {
-        tbb::mutex::scoped_lock lock(uve_mutex_);
-
-        for (typename uve_map::const_iterator oit = map_.begin();
-             oit != map_.end(); oit++) {
-            if (!table.empty() && oit->first != table)
-                continue;
-            typename uve_type_map::const_iterator uve_entry =
-                oit->second.find(name);
-            if (uve_entry != oit->second.end()) {
-           
+        bool sent = false;
+        typename uve_cmap::const_accessor a;
+        if (cmap_.find(a, name)) {
+            for (typename uve_table_map::const_iterator uve_entry = a->second.begin();
+                    uve_entry != a->second.end(); uve_entry++) {
+                if (!table.empty() && uve_entry->first != table) continue;
+                sent = true;
                 T::Send(uve_entry->second->data,
                     (ctx.empty() ? SandeshUVE::ST_INTROSPECT : SandeshUVE::ST_SYNC),
                     uve_entry->second->seqno, ctx);
-                return true;
             }
         }
-        return false;
+        return sent;
     }
 
 private:
 
-    uve_map map_;
+    uve_cmap cmap_;
     const std::string uve_name_;
     mutable tbb::mutex uve_mutex_;
 };
