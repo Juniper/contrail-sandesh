@@ -1373,6 +1373,17 @@ void t_cpp_generator::generate_sandesh_async_creator_helper(ofstream &out, t_san
         out << indent() << "return;" << endl;
         scope_down(out);
     }
+    if (is_flow) {
+        out << indent() <<
+            "if (IsFlowLoggingEnabled() && LoggingUseSyslog()) {" << endl;
+        indent_up();
+        out << indent() << "std::string drop_reason;" << endl;
+        out << indent() << "DropLog" <<
+            generate_sandesh_async_creator(tsandesh, false,
+                false, false, "", "", false, false, true) << ";" << endl;
+        out << indent() << "return;" << endl;
+        scope_down(out);
+    }
     out << indent() << "if (level >= SendingLevel()) {" << endl;
     indent_up();
     out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
@@ -1380,9 +1391,11 @@ void t_cpp_generator::generate_sandesh_async_creator_helper(ofstream &out, t_san
     if (is_flow) {
         out << indent() << "if (IsLoggingDroppedAllowed(SandeshType::FLOW)) {" << endl;
         indent_up();
+        out << indent() << "std::string drop_reason;" << endl;
+    } else {
+        out << indent() << "std::string drop_reason = \"SANDESH: Queue Drop:"
+            " \";" << endl;
     }
-    out << indent() << "std::string drop_reason = \"SANDESH: Queue Drop:"
-        " \";" << endl;
     out << indent() << "DropLog";
     if (use_sandesh) {
         out << "(drop_reason, category, level, snh);" << endl;
@@ -3717,6 +3730,7 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
                                               t_sandesh* tsandesh,
                                               sandesh_logger::type ltype,
 					      bool use_sandesh) {
+    bool is_flow = ((t_base_type *)tsandesh->get_type())->is_sandesh_flow();
     switch (ltype) {
     case sandesh_logger::BUFFER:
         indent(out) << "std::string " << tsandesh->get_name() <<
@@ -3754,7 +3768,11 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
             if (ltype == sandesh_logger::DROP_LOG) {
                 category_str = "category";
                 level_str = "level";
-                logger_level_str = "SandeshLevel::SYS_ERR";
+                if (is_flow) {
+                    logger_level_str = level_str;
+                } else {
+                    logger_level_str = "SandeshLevel::SYS_ERR";
+                }
             } else {
                 category_str = "category()";
                 level_str = "level()";
