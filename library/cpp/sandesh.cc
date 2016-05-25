@@ -471,9 +471,13 @@ void Sandesh::DisableFlowCollection(bool disable) {
 
 bool Sandesh::Enqueue(SandeshQueue *queue) {
     if (!queue) {
-        if (IsLoggingDroppedAllowed(type())) {
-            SANDESH_LOG(ERROR, __func__ << ": SandeshQueue NULL : Dropping Message: "
-                << ToString());
+        if (IsLoggingDroppedAllowed(type_)) {
+            if (type_ == SandeshType::FLOW) {
+                Log();
+            } else {
+                SANDESH_LOG(ERROR, __func__ << ": SandeshQueue NULL : "
+                    "Dropping Message: " << ToString());
+            }
         }
         UpdateTxMsgFailStats(name_, 0, SandeshTxDropReason::NoQueue);
         Release();
@@ -595,9 +599,13 @@ int32_t Sandesh::ReceiveBinaryMsg(u_int8_t *buf, u_int32_t buf_len,
 
 bool Sandesh::SendEnqueue() {
     if (!client_) {
-        if (IsLoggingDroppedAllowed(type())) {
+        if (IsLoggingDroppedAllowed(type_)) {
             if (IsConnectToCollectorEnabled()) {
-                SANDESH_LOG(ERROR, "SANDESH: No client: " << ToString());
+                if (type_ == SandeshType::FLOW) {
+                    Log();
+                } else {
+                    SANDESH_LOG(ERROR, "SANDESH: No client: " << ToString());
+                }
             } else {
                 Log();
             }
@@ -607,8 +615,12 @@ bool Sandesh::SendEnqueue() {
         return false;        
     } 
     if (!client_->SendSandesh(this)) {
-        if (IsLoggingDroppedAllowed(type())) {
-            SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " << ToString());
+        if (IsLoggingDroppedAllowed(type_)) {
+            if (type_ == SandeshType::FLOW) {
+                Log();
+            } else {
+                SANDESH_LOG(ERROR, "SANDESH: Send FAILED: " << ToString());
+            }
         }
         UpdateTxMsgFailStats(name_, 0,
             SandeshTxDropReason::ClientSendFailed);
