@@ -1373,6 +1373,17 @@ void t_cpp_generator::generate_sandesh_async_creator_helper(ofstream &out, t_san
         out << indent() << "return;" << endl;
         scope_down(out);
     }
+    if (is_flow) {
+        out << indent() <<
+            "if (IsFlowLoggingEnabled() && LoggingUseSyslog()) {" << endl;
+        indent_up();
+        out << indent() << "std::string drop_reason;" << endl;
+        out << indent() << "DropLog" <<
+            generate_sandesh_async_creator(tsandesh, false,
+                false, false, "", "", false, false, true) << ";" << endl;
+        out << indent() << "return;" << endl;
+        scope_down(out);
+    }
     out << indent() << "if (level >= SendingLevel()) {" << endl;
     indent_up();
     out << indent() << "UpdateTxMsgFailStats(\"" << tsandesh->get_name() <<
@@ -3717,6 +3728,7 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
                                               t_sandesh* tsandesh,
                                               sandesh_logger::type ltype,
 					      bool use_sandesh) {
+    bool is_flow = ((t_base_type *)tsandesh->get_type())->is_sandesh_flow();
     switch (ltype) {
     case sandesh_logger::BUFFER:
         indent(out) << "std::string " << tsandesh->get_name() <<
@@ -3765,6 +3777,14 @@ void t_cpp_generator::generate_sandesh_logger(ofstream& out,
                 ltype == sandesh_logger::DROP_LOG) {
                 out << indent() <<
                     "log4cplus::Logger Xlogger = Sandesh::logger();" << endl;
+                if (is_flow) {
+                    out << indent() << "SandeshLevel::type Xlevel(" << logger_level_str << ");" << endl;
+                    logger_level_str = "Xlevel";
+                    out << indent() << "if (IsFlowLoggingEnabled() && LoggingUseSyslog()) {" << endl;
+                    indent_up();
+                    out << indent() << "Xlevel = " << level_str << ";" << endl;
+                    scope_down(out);
+                }
                 out << indent() << "log4cplus::LogLevel Xlog4level(" <<
                     "SandeshLevelTolog4Level(" << logger_level_str << "));" << endl;
                 if (ltype != sandesh_logger::FORCED_LOG) {
