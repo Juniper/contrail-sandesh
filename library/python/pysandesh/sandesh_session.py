@@ -252,6 +252,7 @@ class SandeshSendQueue(WorkQueue):
 
     def increment_queue_size(self, element):
         self._qsize += element.size
+        return self._qsize
     # end increment_queue_size
 
     def decrement_queue_size(self, element):
