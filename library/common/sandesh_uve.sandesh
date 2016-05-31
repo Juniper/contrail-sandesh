@@ -81,6 +81,7 @@ struct SandeshMessageTypeStats {
 struct SandeshQueueStats {
     1: u64 enqueues;
     2: u64 count;
+    3: u64 max_count;
 }
 
 struct SandeshGeneratorStats {
@@ -236,6 +237,7 @@ struct ModuleClientState {
     7: optional SandeshSessionStats        session_stats
     8: optional io.SocketIOStats           session_rx_socket_stats
     9: optional io.SocketIOStats           session_tx_socket_stats
+    14: optional u64                       max_sm_queue_count
 }
 
 uve sandesh SandeshModuleClientTrace {
