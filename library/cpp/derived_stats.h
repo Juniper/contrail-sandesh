@@ -19,48 +19,62 @@
 #include <boost/function.hpp>
 #include <base/time_util.h>
 
+template <typename T>
+class SandeshStructDeleteTrait;
+
 namespace contrail {
 namespace sandesh {
 
 template<template<class,class> class DSTT, typename ElemT, typename ResultT>
 void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
         std::map<std::string, boost::shared_ptr<DSTT<ElemT,ResultT> > > & dsm,
-        std::string annotation, bool periodic) {
+        std::string annotation) {
 
     std::map<std::string, bool> srcmap;
     typename std::map<std::string, ElemT>::const_iterator rit;
 
+    // If the new map is empty, clear all DS objects
+    if (raw.empty()) {
+        dsm.clear();
+        return;
+    }
+
     for(rit=raw.begin(); rit!= raw.end(); rit++) {
         srcmap[rit->first] = false;
     }
-    // For all cache entries that are staying, do an update
+
+    // Go through all existing DS object
     typename std::map<std::string,
             boost::shared_ptr<DSTT<
             ElemT,ResultT> > >::iterator dt = dsm.begin();
     while (dt != dsm.end()) {
-        std::map<std::string, bool>::iterator st =
-            srcmap.find(dt->first);
-        if (st != srcmap.end()) {
-            // This cache entry IS in the new vector
-            st->second = true;
-            dt->second->Update((raw.find(st->first))->second);
-            ++dt;
+        rit = raw.find(dt->first);
+        if (rit != raw.end()) {
+            // we have information about this element
+            srcmap[rit->first] = true;
+            if (SandeshStructDeleteTrait<ElemT>::get(rit->second)) {
+                // raw element is requesting deletion
+                typename std::map<std::string,
+                        boost::shared_ptr<DSTT<
+                        ElemT,ResultT> > >::iterator et = dt;
+                dt++;
+                dsm.erase(et);
+            } else {
+                dt->second->Update(rit->second);
+                ++dt;
+            }
         } else {
-            // This cache entry IS NOT in the new vector
-            typename std::map<std::string,
-                    boost::shared_ptr<DSTT<
-                    ElemT,ResultT> > >::iterator et = dt;
-            dt++;
-            // For peridoic stats, un-updated cache entries
-            // will get removed during flush
-            if (!periodic) dsm.erase(et);
+            // We have no information about this element
+            ++dt;
         }
     }
 
-    // Now add all new entries
+    // Now add all new entries that are not requesting deletion
     std::map<std::string, bool>::iterator mt;
     for (mt = srcmap.begin(); mt != srcmap.end(); mt++) {
-        if (mt->second == false) {
+        rit = raw.find(mt->first);
+        if ((mt->second == false) &&
+                (!SandeshStructDeleteTrait<ElemT>::get(rit->second))) {
             dsm[mt->first] = boost::make_shared<DSTT<ElemT,ResultT> >(annotation);
             dsm[mt->first]->Update((raw.find(mt->first))->second);
         }
@@ -123,7 +137,7 @@ class DerivedStatsIf {
         if (!dsm_) {
             dsm_ = boost::make_shared<result_map>();
         }
-        DerivedStatsMerge<DSTT,ElemT,ResultT>(raw, *dsm_, annotation_, false);
+        DerivedStatsMerge<DSTT,ElemT,ResultT>(raw, *dsm_, annotation_);
     }
 };
 
@@ -163,7 +177,7 @@ class DerivedStatsPeriodicIf {
         if (!dsm_) {
             dsm_ = boost::make_shared<result_map >();
         }
-        DerivedStatsMerge<DSTT,ElemT,SubResultT>(raw, *dsm_, annotation_, true);
+        DerivedStatsMerge<DSTT,ElemT,SubResultT>(raw, *dsm_, annotation_);
     }
 
     bool Flush(const ResultT &res) {

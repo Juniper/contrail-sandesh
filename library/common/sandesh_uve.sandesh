@@ -12,14 +12,14 @@ include "io/io.sandesh"
 include "sandesh/library/common/derived_stats_results.sandesh"
 
 struct SandeshMessageStats {
-    1: u64 messages_sent;
-    2: u64 bytes_sent;
-    3: u64 messages_received;
-    4: u64 bytes_received;
-    5: u64 messages_sent_dropped;
-    6: u64 bytes_sent_dropped;
-    7: u64 messages_received_dropped;
-    8: u64 bytes_received_dropped;
+    1: optional u64 messages_sent;
+    2: optional u64 bytes_sent;
+    3: optional u64 messages_received;
+    4: optional u64 bytes_received;
+    5: optional u64 messages_sent_dropped;
+    6: optional u64 bytes_sent_dropped;
+    7: optional u64 messages_received_dropped;
+    8: optional u64 bytes_received_dropped;
     // Send
     // Messages
     51: optional u64 messages_sent_dropped_no_queue;
@@ -241,9 +241,9 @@ struct ModuleClientState {
     9: optional io.SocketIOStats           session_tx_socket_stats
 
     10: optional map<string, SandeshMessageStats> msg_type_agg (hidden="yes")
-    11: optional map<string, SandeshMessageStats> msg_type_diff (stats="msg_type_agg:DSDiff:")
+    11: optional map<string, SandeshMessageStats> msg_type_diff (mstats="msg_type_agg:DSDiff:", tags=".__key")
 
-    12: optional list<derived_stats_results.CategoryResultSubElem> tx_msg_agg (hidden="yes")
+    12: optional derived_stats_results.CategoryResult tx_msg_agg
     13: optional derived_stats_results.CategoryResult tx_msg_agg_diff (stats="tx_msg_agg:DSCategoryCount:", tags="")
     14: optional u64                       max_sm_queue_count
 }
