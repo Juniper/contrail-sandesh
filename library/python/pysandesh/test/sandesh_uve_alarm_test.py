@@ -236,7 +236,8 @@ class SandeshUVEAlarmTest(unittest.TestCase):
             operand2=json.dumps('null'))
         match1 = AlarmMatch(json_operand1_value=json.dumps('null'))
         condition_match = AlarmConditionMatch(condition, [match1])
-        uve_alarm_info.rules = [AlarmRuleMatch(rule=[condition_match])]
+        and_list = AlarmAndList(and_list=[condition_match])
+        uve_alarm_info.alarm_rules = [AlarmRules(or_list=[and_list])]
         uve_alarm_info.ack = False
         uve_alarm_info.timestamp = UTCTimestampUsec()
         uve_alarm_info.severity = 1

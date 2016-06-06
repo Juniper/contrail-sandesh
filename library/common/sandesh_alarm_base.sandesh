@@ -74,6 +74,14 @@ struct AlarmRuleMatch {
     1: list<AlarmConditionMatch> rule
 }
 
+struct AlarmAndList {
+    1: list<AlarmConditionMatch> and_list
+}
+
+struct AlarmRules {
+    1: list<AlarmAndList> or_list
+}
+
 /**
  * AlarmElement is used to explain why an Alarm was raised.
  * It contains:
@@ -97,10 +105,11 @@ struct AlarmElement {
 struct AllOf {
     1: list <AlarmElement> all_of
 }
+
 /**
  * UVEAlarmInfo is used to report any Alarm
  * It contains:
- *     - Alarm Tyoe
+ *     - Alarm Type
  *     - A description of why the alarm was raised.
  *       This corresponds to an OR of ANDs of the 
  *       AlarmElements of individual AlarmTemplates
@@ -114,6 +123,7 @@ struct UVEAlarmInfo {
     /** "any_of" is deprecated */
     8: optional list<AllOf> any_of
     9: list<AlarmRuleMatch> rules
+   10: AlarmRules alarm_rules
     3: bool ack
     4: u64 timestamp
     5: byte severity
