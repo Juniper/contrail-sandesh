@@ -84,18 +84,24 @@ class DSEWM {
     double alpha_;
     double mean_;
     double variance_;
+    double sigma_;
+    double stddev_;
     uint64_t samples_;
 
     bool FillResult(EWMResT &res) const {
         res.set_samples(samples_);
         res.set_mean(mean_);
-        res.set_stddev(sqrt(variance_));
+        res.set_stddev(stddev_);
+        res.set_sigma(sigma_);
         return true;
     }
     void Update(const ElemT& raw) {
         samples_++;
         variance_ = (1-alpha_)*(variance_ + (alpha_*pow(raw-mean_,2)));
         mean_ = ((1-alpha_)*mean_) + (alpha_*raw);
+        stddev_ = sqrt(variance_);
+        if (stddev_) sigma_ = (raw - mean_) / stddev_;
+        else sigma_ = 0;
     }
 };
 

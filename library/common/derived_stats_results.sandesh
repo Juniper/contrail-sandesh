@@ -17,6 +17,7 @@ struct EWMResult {
     3: u64 samples 
     6: double mean
     7: double stddev
+    8: double sigma
 }
 
 struct PercentileResult {

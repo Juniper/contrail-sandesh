@@ -481,7 +481,7 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectCollectorInfo\">uve2</name>");
                 EXPECT_STREQ(mm["ewm_y"].c_str(),
-"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSEWM:0.2\"><EWMResult><samples type=\"u64\" identifier=\"3\">1</samples><mean type=\"double\" identifier=\"6\">0.2</mean><stddev type=\"double\" identifier=\"7\">0.4</stddev></EWMResult></ewm_y>");
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSEWM:0.2\"><EWMResult><samples type=\"u64\" identifier=\"3\">1</samples><mean type=\"double\" identifier=\"6\">0.2</mean><stddev type=\"double\" identifier=\"7\">0.4</stddev><sigma type=\"double\" identifier=\"8\">2</sigma></EWMResult></ewm_y>");
                 break;
             }
             case 3:
@@ -494,7 +494,7 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name>");
                 EXPECT_STREQ(mm["ewm_y"].c_str(),
-"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSEWM:0.2\"><EWMResult><samples type=\"u64\" identifier=\"3\">1</samples><mean type=\"double\" identifier=\"6\">2.2</mean><stddev type=\"double\" identifier=\"7\">4.4</stddev></EWMResult></ewm_y>");
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSEWM:0.2\"><EWMResult><samples type=\"u64\" identifier=\"3\">1</samples><mean type=\"double\" identifier=\"6\">2.2</mean><stddev type=\"double\" identifier=\"7\">4.4</stddev><sigma type=\"double\" identifier=\"8\">2</sigma></EWMResult></ewm_y>");
                 break;
             }
             case 4:
