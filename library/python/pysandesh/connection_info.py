@@ -22,6 +22,7 @@ class ConnectionState(object):
     _status_cb = None
     _uve_type_cls = None
     _uve_data_type_cls = None
+    _table = None
 
     @staticmethod
     def _send_uve():
@@ -39,14 +40,16 @@ class ConnectionState(object):
         uve_data = ConnectionState._uve_data_type_cls(
             name = ConnectionState._hostname,
             process_status = [process_status])
-        uve = ConnectionState._uve_type_cls(data = uve_data,
+        uve = ConnectionState._uve_type_cls(
+                table = ConnectionState._table,
+                data = uve_data,
                 sandesh = ConnectionState._sandesh)
         uve.send(sandesh = ConnectionState._sandesh)
     #end _send_uve
 
     @staticmethod
     def init(sandesh, hostname, module_id, instance_id, status_cb,
-             uve_type_cls, uve_data_type_cls):
+             uve_type_cls, uve_data_type_cls, table = None):
         ConnectionState._sandesh = sandesh
         ConnectionState._hostname = hostname
         ConnectionState._module_id = module_id
@@ -54,6 +57,7 @@ class ConnectionState(object):
         ConnectionState._status_cb = status_cb
         ConnectionState._uve_type_cls = uve_type_cls
         ConnectionState._uve_data_type_cls = uve_data_type_cls
+        ConnectionState._table = table
     #end init
 
     @staticmethod
