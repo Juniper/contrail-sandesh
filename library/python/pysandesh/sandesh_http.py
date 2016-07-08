@@ -227,14 +227,12 @@ class SandeshHttp(object):
                 return
             for importer, mod, ispkg in \
                 pkgutil.walk_packages(path=pkg_path, prefix=imp_pkg.__name__+'.'):
-                if ispkg:
-                    sub_pkg = mod
-                else:
+                if not ispkg:
                     if 'http_request' == mod.rsplit('.', 1)[-1]:
-                        self._add_http_request_links(pkg_path[0], sub_pkg, mod)
+                        self._add_http_request_links(pkg_path[0], mod)
     #end _extract_http_requests
 
-    def _add_http_request_links(self, pkg_path, sub_pkg, mod):
+    def _add_http_request_links(self, pkg_path, mod):
         try:
             http_module = importlib.import_module(mod)
         except ImportError:
@@ -247,8 +245,9 @@ class SandeshHttp(object):
             else:
                 # Add the link to the homepage, only if the request list is non-empty
                 if len(http_req_list):
-                    link = sub_pkg.rsplit('.', 1)[-1]+'.xml'
-                    sub_path = sub_pkg.split('.', 1)[-1].replace('.', '/')
+                    pkg = mod.rsplit('.', 1)[0]
+                    link = pkg.rsplit('.', 1)[-1]+'.xml'
+                    sub_path = pkg.split('.', 1)[-1].replace('.', '/')
                     path = pkg_path + '/' + sub_path
                     self._logger.debug('Add [%s:%s] to home page' % (link, path))
                     # TODO: Check for the existence of the html file
