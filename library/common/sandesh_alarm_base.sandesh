@@ -128,6 +128,7 @@ struct UVEAlarmInfo {
     4: u64 timestamp
     5: byte severity
     6: string token
+   11: string description
 }
 
 struct UVEAlarmConfig {
