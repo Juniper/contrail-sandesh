@@ -189,8 +189,8 @@ class DerivedStatsPeriodicIf {
             return ds_cache_;
         }
         ds_cache_ = boost::make_shared<ResultT>();
-        if (ds_->FillResult(ds_cache_->previous)) {
-            ds_cache_->__isset.previous = true;
+        if (ds_->FillResult(ds_cache_->value)) {
+            ds_cache_->__isset.value = true;
         } else ds_cache_.reset();
 
         // Clear the DerivedStat
@@ -205,14 +205,14 @@ class DerivedStatsPeriodicIf {
         isset = false;
         if (ds_cache_) {
             // Fill in previous information
-            res.previous = ds_cache_->previous;
-            res.__isset.previous = true;
+            res.value = ds_cache_->value;
+            res.__isset.value = true;
             isset = true;
         }
         if (ds_) {
             // Fill in current information
-            if (ds_->FillResult(res.current)) {
-                res.__isset.current = true;
+            if (ds_->FillResult(res.staging)) {
+                res.__isset.staging = true;
                 isset = true;
             }
         }
@@ -230,8 +230,8 @@ class DerivedStatsPeriodicIf {
         for (typename result_map::const_iterator dit = dsm_->begin();
                 dit != dsm_->end(); dit++) {
             ResultT res;
-            if (dit->second->FillResult(res.previous)) {
-                res.__isset.previous = true;
+            if (dit->second->FillResult(res.value)) {
+                res.__isset.value = true;
                 dsm_cache_->insert(std::make_pair(dit->first, res));
             }
         }
@@ -251,8 +251,8 @@ class DerivedStatsPeriodicIf {
             for (typename std::map<std::string,ResultT>::const_iterator dit = dsm_cache_->begin();
                     dit != dsm_cache_->end(); dit++) {
                 ResultT res;
-                res.previous = dit->second.previous;
-                res.__isset.previous = true;
+                res.value = dit->second.value;
+                res.__isset.value = true;
                 mres.insert(std::make_pair(dit->first, res));
             }
         }
@@ -264,13 +264,13 @@ class DerivedStatsPeriodicIf {
                 typename std::map<std::string, ResultT>::iterator wit =
                         mres.find(dit->first);
                 if (wit != mres.end()) {
-                    if (dit->second->FillResult(wit->second.current)) {
-                        wit->second.__isset.current = true;
+                    if (dit->second->FillResult(wit->second.staging)) {
+                        wit->second.__isset.staging = true;
                     }
                 } else {
                     ResultT res;
-                    if (dit->second->FillResult(res.current)) {
-                        res.__isset.current = true;
+                    if (dit->second->FillResult(res.staging)) {
+                        res.__isset.staging = true;
                         mres.insert(std::make_pair(dit->first, res));
                     }
                 }

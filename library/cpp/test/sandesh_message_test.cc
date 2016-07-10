@@ -739,11 +739,11 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
                 EXPECT_STREQ(mm["null_x"].c_str(),
-"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSSum:\"><int_P_><previous type=\"i32\" identifier=\"2\">197</previous></int_P_></null_x>");
+"<null_x type=\"struct\" identifier=\"4\" stats=\"x:DSSum:\"><int_P_><value type=\"i32\" identifier=\"2\">197</value></int_P_></null_x>");
                 EXPECT_STREQ(mm["sum_tsm"].c_str(),
-"<sum_tsm type=\"map\" identifier=\"6\" mstats=\"tsm:DSSum:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><int_P_><previous type=\"i32\" identifier=\"2\">17</previous></int_P_><element>j3</element><int_P_><previous type=\"i32\" identifier=\"2\">27</previous></int_P_></map></sum_tsm>");
+"<sum_tsm type=\"map\" identifier=\"6\" mstats=\"tsm:DSSum:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><int_P_><value type=\"i32\" identifier=\"2\">17</value></int_P_><element>j3</element><int_P_><value type=\"i32\" identifier=\"2\">27</value></int_P_></map></sum_tsm>");
                 EXPECT_STREQ(mm["avg_x"].c_str(),
-"<avg_x type=\"struct\" identifier=\"7\" stats=\"x:DSAvg:3\"><int_P_><previous type=\"i32\" identifier=\"2\">98</previous></int_P_></avg_x>");
+"<avg_x type=\"struct\" identifier=\"7\" stats=\"x:DSAvg:3\"><int_P_><value type=\"i32\" identifier=\"2\">98</value></int_P_></avg_x>");
                 break;
             }
             case 25:
@@ -754,13 +754,13 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
                 EXPECT_STREQ(mm["avg_x"].c_str(),
-"<avg_x type=\"struct\" identifier=\"7\" stats=\"x:DSAvg:3\"><int_P_><current type=\"i32\" identifier=\"1\">94</current><previous type=\"i32\" identifier=\"2\">98</previous></int_P_></avg_x>");
+"<avg_x type=\"struct\" identifier=\"7\" stats=\"x:DSAvg:3\"><int_P_><staging type=\"i32\" identifier=\"1\">94</staging><value type=\"i32\" identifier=\"2\">98</value></int_P_></avg_x>");
                 EXPECT_STREQ(mm["x"].c_str(),
 "<x type=\"i32\" identifier=\"3\" hidden=\"yes\">97</x>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"5\"><map key=\"string\" value=\"i32\" size=\"2\"><element>j2</element><element>17</element><element>j3</element><element>27</element></map></tsm>");
                 EXPECT_STREQ(mm["sum_tsm"].c_str(),
-"<sum_tsm type=\"map\" identifier=\"6\" mstats=\"tsm:DSSum:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><int_P_><previous type=\"i32\" identifier=\"2\">17</previous></int_P_><element>j3</element><int_P_><previous type=\"i32\" identifier=\"2\">27</previous></int_P_></map></sum_tsm>");
+"<sum_tsm type=\"map\" identifier=\"6\" mstats=\"tsm:DSSum:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><int_P_><value type=\"i32\" identifier=\"2\">17</value></int_P_><element>j3</element><int_P_><value type=\"i32\" identifier=\"2\">27</value></int_P_></map></sum_tsm>");
                 break;
             }
             default:

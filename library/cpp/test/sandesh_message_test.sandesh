@@ -69,8 +69,8 @@ struct TestAggStruct {
 }
 
 struct int_P_ {
-    1: optional i32 current
-    2: optional i32 previous
+    1: optional i32 staging
+    2: optional i32 value
 }
 
 struct SandeshUVEData {
