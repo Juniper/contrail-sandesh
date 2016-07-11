@@ -633,30 +633,29 @@ void t_doc_generator::generate_stat_schema_suffixes(string prefix, t_field* tfie
         string fname = it->first;
         string datatype = get_type_of_member(fname, tfield, cstruct, tstruct);
         if (boost::starts_with(fname, ".")) {
-            fname = tfield->get_name().c_str() + fname;
+            fname = tfield->get_name() + fname;
         }
         if (!prefix.empty()) {
             fname = prefix + "." + fname;
         }
-        string index = "\"true\"";
-        string suffix = "[";
+        string index = "true";
+        string suffix;
         vector<string>::iterator name_it;
         for (name_it = it->second.begin(); name_it!=it->second.end(); ++name_it) {
-            string suffix_name = tfield->get_name().c_str() + *name_it;
+            string suffix_name = tfield->get_name() + *name_it;
             if (boost::starts_with(suffix_name, ".")) {
-                suffix_name = tfield->get_name().c_str() + suffix_name;
+                suffix_name = tfield->get_name() + suffix_name;
             }
             if (!prefix.empty()) {
                 suffix_name = prefix + "." + suffix_name;
             }
             if(name_it == it->second.begin()) {
-                suffix = suffix + "'" + suffix_name + "\'";
+                suffix = suffix + "\"" + suffix_name + "\"";
             } else {
-                suffix = suffix + ", '" + suffix_name + "\'";
+                suffix = suffix + ", \"" + suffix_name + "\"";
             }
         }
-        suffix += "]";
-        f_stats_tables_ << ",\n\t{\"name\":\"" << fname << "\",\"datatype\":\"" << datatype << "\",\"index\": " << index << ",\"suffixes\":\"" << suffix << "\"}";
+        f_stats_tables_ << ",\n\t{\"name\":\"" << fname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << ",\"suffixes\":[" << suffix << "]}";
     }
 }
 
@@ -666,7 +665,7 @@ void t_doc_generator::is_indexed_or_suffixed_field(string fname, vector<string> 
         string trimmed_tag = tag;
         boost::trim(trimmed_tag);
         if (trimmed_tag == field_name) {
-            index = "\"true\"";
+            index = "true";
             break;
         } else if (boost::starts_with(trimmed_tag, field_name)) {
             is_suffixed_field = true;
@@ -684,7 +683,7 @@ void t_doc_generator::generate_stat_schema_struct_members(string prefix, t_field
     }
     bool is_empty_tag = tags.empty();
     for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
-        string index = "\"false\"";
+        string index = "false";
         bool is_suffixed_field = false;
         is_indexed_or_suffixed_field((*m_iter)->get_name(), tags, index, is_suffixed_field);
         if (is_suffixed_field) {
@@ -723,22 +722,22 @@ void t_doc_generator::generate_stat_schema_map(string sname, t_type* keytype, t_
     extract_tags(tfield, suffixes, top_level_tags, member_tags);
     string name = tfield->get_name().c_str() + string(".__key");
     string datatype = get_datatype_from_tfield(keytype);
-    string index = "\"false\"";
+    string index = "false";
     bool is_suffixed_field = false;
     is_indexed_or_suffixed_field(string("__key"), member_tags, index, is_suffixed_field);
     if (!is_suffixed_field) {
-        f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\": " << index << "},\n";
+        f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "},\n";
     }
     if(valtype->is_base_type()) {
         name = tfield->get_name().c_str() + string(".__value");
         datatype = get_datatype_from_tfield(valtype);
-        index = "\"false\"";
+        index = "false";
         BOOST_FOREACH(const string &f, member_tags) {
             if (f == string(".__value")) {
-                index = "\"true\"";
+                index = "true";
             }
         }
-        f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\": " << index << "}";
+        f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
     }
 
     string empty_prefix;
@@ -763,10 +762,10 @@ void t_doc_generator::generate_stat_schema_struct_base_member(string name, t_fie
     }
     string datatype = get_datatype_from_tfield(tfield->get_type());
     if(!first_member) {
-        f_stats_tables_ << ",\n\t{\"name\":\"" << fname << "\",\"datatype\":\"" << datatype << "\",\"index\": " << index << "}";
+        f_stats_tables_ << ",\n\t{\"name\":\"" << fname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
     } else {
         first_member = false;
-        f_stats_tables_ << "\t{\"name\":\"" << fname << "\",\"datatype\":\"" << datatype << "\",\"index\": " << index << "}";
+        f_stats_tables_ << "\t{\"name\":\"" << fname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
     }
 }
 
