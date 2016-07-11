@@ -244,6 +244,7 @@ struct ModuleClientState {
     11: optional map<string, SandeshMessageStats> msg_type_diff (mstats="msg_type_agg:DSDiff:", tags=".__key")
 
     12: optional derived_stats_results.CategoryResult tx_msg_agg
+    /** @display_name:Sandesh Client Message Stats*/
     13: optional derived_stats_results.CategoryResult tx_msg_agg_diff (stats="tx_msg_agg:DSCategoryCount:", tags="")
     14: optional u64                       max_sm_queue_count
 }
