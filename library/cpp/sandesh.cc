@@ -259,7 +259,10 @@ bool Sandesh::InitGenerator(const std::string &module,
                             const std::string &instance_id,
                             EventManager *evm,
                             unsigned short http_port,
-                            SandeshContext *client_context) {
+                            SandeshContext *client_context, 
+                            std::map<std::string,
+                                std::map<std::string,std::string> > ds) {
+    assert(SandeshUVETypeMaps::InitDerivedStats(ds));
     return Initialize(SandeshRole::Generator, module, source, node_type,
                       instance_id, evm, http_port, client_context);
 }
@@ -272,7 +275,10 @@ bool Sandesh::InitGenerator(const std::string &module,
                             unsigned short http_port,
                             CollectorSubFn csf,
                             const std::vector<std::string> &collectors,
-                            SandeshContext *client_context) {
+                            SandeshContext *client_context,
+                            std::map<std::string,
+                                std::map<std::string,std::string> > ds) {
+    assert(SandeshUVETypeMaps::InitDerivedStats(ds));
     bool success(Initialize(SandeshRole::Generator, module, source, node_type,
                             instance_id, evm, http_port, client_context));
     if (!success) {

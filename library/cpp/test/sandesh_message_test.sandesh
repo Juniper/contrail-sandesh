@@ -78,10 +78,14 @@ struct SandeshUVEData {
     2: optional bool deleted
     3: optional map<string,TestAggStruct> z
     4: optional map<string,TestAggStruct> diff_z (mstats="z:DSDiff:")
+    5: optional TestAggStruct fz
     7: optional i32 y
     8: optional map<string,i32> tsm
     9: optional map<string,derived_stats_results.NullResult> null_tsm (mstats="tsm:DSNull:")
    10: optional derived_stats_results.EWMResult ewm_y (stats="y:DSEWM:0.2")
+   11: optional derived_stats_results.NullResult null_fz (stats="fz.count:DSNull:")
+   12: optional map<string,derived_stats_results.NullResult> nullm_zc (mstats="z.count:DSNull:")
+   13: optional derived_stats_results.EWMResult ewmd_y (stats="y:DSEWM:0.2")
 }
 
 uve sandesh SandeshUVETest {
