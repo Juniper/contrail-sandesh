@@ -20,6 +20,26 @@ using std::map;
 SandeshUVETypeMaps::uve_global_map* SandeshUVETypeMaps::map_ = NULL;
 int PullSandeshUVE = 0;
 
+
+bool 
+SandeshUVETypeMaps::InitDerivedStats(
+        const std::map<std::string, ds_conf_elem> &dsmap) {
+    bool success = true;
+    // For all (per UVE Struct) elements of the DerivedStats config,
+    // call the InitDerivedStats functions on that UVE Struct's Cache
+    for (map<string, ds_conf_elem>::const_iterator cit = dsmap.begin();
+            cit != dsmap.end(); cit++) {
+        uve_global_map::iterator it = map_->find(cit->first);
+        if (it==map_->end()) {
+            success = false;
+        } else {
+            if (!(it->second.second)->InitDerivedStats(cit->second))
+                success = false;
+        }
+    }
+    return success;
+}
+
 void
 SandeshUVETypeMaps::SyncAllMaps(const map<string,uint32_t> & inpMap, bool periodic) {
     static uint64_t periodic_count = 0;
@@ -66,10 +86,28 @@ SandeshUVETypesReq::HandleRequest() const {
         sti.set_type_name(it->first);
         sti.set_seq_num(it->second.second->TypeSeq());
         sti.set_period(it->second.first);
+        sti.set_dsconf(it->second.second->GetDSConf());
         stv.push_back(sti);
     }
     SandeshUVETypesResp *sur = new SandeshUVETypesResp();
     sur->set_type_info(stv);
+    sur->set_context(context());
+    sur->Response();
+}
+void
+SandeshUVEDSConfReq::HandleRequest() const {
+    const SandeshUVETypeMaps::uve_global_elem um =
+        SandeshUVETypeMaps::TypeMap(get_tname());
+    
+    map<string,string> dsconf;
+    bool success = false;
+    if (um.second) {
+        dsconf.insert(std::make_pair(get_dsattr(), get_dsconf()));
+        success = um.second->InitDerivedStats(dsconf); 
+    }
+    SandeshUVEDSConfResp *sur = new SandeshUVEDSConfResp();
+    sur->set_success(success);
+    if (success) sur->set_dsconf(um.second->GetDSConf());
     sur->set_context(context());
     sur->Response();
 }
@@ -90,7 +128,7 @@ SandeshUVECacheReq::HandleRequest() const {
 
     SandeshUVECacheResp *sur = new SandeshUVECacheResp();
     sur->set_returned(returned);
-    sur->set_period(um.first);
+    if (um.second) sur->set_period(um.first);
     sur->set_context(context());
     sur->Response();
 }

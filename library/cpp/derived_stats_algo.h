@@ -14,7 +14,10 @@
 #include <iostream>
 #include <cstdlib>
 #include <cmath>
+#include <sstream>
 #include <sandesh/derived_stats_results_types.h>
+#include <boost/assign/list_of.hpp>
+#include <boost/scoped_ptr.hpp>
 
 using std::vector;
 using std::map;
@@ -71,25 +74,136 @@ class DSCategoryCount<CategoryResult,CategoryResult> {
     }
 };
 
-
-template <typename ElemT, class EWMResT>
-class DSEWM {
+// Interface for all Anomaly Detection algorithms
+// That can be plugged into the DSAnomaly DerivedStat
+template <typename ElemT>
+class DSAnomalyIf {
   public:
-    DSEWM(const std::string &annotation):
-                mean_(0), variance_(0), samples_(0)  { 
+    virtual bool FillResult(AnomalyResult& res) const = 0;
+    virtual void Update(const ElemT& raw) = 0;
+};
+
+// Implementation of Exponential Weighted Mean
+// algorithm for Anomaly Detection
+template <typename ElemT>
+class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
+  public:
+    DSAnomalyEWM (const std::string &annotation, 
+            std::string &errstr) :
+                mean_(0), variance_(0), sigma_(0), stddev_(0) {
         alpha_ = (double) strtod(annotation.c_str(), NULL);
-        assert(alpha_ > 0);
-        assert(alpha_ < 1);
+        if ((alpha_ <= 0) || (alpha_ > 1)) {
+            errstr = std::string("Invalid alpha ") + annotation;
+            alpha_ = 0;
+        }
     }
     double alpha_;
     double mean_;
     double variance_;
     double sigma_;
     double stddev_;
+    
+    virtual bool FillResult(AnomalyResult& res) const {
+        assert(alpha_ != 0);
+        std::ostringstream meanstr, stddevstr;
+        meanstr << mean_;
+        stddevstr << stddev_;
+
+        res.set_sigma(sigma_);
+        res.set_state(boost::assign::map_list_of(
+            std::string("mean"), meanstr.str())(
+            std::string("stddev"), stddevstr.str()));
+        return true;
+    }
+
+    virtual void Update(const ElemT& raw) {
+        assert(alpha_ != 0);
+        variance_ = (1-alpha_)*(variance_ + (alpha_*pow(raw-mean_,2)));
+        mean_ = ((1-alpha_)*mean_) + (alpha_*raw);
+        stddev_ = sqrt(variance_);
+        if (stddev_) sigma_ = (raw - mean_) / stddev_;
+        else sigma_ = 0;
+    }
+};
+
+template <typename ElemT, class AnomalyResT>
+class DSAnomaly {
+  public:
+    DSAnomaly(const std::string &annotation):
+            samples_(0) {
+        size_t rpos = annotation.find(':');
+        algo_ = annotation.substr(0,rpos);
+        config_ = annotation.substr(rpos+1, string::npos);
+        if (algo_.compare("EWM") == 0) {
+            impl_.reset(new DSAnomalyEWM<ElemT>(config_, error_));
+            if (!error_.empty()) {
+                impl_.reset();
+            }
+            return;
+        }
+        // No valid Anomaly Detection algorithm was found
+        impl_.reset(NULL);
+    }
+
+    bool FillResult(AnomalyResT &res) const {
+        bool ret = true;
+        if (impl_) {
+            ret = impl_->FillResult(res);
+            // We should have cleared impl_ if there was a parsing error
+            // with the DSAnomaly config
+            assert(error_.empty());
+        }
+        if (ret) {
+            res.set_samples(samples_);
+            res.set_algo(algo_);
+            res.set_config(config_);
+            if (!error_.empty()) res.set_error(error_);
+        }
+        return ret;
+    }
+
+    void Update(const ElemT& raw) {
+        samples_++;
+        if (impl_) impl_->Update(raw);
+    }
+
     uint64_t samples_;
+    std::string algo_;
+    std::string config_;
+    std::string error_;
+    boost::scoped_ptr<DSAnomalyIf<ElemT> > impl_;
+};
+
+template <typename ElemT, class EWMResT>
+class DSEWM {
+  public:
+    DSEWM(const std::string &annotation):
+                mean_(0), variance_(0), samples_(0) {
+        alpha_ = (double) strtod(annotation.c_str(), NULL);
+        if (alpha_ == 0) {
+            error_ = std::string("Disabled");
+            return;
+        }
+        if ((alpha_ < 0) || (alpha_ > 1)) {
+            error_ = std::string("Invalid alpha ") + annotation;
+            alpha_ = 0;
+        }
+    }
+
+    double alpha_;
+    double mean_;
+    double variance_;
+    double sigma_;
+    double stddev_;
+    uint64_t samples_;
+    std::string error_;
 
     bool FillResult(EWMResT &res) const {
-        res.set_samples(samples_);
+	res.set_samples(samples_);
+        if (!error_.empty()) {
+            res.set_error(error_);
+            return true;
+        }
         res.set_mean(mean_);
         res.set_stddev(stddev_);
         res.set_sigma(sigma_);
@@ -97,6 +211,7 @@ class DSEWM {
     }
     void Update(const ElemT& raw) {
         samples_++;
+        if (!error_.empty()) return;
         variance_ = (1-alpha_)*(variance_ + (alpha_*pow(raw-mean_,2)));
         mean_ = ((1-alpha_)*mean_) + (alpha_*raw);
         stddev_ = sqrt(variance_);
