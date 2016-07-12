@@ -33,6 +33,7 @@ class SandeshUVETypeMaps {
 public:
     typedef std::pair<int, SandeshUVEPerTypeMap *> uve_global_elem;
     typedef std::map<std::string, uve_global_elem> uve_global_map;
+    typedef std::map<std::string, std::string> ds_conf_elem;
 
     static void RegisterType(const std::string &s, SandeshUVEPerTypeMap *tmap,
             int period) {
@@ -48,6 +49,8 @@ public:
     }
     static void SyncAllMaps(const std::map<std::string,uint32_t> &,
         bool periodic = false);
+    static bool InitDerivedStats(
+        const std::map<std::string, ds_conf_elem> &);
     static void SyncIntrospect(std::string tname, std::string table, std::string key);
 
     static uve_global_map::const_iterator Begin() { return GetMap()->begin(); }
@@ -71,9 +74,12 @@ public:
     virtual ~SandeshUVEPerTypeMap() { }
     virtual uint32_t TypeSeq() = 0;
     virtual uint32_t SyncUVE(const std::string &table, SandeshUVE::SendType st,
-             const uint32_t seqno, const std::string &ctx) const = 0;
+            const uint32_t seqno, const std::string &ctx) const = 0;
+    virtual bool InitDerivedStats(
+            const std::map<std::string,std::string> & dsconf) = 0;
     virtual bool SendUVE(const std::string& table, const std::string& name,
             const std::string& ctx) const = 0;
+    virtual std::map<std::string, std::string> GetDSConf(void) const = 0;
 };
 
 
@@ -119,7 +125,8 @@ public:
     // The key is the UVE-Key
     typedef tbb::concurrent_hash_map<std::string, uve_table_map, HashCompare > uve_cmap;
 
-    SandeshUVEPerTypeMapImpl(char const * u_name) : uve_name_(u_name) {
+    SandeshUVEPerTypeMapImpl(char const * u_name) : uve_name_(u_name),
+            dsconf_(T::_DSConf()) {
         SandeshUVETypeMaps::RegisterType(u_name, this, P);
     }
 
@@ -133,12 +140,16 @@ public:
         assert(!table.empty());
         const std::string &s = data.get_name();
        
+        // pickup DS Config
+        lock.acquire(uve_mutex_);
+        std::map<string,string> dsconf = dsconf_;
+
         // If we are going to erase, we need a global lock
         // to coordinate with iterators 
         // To prevent deadlock, we always acquire global lock
         // before accessor
-        if (data.get_deleted()) {
-            lock.acquire(uve_mutex_);
+        if (!data.get_deleted()) {
+            lock.release();
         }
         typename uve_cmap::accessor a;
 
@@ -153,6 +164,7 @@ public:
         typename uve_table_map::iterator imapentry = a->second.find(table); 
         if (imapentry == a->second.end()) {
             std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(data.table_, seqnum));
+            T::_InitDerivedStats(ume->data, dsconf);
             send = T::UpdateUVE(data, ume->data);
             imapentry = a->second.insert(table, ume).first;
         } else {
@@ -172,6 +184,50 @@ public:
     // to get the seq num of the last message sent for this SandeshUVE type
     uint32_t TypeSeq(void) {
         return T::lseqnum();
+    }
+   
+    bool InitDerivedStats(const std::map<std::string,std::string> & dsconf) {
+
+        // Global lock is needed for iterator
+        tbb::mutex::scoped_lock lock(uve_mutex_);
+
+        // Copy the existing configuration
+        // We will be replacing elements in it.
+        std::map<std::string,std::string> dsnew = dsconf_;
+        
+        bool failure = false;
+        for (map<std::string,std::string>::const_iterator n_iter = dsconf.begin();
+                n_iter != dsconf.end(); n_iter++) {
+            if (dsnew.find(n_iter->first) != dsnew.end()) {
+                SANDESH_LOG(INFO, __func__ << " Overide DSConf for " <<
+                    n_iter->first << " , " << dsnew[n_iter->first] <<
+                    " with " << n_iter->second);
+                dsnew[n_iter->first] = n_iter->second;
+            } else {
+                SANDESH_LOG(INFO, __func__ << " Cannot find DSConf for " <<
+                    n_iter->first << " , " << n_iter->second);
+                failure = true;
+            }
+        }
+        
+        if (failure) return false;
+
+        // Copy the new conf into the old one if there we no errors
+        dsconf_ = dsnew;
+
+        (const_cast<SandeshUVEPerTypeMapImpl<T,U,P> *>(this))->cmap_.rehash();
+        for (typename uve_cmap::iterator git = cmap_.begin();
+                git != cmap_.end(); git++) {
+            typename uve_cmap::accessor a;
+            if (!cmap_.find(a, git->first)) continue;
+            for (typename uve_table_map::iterator uit = a->second.begin();
+                    uit != a->second.end(); uit++) {
+                SANDESH_LOG(INFO, __func__ << " Reset Derived Stats for " <<
+                    git->first);
+                T::_InitDerivedStats(uit->second->data, dsconf_);
+            }
+        }
+        return true;
     }
 
     uint32_t SyncUVE(const std::string &table,
@@ -220,11 +276,16 @@ public:
         }
         return sent;
     }
+    
+    std::map<std::string, std::string> GetDSConf(void) const {
+        return dsconf_;
+    }
 
 private:
 
     uve_cmap cmap_;
     const std::string uve_name_;
+    std::map<std::string, std::string> dsconf_;
     mutable tbb::mutex uve_mutex_;
 };
 #endif

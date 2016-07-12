@@ -76,20 +76,32 @@ template <typename ElemT, class EWMResT>
 class DSEWM {
   public:
     DSEWM(const std::string &annotation):
-                mean_(0), variance_(0), samples_(0)  { 
+                mean_(0), variance_(0), samples_(0) {
         alpha_ = (double) strtod(annotation.c_str(), NULL);
-        assert(alpha_ > 0);
-        assert(alpha_ < 1);
+        if (alpha_ == 0) {
+            error_ = std::string("Disabled");
+            return;
+        }
+        if ((alpha_ < 0) || (alpha_ > 1)) {
+            error_ = std::string("Invalid alpha ") + annotation;
+            alpha_ = 0;
+        }
     }
+
     double alpha_;
     double mean_;
     double variance_;
     double sigma_;
     double stddev_;
     uint64_t samples_;
+    std::string error_;
 
     bool FillResult(EWMResT &res) const {
-        res.set_samples(samples_);
+	res.set_samples(samples_);
+        if (!error_.empty()) {
+            res.set_error(error_);
+            return true;
+        }
         res.set_mean(mean_);
         res.set_stddev(stddev_);
         res.set_sigma(sigma_);
@@ -97,6 +109,7 @@ class DSEWM {
     }
     void Update(const ElemT& raw) {
         samples_++;
+        if (!error_.empty()) return;
         variance_ = (1-alpha_)*(variance_ + (alpha_*pow(raw-mean_,2)));
         mean_ = ((1-alpha_)*mean_) + (alpha_*raw);
         stddev_ = sqrt(variance_);

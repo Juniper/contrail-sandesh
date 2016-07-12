@@ -15,9 +15,10 @@ struct NullResult {
 
 struct EWMResult {
     3: u64 samples 
-    6: double mean
-    7: double stddev
-    8: double sigma
+    4: optional string error
+    6: optional double mean
+    7: optional double stddev
+    8: optional double sigma
 }
 
 struct PercentileResult {
