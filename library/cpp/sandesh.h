@@ -153,14 +153,18 @@ public:
             unsigned short http_port,
             CollectorSubFn csf,
             const std::vector<std::string> &collectors,
-            SandeshContext *client_context = NULL);
+            SandeshContext *client_context = NULL,
+            std::map<std::string, std::map<std::string,std::string> > ds = 
+                std::map<std::string, std::map<std::string,std::string> >());
     static bool InitGenerator(const std::string &module,
             const std::string &source, 
             const std::string &node_type,
             const std::string &instance_id,
             EventManager *evm,
             unsigned short http_port,
-            SandeshContext *client_context = NULL);
+            SandeshContext *client_context = NULL,
+            std::map<std::string, std::map<std::string,std::string> > ds = 
+                std::map<std::string, std::map<std::string,std::string> >());
     static void RecordPort(const std::string& name, const std::string& module,
             unsigned short port);
     // Collector
