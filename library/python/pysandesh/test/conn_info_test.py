@@ -19,7 +19,7 @@ from pysandesh.gen_py.process_info.constants import ConnectionTypeNames, \
 from pysandesh.gen_py.process_info.ttypes import ConnectionInfo, \
     ProcessStatus, ProcessState, ConnectionType, ConnectionStatus
 from pysandesh.connection_info import ConnectionState
-from gen_py.connection_info_test.ttypes import NodeStatusTestUVE, NodeStatusTest
+from gen_py.nodeinfo.ttypes import NodeStatusUVE, NodeStatus
 from pysandesh.sandesh_base import Sandesh
 
 class ConnInfoTest(unittest.TestCase):
@@ -68,8 +68,8 @@ class ConnInfoTest(unittest.TestCase):
         ConnectionState.init(sandesh = self._sandesh, hostname = "TestHost",
             module_id = "TestModule", instance_id = "0",
             status_cb = self._check_process_status_cb,
-            uve_type_cls = NodeStatusTestUVE,
-            uve_data_type_cls = NodeStatusTest)
+            uve_type_cls = NodeStatusUVE,
+            uve_data_type_cls = NodeStatus)
         vcinfos = []
         self._update_conn_info("Test1", ConnectionStatus.UP, "Test1 UP",
             vcinfos)
