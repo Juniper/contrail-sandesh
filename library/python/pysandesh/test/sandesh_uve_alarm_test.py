@@ -168,7 +168,19 @@ class SandeshUVEAlarmTest(unittest.TestCase):
             print uve_data.__dict__
             expected_data.extend([{'seqnum': uve['seqnum'], 'data': uve_data}])
 
+        # verify the result
+        args_list = self.sandesh._client.send_uve_sandesh.call_args_list
+        args_len = len(args_list)
+        self.assertEqual(len(expected_data), len(args_list),
+                         'args_list: %s' % str(args_list))
+        for i in range(len(expected_data)):
+            self.verify_uve_alarm_sandesh(args_list[i][0][0],
+                seqnum=expected_data[i]['seqnum'],
+                sandesh_type=SandeshType.UVE,
+                data=expected_data[i]['data'])
+
         # sync UVEs
+        expected_data = []
         self.sandesh._uve_type_maps.sync_all_uve_types({}, self.sandesh)
 
         sync_uve_data = [
@@ -218,14 +230,38 @@ class SandeshUVEAlarmTest(unittest.TestCase):
             expected_data.extend([{'seqnum': uve['seqnum'], 'data': uve_data}])
 
         # verify the result
-        args_list = self.sandesh._client.send_uve_sandesh.call_args_list
+        args_list = self.sandesh._client.send_uve_sandesh.call_args_list[args_len:]
+        args_sandesh_list = [args[0][0] for args in args_list]
+        args_dlist = [{'source': sandesh._source,
+                       'node_type': sandesh._node_type,
+                       'module': sandesh._module,
+                       'instance_id': sandesh._instance_id,
+                       'hints': (SANDESH_KEY_HINT & sandesh._hints),
+                       'seqnum': sandesh._seqnum,
+                       'type': sandesh._type,
+                       'data': sandesh.data} for sandesh in args_sandesh_list]
+        expected_source = socket.gethostname()
+        expected_node_type = 'Test'
+        expected_module = 'sandesh_uve_alarm_test'
+        expected_instance_id = '0'
+        expected_hints = SANDESH_KEY_HINT
+        expected_sandesh_type = SandeshType.UVE
+        expected_dlist = [{'source': expected_source,
+                           'node_type': expected_node_type,
+                           'module': expected_module,
+                           'instance_id': expected_instance_id,
+                           'hints': expected_hints,
+                           'seqnum': einfo['seqnum'],
+                           'type': expected_sandesh_type,
+                           'data': einfo['data']} for einfo in expected_data]
         self.assertEqual(len(expected_data), len(args_list),
                          'args_list: %s' % str(args_list))
-        for i in range(len(expected_data)):
-            self.verify_uve_alarm_sandesh(args_list[i][0][0],
-                seqnum=expected_data[i]['seqnum'],
-                sandesh_type=SandeshType.UVE,
-                data=expected_data[i]['data'])
+        self.assertEqual(len(expected_dlist), len(args_dlist),
+                         'args_dlist: %s' % str(args_dlist))
+        for expected_dict in expected_dlist:
+            self.assertTrue(expected_dict in args_dlist)
+        for args_dict in args_dlist:
+            self.assertTrue(args_dict in expected_dlist)
     # end test_sandesh_uve
 
     def _create_uve_alarm_info(self):
