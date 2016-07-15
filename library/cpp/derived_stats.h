@@ -28,10 +28,11 @@ namespace sandesh {
 template<template<class,class> class DSTT, typename ElemT, typename ResultT>
 void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
         std::map<std::string, boost::shared_ptr<DSTT<ElemT,ResultT> > > & dsm,
-        std::string annotation) {
+        std::string annotation, const std::map<std::string, bool> &del) {
 
     std::map<std::string, bool> srcmap;
     typename std::map<std::string, ElemT>::const_iterator rit;
+    std::map<std::string, bool>::const_iterator dlt;
 
     // If the new map is empty, clear all DS objects
     if (raw.empty()) {
@@ -49,10 +50,12 @@ void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
             ElemT,ResultT> > >::iterator dt = dsm.begin();
     while (dt != dsm.end()) {
         rit = raw.find(dt->first);
+        dlt = del.find(dt->first);
         if (rit != raw.end()) {
+            assert(dlt!=del.end());
             // we have information about this element
             srcmap[rit->first] = true;
-            if (SandeshStructDeleteTrait<ElemT>::get(rit->second)) {
+            if (dlt->second) {
                 // raw element is requesting deletion
                 typename std::map<std::string,
                         boost::shared_ptr<DSTT<
@@ -73,8 +76,8 @@ void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
     std::map<std::string, bool>::iterator mt;
     for (mt = srcmap.begin(); mt != srcmap.end(); mt++) {
         rit = raw.find(mt->first);
-        if ((mt->second == false) &&
-                (!SandeshStructDeleteTrait<ElemT>::get(rit->second))) {
+        dlt = del.find(mt->first);
+        if ((mt->second == false) && (!dlt->second)) {
             dsm[mt->first] = boost::make_shared<DSTT<ElemT,ResultT> >(annotation);
             dsm[mt->first]->Update((raw.find(mt->first))->second);
         }
@@ -133,11 +136,11 @@ class DerivedStatsIf {
         ds_->Update(raw);
     }
     
-    void Update(const std::map<std::string, ElemT> & raw) {
+    void Update(const std::map<std::string, ElemT> & raw, const std::map<std::string, bool> &del) {
         if (!dsm_) {
             dsm_ = boost::make_shared<result_map>();
         }
-        DerivedStatsMerge<DSTT,ElemT,ResultT>(raw, *dsm_, annotation_);
+        DerivedStatsMerge<DSTT,ElemT,ResultT>(raw, *dsm_, annotation_, del);
     }
 };
 
@@ -173,11 +176,11 @@ class DerivedStatsPeriodicIf {
         ds_->Update(raw);
     }
 
-    void Update(const std::map<std::string, ElemT> & raw) {
+    void Update(const std::map<std::string, ElemT> & raw, const std::map<std::string, bool> &del) {
         if (!dsm_) {
             dsm_ = boost::make_shared<result_map >();
         }
-        DerivedStatsMerge<DSTT,ElemT,SubResultT>(raw, *dsm_, annotation_);
+        DerivedStatsMerge<DSTT,ElemT,SubResultT>(raw, *dsm_, annotation_, del);
     }
 
     bool Flush(const ResultT &res) {

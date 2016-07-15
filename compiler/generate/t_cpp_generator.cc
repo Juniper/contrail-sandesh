@@ -152,9 +152,24 @@ void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, b
   void generate_sandesh_static_rate_limit_log_def(ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_static_rate_limit_mutex_def(ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_static_rate_limit_buffer_def(ofstream& out, t_sandesh* tsandesh);
+  struct DSInfo {
+    DSInfo(bool is_map, string rawtype, string resulttype, string algo, string annotation,
+          string comptype = string(""), string compattr = string("")) :
+        is_map_(is_map), rawtype_(rawtype), resulttype_(resulttype), algo_(algo),
+        annotation_(annotation), comptype_(comptype), compattr_(compattr) {    
+      assert( (comptype.empty() && compattr.empty()) ||
+              (!comptype.empty() && !compattr.empty()) );
+    }
+    bool is_map_;
+    string rawtype_;
+    string resulttype_;
+    string algo_;
+    string annotation_;
+    string comptype_;
+    string compattr_;
+  };
   void derived_stats_info(t_struct* tstruct,
-    // val is rawtype,resulttype,algo,annotation
-    map<string,tuple<string,string,string,string> >& dsmap,
+    map<string,DSInfo>& dsmap,
     // val is set of ds attributes
     map<string,set<string> >& rawmap);
 
@@ -525,7 +540,10 @@ void t_cpp_generator::init_generator() {
     "#include <sandesh/sandesh_uve.h>" << endl <<
     "#include <sandesh/sandesh_http.h>" << endl <<
     "#include <sandesh/sandesh_trace.h>" << endl <<
-    "#include <curl/curl.h>" << endl << endl;
+    "#include <curl/curl.h>" << endl << 
+    "#include <boost/foreach.hpp>" << endl << 
+    "#include <boost/assign/list_of.hpp>" << endl <<
+    "#include <boost/make_shared.hpp>" << endl << endl;
 #endif
   f_types_impl_ <<
     "#include \"" << get_include_prefix(*get_program()) << program_name_ <<
@@ -2031,6 +2049,10 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
         vector<t_field*>::const_iterator f_iter = fields.begin();
         assert((*f_iter)->get_name() == "data");
         string dtype = type_name((*f_iter)->get_type());
+        out << indent() <<
+            "static std::map<std::string, std::string> _DSConf(void);" << endl;
+        out << indent() << "static void _InitDerivedStats(" <<  dtype <<
+            " & _data, const map<string,string> & _dsconf);" << endl;
         out << indent() << "static bool UpdateUVE(" <<  dtype <<
             " & _data, " << dtype <<
             " & tdata);" << endl;
@@ -2207,8 +2229,8 @@ void t_cpp_generator::cache_attr_info(t_struct* tstruct,
 
 
 void t_cpp_generator::derived_stats_info(t_struct* tstruct,
-    // val is rawtype,resulttype,algo,annotation
-    map<string,tuple<string,string,string,string> >& dsmap,
+    // val is rawtype,resulttype,algo,annotation,comptype,compattr
+    map<string,DSInfo> & dsmap,
     // val is set of ds attributes
     map<string,set<string> >& rawmap) {
   const vector<t_field*>& members = tstruct->get_members();
@@ -2240,34 +2262,62 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
       const string &tstr = ((jt == (*m_iter)->annotations_.end()) ?
               mt->second : jt->second);
       size_t pos = tstr.find(':');
-      string rawattr = tstr.substr(0,pos);
 
       string residual = tstr.substr(pos+1, string::npos);
       size_t rpos = residual.find(':');
       string algo = residual.substr(0,rpos);
       string anno = residual.substr(rpos+1, string::npos);
 
+      string rawfullattr = tstr.substr(0,pos);
+      size_t cpos = rawfullattr.find('.');
+      string rawattr;
+      string compattr("");
+
+      // Does the raw attribute have a composite underneath it?
+      if (cpos != string::npos) {
+        rawattr = rawfullattr.substr(0,cpos);
+        compattr = rawfullattr.substr(cpos+1, string::npos);
+      } else {
+        rawattr = rawfullattr;
+      }
+         
       string rawtype;
+      string comptype("");
       vector<t_field*>::const_iterator s_iter;
       for (s_iter = members.begin(); s_iter != members.end(); ++s_iter) {
-        if (rawattr.compare((*s_iter)->get_name())==0) {
+	if (rawattr.compare((*s_iter)->get_name())==0) {
           t_type* ratype = get_true_type((*s_iter)->get_type());
+          t_type* vtype = ratype;
           if (is_ds_map) {
             assert(ratype->is_map());
-            t_type* vtype = ((t_map*)ratype)->get_val_type();
-            rawtype = type_name(get_true_type(vtype));
-          } else {
-            rawtype = type_name(get_true_type((*s_iter)->get_type()));
+            vtype = ((t_map*)ratype)->get_val_type();
           }
-          break;
-        }
+          rawtype = type_name(vtype);
+          if (!compattr.empty()) {
+            // The raw attribute is a composite.
+            // Find info for the composite attribute.
+            assert(vtype->is_struct());
+            comptype = rawtype;
+            rawtype = string("");
+            
+            const vector<t_field*>& cmembers = ((t_struct*)vtype)->get_members();
+            vector<t_field*>::const_iterator c_iter;
+            for (c_iter = cmembers.begin(); c_iter != cmembers.end(); ++c_iter) {
+              if (compattr.compare((*c_iter)->get_name())==0) {
+                t_type* catype = get_true_type((*c_iter)->get_type());
+                rawtype = type_name(catype);
+                break;
+              }
+            }
+          }
+	  break;
+	}
       }
-      if (rawtype.empty()) {
-        rawtype = rawattr;
-      }
+      assert(!rawtype.empty());
+      DSInfo dsi(is_ds_map, rawtype, restype, algo, anno, comptype, compattr);
+
       // map of derived stats
-      dsmap.insert(make_pair((*m_iter)->get_name(),
-        make_tuple(rawtype, restype, algo, anno)));
+      dsmap.insert(make_pair((*m_iter)->get_name(), dsi));
 
       // map of raw attributes
       map<string,set<string> >::iterator r_iter = rawmap.find(rawattr);
@@ -2377,10 +2427,10 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   std::map<string, CacheAttribute> cache_attrs;
   cache_attr_info(tstruct, cache_attrs);
 
-  map<string,tuple<string,string,string,string> > dsinfo;
+  map<string,DSInfo> dsinfo;
   map<string,set<string> > rawmap;
   derived_stats_info(tstruct, dsinfo, rawmap);
-  map<string,tuple<string,string,string,string> >::iterator ds_iter;
+  map<string,DSInfo >::iterator ds_iter;
 #endif
 
   if (!pointers) {
@@ -2445,26 +2495,6 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
     }
 
 #ifdef SANDESH
-    for (ds_iter = dsinfo.begin(); ds_iter != dsinfo.end(); ++ds_iter) {
-
-      CacheAttribute cat = (cache_attrs.find(ds_iter->first))->second;
-    
-      if (cat == PERIODIC) {
-        out << ", __dsobj_" << ds_iter->first << 
-          "(new ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" <<
-          ds_iter->second.get<2>() << ", " << 
-          ds_iter->second.get<0>() << ", " <<
-          ds_iter->second.get<1>().substr(0, ds_iter->second.get<1>().size() - 3) << ", " <<
-          ds_iter->second.get<1>() << ">(\"" << ds_iter->second.get<3>() << "\"))";
-      } else {
-
-        out << ", __dsobj_" << ds_iter->first << 
-          "(new ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" <<
-          ds_iter->second.get<2>() << ", " <<
-          ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
-          ">(\"" << ds_iter->second.get<3>() << "\"))";
-      }
-    }
     if (is_table) {
       out << ", table_(__tbl)";
     }
@@ -2508,17 +2538,18 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   for (ds_iter = dsinfo.begin(); ds_iter != dsinfo.end(); ++ds_iter) {
     CacheAttribute cat = (cache_attrs.find(ds_iter->first))->second;
   
+    // val is rawtype,resulttype,algo,annotation,comptype,compattr
     if (cat == PERIODIC) {
       indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" << 
-        ds_iter->second.get<2>() << ", " << 
-        ds_iter->second.get<0>() << ", " <<
-        ds_iter->second.get<1>().substr(0, ds_iter->second.get<1>().size() - 3) << ", " <<
-        ds_iter->second.get<1>() <<
+        ds_iter->second.algo_ << ", " << 
+        ds_iter->second.rawtype_ << ", " <<
+        ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
+        ds_iter->second.resulttype_ << 
         "> > __dsobj_" << ds_iter->first << ";" << endl;
     } else {
       indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" << 
-        ds_iter->second.get<2>() << ", " <<
-        ds_iter->second.get<0>() << ", " << ds_iter->second.get<1>() <<
+        ds_iter->second.algo_ << ", " <<
+        ds_iter->second.rawtype_ << ", " << ds_iter->second.resulttype_ <<
         "> > __dsobj_" << ds_iter->first << ";" << endl;
     }
 
@@ -3511,7 +3542,7 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
 
   t_struct* ts = (t_struct*)t;
 
-  map<string,tuple<string,string,string,string> > dsinfo;
+  map<string,DSInfo> dsinfo;
   map<string,set<string> > rawmap;
   derived_stats_info(ts, dsinfo, rawmap);
 
@@ -3581,6 +3612,66 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
   indent(out) <<  "else return true;" << endl;
   indent_down();
   indent(out) <<  "}" << endl << endl;
+ 
+  indent(out) << "std::map<std::string, std::string> " << tsandesh->get_name() <<
+    "::_DSConf(void) {" << endl;
+  indent_up();
+
+  bool is_dsconf = false;
+  for (map<string,DSInfo>::const_iterator ds_iter = dsinfo.begin();
+       ds_iter != dsinfo.end(); ++ds_iter) {
+    if (!is_dsconf) 
+      indent(out) << "std::map<std::string, std::string> _dsconf = " <<
+        "boost::assign::map_list_of" << endl;
+    indent(out) << "(\"" << ds_iter->first << "\", \"" <<
+      ds_iter->second.annotation_ << "\")" << endl;
+    is_dsconf = true;
+  }
+  if (is_dsconf) indent(out) << ";" << endl;
+  else indent(out) << "std::map<std::string, std::string> _dsconf;" << endl;
+  
+  indent(out) << "return _dsconf;" << endl;
+  indent_down();
+  indent(out) <<  "}" << endl << endl;  
+ 
+  indent(out) << "void " << tsandesh->get_name() << 
+    "::_InitDerivedStats(" << dtype << 
+    " & _data, const map<string,string> & _dsconf) {" << endl;
+  indent_up();
+  
+  for (map<string,DSInfo>::const_iterator ds_iter = dsinfo.begin();
+       ds_iter != dsinfo.end(); ++ds_iter) {
+
+    indent(out) << "{" << endl;
+    indent_up();
+    indent(out) << "map<string,string>::const_iterator _dci = _dsconf.find(\"" <<
+      ds_iter->first << "\");" << endl;
+    indent(out) << "assert(_dci != _dsconf.end());" << endl;
+
+    CacheAttribute cat = (cache_attrs.find(ds_iter->first))->second;
+    // val is rawtype,resulttype,algo,annotation,comptype,compattr
+    
+    indent(out) << "_data.__dsobj_" << ds_iter->first << ".reset();" << endl;
+     
+    if (cat == PERIODIC) {
+      indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
+        " ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" <<
+	ds_iter->second.algo_ << ", " << 
+	ds_iter->second.rawtype_ << ", " <<
+	ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
+	ds_iter->second.resulttype_ << "> >(_dci->second);" << endl;
+    } else {
+      indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
+        " ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" <<
+	ds_iter->second.algo_ << ", " <<
+	ds_iter->second.rawtype_ << ", " << ds_iter->second.resulttype_ <<
+	"> >(_dci->second);" << endl;
+    }
+    indent_down();
+    indent(out) << "}" << endl;         
+  }
+  indent_down();
+  indent(out) << "}" << endl << endl;
 
   indent(out) << "bool " << tsandesh->get_name() << 
     "::UpdateUVE(" <<  dtype <<
@@ -3618,11 +3709,53 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
       map<string,set<string> >::const_iterator r_iter = rawmap.find(snm);
       // Update all derivied stats of this raw attribute
       if (r_iter != rawmap.end()) {
+        t_type* ratype = (*s_iter)->get_type();
+        if (ratype->is_map()) {
+            t_type* vtype = ((t_map*)ratype)->get_val_type();
+            indent(out) << "typedef " << type_name((*s_iter)->get_type()) << 
+              " _T_" << snm << ";" << endl;
+            indent(out) << "std::map<string,bool> _delmap_" << snm
+              << ";" << endl;
+            indent(out) << "BOOST_FOREACH(const _T_" << snm <<
+              "::value_type& _tp, _data.get_" << snm << "())" << endl;
+            indent(out) << "  _delmap_" << snm <<
+              ".insert(make_pair(_tp.first, SandeshStructDeleteTrait<" <<
+              type_name(vtype) << ">::get(_tp.second)));" << endl; 
+        }
         set<string>::const_iterator d_iter;
         for (d_iter = r_iter->second.begin(); d_iter != r_iter->second.end(); ++d_iter) {
           CacheAttribute dat = (cache_attrs.find(*d_iter))->second;
-          indent(out) << "tdata.__dsobj_" << *d_iter << "->Update(_data.get_" <<
-            snm << "());" << endl;
+          map<string,DSInfo>::const_iterator c_iter = dsinfo.find(*d_iter);
+          
+          if (c_iter->second.compattr_.empty()) {
+            if (!c_iter->second.is_map_) {
+              indent(out) << "tdata.__dsobj_" << *d_iter <<
+                "->Update(_data.get_" << snm << "());" << endl;
+            } else {
+              indent(out) << "tdata.__dsobj_" << *d_iter <<
+                "->Update(_data.get_" << snm << "(), _delmap_" << 
+                snm << ");" << endl;
+            }
+          } else {
+            if (!c_iter->second.is_map_) {
+              indent(out) << "tdata.__dsobj_" << *d_iter << "->Update(_data.get_" <<
+                snm << "().get_" << c_iter->second.compattr_ << "());" << endl;
+            } else {
+              indent(out) << "std::map<string," << c_iter->second.rawtype_ << "> temp_" << 
+                *d_iter << ";" << endl;
+              indent(out) << "BOOST_FOREACH(const _T_" << snm <<
+                "::value_type& _tp, _data.get_" << snm << "()) {" << endl;
+              indent_up();
+              indent(out) << "temp_" << *d_iter <<
+                ".insert(make_pair(_tp.first, _tp.second.get_" <<
+                c_iter->second.compattr_ << "()));" << endl;
+              indent_down();
+              indent(out) <<  "}" << endl;
+              indent(out) << "tdata.__dsobj_" << *d_iter << "->Update(temp_" <<
+                *d_iter << ", _delmap_" << snm << ");" << endl; 
+              indent(out) << "temp_" << *d_iter << ".clear();" << endl;
+            }
+          }
           // If the DS is inline or mandatory
           if (dat == INLINE) {
             indent(out) << "send = true;" << endl;

@@ -38,6 +38,8 @@
 #include "sandesh_test_common.h"
 
 using std::string;
+using std::map;
+using std::make_pair;
 using namespace contrail::sandesh::protocol;
 using namespace contrail::sandesh::transport;
 using boost::asio::ip::address;
@@ -253,7 +255,7 @@ protected:
             EXPECT_EQ(0, header.get_Hints());
             EXPECT_EQ(SandeshLevel::SYS_INFO, header.get_Level());
             EXPECT_EQ("", header.get_Category());
-            const char *expect = "<ObjectLogOptionalTest type=\"sandesh\"><f1 type=\"i32\" identifier=\"1\">200</f1><f3 type=\"i32\" identifier=\"2\">100</f3><file type=\"string\" identifier=\"-32768\">tools/sandesh/library/cpp/test/sandesh_message_test.cc</file><line type=\"i32\" identifier=\"-32767\">317</line></ObjectLogOptionalTest>";
+            const char *expect = "<ObjectLogOptionalTest type=\"sandesh\"><f1 type=\"i32\" identifier=\"1\">200</f1><f3 type=\"i32\" identifier=\"2\">100</f3><file type=\"string\" identifier=\"-32768\">tools/sandesh/library/cpp/test/sandesh_message_test.cc</file><line type=\"i32\" identifier=\"-32767\">319</line></ObjectLogOptionalTest>";
             EXPECT_STREQ(expect, message.c_str());
 	    break;
 	}
@@ -463,6 +465,10 @@ protected:
 "<z type=\"map\" identifier=\"3\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct><element>idx2</element><TestAggStruct><count type=\"i32\" identifier=\"1\">20</count></TestAggStruct></map></z>");
                 EXPECT_STREQ(mm["diff_z"].c_str(),
 "<diff_z type=\"map\" identifier=\"4\" mstats=\"z:DSDiff:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct><element>idx2</element><TestAggStruct><count type=\"i32\" identifier=\"1\">20</count></TestAggStruct></map></diff_z>");
+                EXPECT_STREQ(mm["nullm_zc"].c_str(),
+"<nullm_zc type=\"map\" identifier=\"12\" mstats=\"z.count:DSNull:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">55</value></NullResult><element>idx2</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">20</value></NullResult></map></nullm_zc>");
+                EXPECT_STREQ(mm["null_fz"].c_str(),
+"<null_fz type=\"struct\" identifier=\"11\" stats=\"fz.count:DSNull:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">20</value></NullResult></null_fz>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>20</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
@@ -481,7 +487,13 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectCollectorInfo\">uve2</name>");
                 EXPECT_STREQ(mm["ewm_y"].c_str(),
-"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSEWM:0.2\"><EWMResult><samples type=\"u64\" identifier=\"3\">1</samples><mean type=\"double\" identifier=\"6\">0.2</mean><stddev type=\"double\" identifier=\"7\">0.4</stddev><sigma type=\"double\" identifier=\"8\">2</sigma></EWMResult></ewm_y>");
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.2</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>0.2</element><element>stddev</element><element>0.4</element></map></state><sigma type=\"double\" identifier=\"6\">2</sigma></AnomalyResult></ewm_y>");
+                EXPECT_STREQ(mm["ewmd_y"].c_str(),
+"<ewmd_y type=\"struct\" identifier=\"13\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.1</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>0.1</element><element>stddev</element><element>0.3</element></map></state><sigma type=\"double\" identifier=\"6\">3</sigma></AnomalyResult></ewmd_y>");
+                EXPECT_STREQ(mm["ewmn_y"].c_str(),
+"<ewmn_y type=\"struct\" identifier=\"14\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">Null</algo><config type=\"string\" identifier=\"3\">Null</config></AnomalyResult></ewmn_y>");
+                EXPECT_STREQ(mm["ewmi_y"].c_str(),
+"<ewmi_y type=\"struct\" identifier=\"15\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0</config><error type=\"string\" identifier=\"4\">Invalid alpha 0</error></AnomalyResult></ewmi_y>");
                 break;
             }
             case 3:
@@ -494,7 +506,7 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name>");
                 EXPECT_STREQ(mm["ewm_y"].c_str(),
-"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSEWM:0.2\"><EWMResult><samples type=\"u64\" identifier=\"3\">1</samples><mean type=\"double\" identifier=\"6\">2.2</mean><stddev type=\"double\" identifier=\"7\">4.4</stddev><sigma type=\"double\" identifier=\"8\">2</sigma></EWMResult></ewm_y>");
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.2</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>2.2</element><element>stddev</element><element>4.4</element></map></state><sigma type=\"double\" identifier=\"6\">2</sigma></AnomalyResult></ewm_y>");
                 break;
             }
             case 4:
@@ -647,6 +659,10 @@ protected:
 "<z type=\"map\" identifier=\"3\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct><element>idx2</element><TestAggStruct><count type=\"i32\" identifier=\"1\">20</count></TestAggStruct></map></z>");
                 EXPECT_STREQ(mm["diff_z"].c_str(),
 "<diff_z type=\"map\" identifier=\"4\" mstats=\"z:DSDiff:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct><element>idx2</element><TestAggStruct><count type=\"i32\" identifier=\"1\">20</count></TestAggStruct></map></diff_z>");
+                EXPECT_STREQ(mm["nullm_zc"].c_str(),
+"<nullm_zc type=\"map\" identifier=\"12\" mstats=\"z.count:DSNull:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">55</value></NullResult><element>idx2</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">20</value></NullResult></map></nullm_zc>");
+                EXPECT_STREQ(mm["null_fz"].c_str(),
+"<null_fz type=\"struct\" identifier=\"11\" stats=\"fz.count:DSNull:\"><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">20</value></NullResult></null_fz>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>20</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
@@ -667,6 +683,12 @@ protected:
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name>");
                 EXPECT_STREQ(mm["y"].c_str(),
 "<y type=\"i32\" identifier=\"7\">11</y>");
+                EXPECT_STREQ(mm["ewmd_y"].c_str(),
+"<ewmd_y type=\"struct\" identifier=\"13\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.1</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>1.1</element><element>stddev</element><element>3.3</element></map></state><sigma type=\"double\" identifier=\"6\">3</sigma></AnomalyResult></ewmd_y>");
+                EXPECT_STREQ(mm["ewmn_y"].c_str(),
+"<ewmn_y type=\"struct\" identifier=\"14\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">Null</algo><config type=\"string\" identifier=\"3\">Null</config></AnomalyResult></ewmn_y>");
+                EXPECT_STREQ(mm["ewmi_y"].c_str(),
+"<ewmi_y type=\"struct\" identifier=\"15\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0</config><error type=\"string\" identifier=\"4\">Invalid alpha 0</error></AnomalyResult></ewmi_y>");
                 break;
             }
             case 20:
@@ -680,6 +702,10 @@ protected:
 "<z type=\"map\" identifier=\"3\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">111</count></TestAggStruct><element>idx2</element><TestAggStruct><count type=\"i32\" identifier=\"1\">111</count><deleted type=\"bool\" identifier=\"2\">true</deleted></TestAggStruct></map></z>");
                 EXPECT_STREQ(mm["diff_z"].c_str(),
 "<diff_z type=\"map\" identifier=\"4\" mstats=\"z:DSDiff:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">56</count></TestAggStruct></map></diff_z>");
+                EXPECT_STREQ(mm["nullm_zc"].c_str(),
+"<nullm_zc type=\"map\" identifier=\"12\" mstats=\"z.count:DSNull:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>idx1</element><NullResult><samples type=\"u64\" identifier=\"3\">2</samples><value type=\"i32\" identifier=\"5\">111</value></NullResult></map></nullm_zc>");
+                EXPECT_STREQ(mm["null_fz"].c_str(),
+"<null_fz type=\"struct\" identifier=\"11\" stats=\"fz.count:DSNull:\"><NullResult><samples type=\"u64\" identifier=\"3\">2</samples><value type=\"i32\" identifier=\"5\">111</value></NullResult></null_fz>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
 "<tsm type=\"map\" identifier=\"8\"><map key=\"string\" value=\"i32\" size=\"2\"><element>i2</element><element>21</element><element>i3</element><element>31</element></map></tsm>");
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
@@ -781,8 +807,14 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     int port = server_->GetPort();
     ASSERT_LT(0, port);
 
+    map<string,string> dselem;
+    dselem.insert(make_pair(string("ewmd_y"), string("EWM:0.1")));
+    dselem.insert(make_pair(string("ewmn_y"), string("Null")));
+    dselem.insert(make_pair(string("ewmi_y"), string("EWM:0")));
+    map<string, map<string,string> > dsmap;
+    dsmap.insert(make_pair(string("SandeshUVEData"),dselem));
     Sandesh::InitGenerator("SandeshUVEAlarmTest-Client", "localhost", "Test",
-                           "0", evm_.get(), 0, NULL);
+                           "0", evm_.get(), 0, NULL, dsmap);
     Sandesh::ConnectToCollector("127.0.0.1", port);
     TASK_UTIL_EXPECT_TRUE(Sandesh::client()->state() == SandeshClientSM::ESTABLISHED);
 
@@ -803,6 +835,7 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     tas2.set_count(20);
     mtas2.insert(std::make_pair("idx2", tas2));
     uve_data2.set_z(mtas2);
+    uve_data2.set_fz(tas2);
 
     std::map<string,int32_t> my;
     my.insert(std::make_pair("i2",20));
@@ -918,6 +951,7 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     tas10.set_deleted(true);
     mtas10.insert(std::make_pair("idx2",tas10));
     uve_data10.set_z(mtas10);
+    uve_data10.set_fz(tas10);
 
     std::map<string,int32_t> my2;
     my2.insert(std::make_pair("i2",21));
