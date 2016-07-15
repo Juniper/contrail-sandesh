@@ -265,6 +265,7 @@ struct ModuleClientState {
     9: optional io.SocketIOStats           session_tx_socket_stats
 
     10: optional map<string, SandeshMessageStats> msg_type_agg  (metric="agg", hidden="yes")
+    /** @display_name:Sandesh Client Message Type Stats*/
     11: optional map<string, SandeshMessageStats> msg_type_diff (mstats="0-msg_type_agg:DSNon0:", tags=".__key")
     12: optional map<string, SnhMsgStats_P_> msg_type_1h (mstats="60-msg_type_agg:DSSum:", hidden="yes")
     13: optional map<string, mcs_uint_P_>    msg_type_tx_10m (mstats="10-msg_type_agg.messages_sent:DSSum:")
