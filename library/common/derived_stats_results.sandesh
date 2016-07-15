@@ -26,6 +26,7 @@ struct PercentileResult {
 }
 
 struct CategoryResult {
+    /** @display_name:Sandesh Client Message Stats*/
     1: map<string, u64> counters (tags=".__key")
 }
 
