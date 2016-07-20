@@ -63,27 +63,31 @@ response sandesh SandeshResponseTest {
 request sandesh SandeshRequestEmptyTest {
 }
 
-struct TestAggStruct {
-    1: i32 count
-    2: optional bool deleted
-}
-
 struct int_P_ {
     1: optional i32 staging
     2: optional i32 value
 }
 
+struct TestAggStruct {
+    1: i32 count
+    2: optional bool deleted
+    3: optional int_P_ inner
+}
+
 struct SandeshUVEData {
     1: string name (key="ObjectGeneratorInfo")
     2: optional bool deleted
-    3: optional map<string,TestAggStruct> z
-    4: optional map<string,TestAggStruct> diff_z (mstats="z:DSDiff:")
+    3: optional map<string,TestAggStruct> z (metric="agg")
+    4: optional map<string,TestAggStruct> diff_z (mstats="z:DSNone:")
     5: optional TestAggStruct fz
+    6: optional TestAggStruct gz (metric="diff")
     7: optional i32 y
     8: optional map<string,i32> tsm
     9: optional map<string,derived_stats_results.NullResult> null_tsm (mstats="tsm:DSNull:")
    10: optional derived_stats_results.AnomalyResult ewm_y (stats="y:DSAnomaly:EWM:0.2")
-   11: optional derived_stats_results.NullResult null_fz (stats="fz.count:DSNull:")
+   11: optional i32 null_fz (stats="fz.count:DSChange:")
+   16: optional i32 null_gz (stats="gz.count:DSNon0:")
+   17: optional i32 null_hz (stats="gz.inner.value:DSNone:")
    12: optional map<string,derived_stats_results.NullResult> nullm_zc (mstats="z.count:DSNull:")
    13: optional derived_stats_results.AnomalyResult ewmd_y (stats="y:DSAnomaly:EWM:0.2")
    14: optional derived_stats_results.AnomalyResult ewmn_y (stats="y:DSAnomaly:EWM:0.2")

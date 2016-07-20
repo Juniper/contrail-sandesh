@@ -8,6 +8,7 @@
  */
 
 
+/* For testing only */
 struct NullResult {
     3: u64 samples 
     5: i32 value
@@ -31,6 +32,7 @@ struct AnomalyResult {
     6: optional double sigma
 }
 
+/* TODO: Not implemented yet */
 struct PercentileResult {
     3: u64 samples 
     4: map<string,double> percentiles;
