@@ -152,16 +152,25 @@ void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, b
   void generate_sandesh_static_rate_limit_log_def(ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_static_rate_limit_mutex_def(ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_static_rate_limit_buffer_def(ofstream& out, t_sandesh* tsandesh);
+  typedef enum {
+      RM_DIAL = 0,
+      RM_AGG = 1,
+      RM_DIFF = 2,
+      RM_MAX = 3 
+  } RawMetric;
   struct DSInfo {
-    DSInfo(bool is_map, string rawtype, string resulttype, string algo, string annotation,
+    DSInfo(bool is_map, string rawtype, RawMetric rmtype,
+          string resulttype, string algo, string annotation,
           string comptype = string(""), string compattr = string("")) :
-        is_map_(is_map), rawtype_(rawtype), resulttype_(resulttype), algo_(algo),
+        is_map_(is_map), rawtype_(rawtype), rmtype_(rmtype),
+        resulttype_(resulttype), algo_(algo),
         annotation_(annotation), comptype_(comptype), compattr_(compattr) {    
       assert( (comptype.empty() && compattr.empty()) ||
               (!comptype.empty() && !compattr.empty()) );
     }
     bool is_map_;
     string rawtype_;
+    RawMetric rmtype_;
     string resulttype_;
     string algo_;
     string annotation_;
@@ -178,7 +187,7 @@ void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, b
       INLINE = 1,
       HIDDEN = 2,
       PERIODIC = 3,
-      MAX =  4
+      CA_MAX =  4
   } CacheAttribute;
 
   void cache_attr_info(t_struct* tstruct, std::map<string, CacheAttribute>& attrs);
@@ -2282,10 +2291,17 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
       }
          
       string rawtype;
+      RawMetric rmt = RM_DIAL;
       string comptype("");
       vector<t_field*>::const_iterator s_iter;
       for (s_iter = members.begin(); s_iter != members.end(); ++s_iter) {
 	if (rawattr.compare((*s_iter)->get_name())==0) {
+          map<string,string>::const_iterator cit =
+              (*s_iter)->annotations_.find("metric");
+          if (cit != (*s_iter)->annotations_.end()) { 
+	    if (cit->second.compare("agg") == 0) rmt = RM_AGG;
+	    else if (cit->second.compare("diff") == 0) rmt = RM_DIFF;
+          }
           t_type* ratype = get_true_type((*s_iter)->get_type());
           t_type* vtype = ratype;
           if (is_ds_map) {
@@ -2314,7 +2330,8 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
 	}
       }
       assert(!rawtype.empty());
-      DSInfo dsi(is_ds_map, rawtype, restype, algo, anno, comptype, compattr);
+      DSInfo dsi(is_ds_map, rawtype, rmt,
+          restype, algo, anno, comptype, compattr);
 
       // map of derived stats
       dsmap.insert(make_pair((*m_iter)->get_name(), dsi));
@@ -3646,6 +3663,11 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
     indent_up();
     indent(out) << "map<string,string>::const_iterator _dci = _dsconf.find(\"" <<
       ds_iter->first << "\");" << endl;
+    if (ds_iter->second.rmtype_ == RM_AGG) {
+        indent(out) << "bool is_agg = true;" << endl;
+    }  else {
+        indent(out) << "bool is_agg = false;" << endl;
+    }
     indent(out) << "assert(_dci != _dsconf.end());" << endl;
 
     CacheAttribute cat = (cache_attrs.find(ds_iter->first))->second;
@@ -3659,13 +3681,13 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
 	ds_iter->second.algo_ << ", " << 
 	ds_iter->second.rawtype_ << ", " <<
 	ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
-	ds_iter->second.resulttype_ << "> >(_dci->second);" << endl;
+	ds_iter->second.resulttype_ << "> >(_dci->second, is_agg);" << endl;
     } else {
       indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
         " ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" <<
 	ds_iter->second.algo_ << ", " <<
 	ds_iter->second.rawtype_ << ", " << ds_iter->second.resulttype_ <<
-	"> >(_dci->second);" << endl;
+	"> >(_dci->second, is_agg);" << endl;
     }
     indent_down();
     indent(out) << "}" << endl;         
@@ -3758,10 +3780,9 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
           }
           // If the DS is inline or mandatory
           if (dat == INLINE) {
-            indent(out) << "send = true;" << endl;
-
             indent(out) << "tdata.__dsobj_" << *d_iter << "->FillResult(_data." <<
               *d_iter << ", _data.__isset." << *d_iter << ");" << endl;
+            indent(out) << "if (_data.__isset." << *d_iter <<") send = true;" << endl;
           }
         }
       }

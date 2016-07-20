@@ -18,6 +18,8 @@
 #include <sandesh/derived_stats_results_types.h>
 #include <boost/assign/list_of.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/type_traits/is_arithmetic.hpp>
+#include <boost/utility/enable_if.hpp>
 
 using std::vector;
 using std::map;
@@ -221,6 +223,78 @@ class DSEWM {
 };
 
 template <typename ElemT, class NullResT>
+class DSChange {
+  public:
+    DSChange(const std::string &annotation) : init_(false) {}
+
+    bool init_;
+    ElemT value_;
+    ElemT prev_;
+
+    bool FillResult(NullResT &res) const {
+        assert(init_);
+	if (prev_ == value_) return false;
+	else {
+	    res = value_;
+	    return true;
+	}
+    }
+
+    void Update(const ElemT& raw) {
+        if (init_) prev_ = value_;
+        value_ = raw;
+        init_ = true;
+    }
+};
+
+template <typename ElemT, class NullResT>
+bool FillResultNon0(NullResT &res, 
+typename boost::enable_if<boost::is_arithmetic<ElemT>, const ElemT >::type & value_) {
+    if (value_ == 0) return false;
+    res = value_;
+    return true;
+}
+
+template <typename ElemT, class NullResT>
+bool FillResultNon0(NullResT &res, 
+typename boost::disable_if<boost::is_arithmetic<ElemT>, const ElemT >::type & value_) {
+    ElemT empty;
+    if (value_ == empty) return false;
+    res = value_;
+    return true;
+}
+
+template <typename ElemT, class NullResT>
+class DSNon0 {
+  public:
+    DSNon0(const std::string &annotation) {}
+    ElemT value_;
+
+    bool FillResult(NullResT &res) const {
+        return FillResultNon0<ElemT,NullResT>(res, value_);
+    }
+
+    void Update(const ElemT& raw) {
+        value_ = raw;
+    }
+};
+
+template <typename ElemT, class NullResT>
+class DSNone {
+  public:
+    DSNone(const std::string &annotation) {}
+    ElemT value_;
+
+    bool FillResult(NullResT &res) const {
+        res = value_;
+        return true;
+    }
+    void Update(const ElemT& raw) {
+        value_ = raw;
+    }
+};
+
+template <typename ElemT, class NullResT>
 class DSNull {
   public:
     DSNull(const std::string &annotation): samples_(0) {}
@@ -238,6 +312,7 @@ class DSNull {
     }
 };
 
+/* Deprecated: use metric="agg" on raw stat instead */
 template <typename ElemT, class DiffResT>
 class DSDiff {
   public:
