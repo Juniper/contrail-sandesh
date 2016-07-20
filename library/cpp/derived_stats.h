@@ -25,6 +25,35 @@ class SandeshStructDeleteTrait;
 namespace contrail {
 namespace sandesh {
 
+template<typename ElemT>
+std::map<std::string, ElemT> DerivedStatsAgg(const std::map<std::string, ElemT> & raw,
+        std::map<std::string, ElemT> & agg,
+        const std::map<std::string, bool> &del) {
+
+    std::map<std::string, ElemT> diff;
+
+    typename std::map<std::string, ElemT>::const_iterator rit;
+    typename std::map<std::string, ElemT>::iterator ait;
+   
+    // Go through all raw elements to generate diff and update agg 
+    for (rit=raw.begin(); rit!= raw.end(); rit++) {
+        ait=agg.find(rit->first);
+        // The aggregate already has this element
+        if (ait!=agg.end()) {
+            diff[rit->first] = rit->second - ait->second;
+            // Remove from agg if this element is marked for deletion
+            // (It will still be in the diff)
+            if (!del.at(rit->first)) ait->second = ait->second + diff[rit->first];
+            else agg.erase(ait);
+        } else {
+            diff[rit->first] = rit->second;
+            if (!del.at(rit->first)) agg[rit->first] = diff[rit->first]; 
+        }
+    }
+    return diff;
+}  
+
+ 
 template<template<class,class> class DSTT, typename ElemT, typename ResultT>
 void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
         std::map<std::string, boost::shared_ptr<DSTT<ElemT,ResultT> > > & dsm,
@@ -78,6 +107,7 @@ void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
         rit = raw.find(mt->first);
         dlt = del.find(mt->first);
         if ((mt->second == false) && (!dlt->second)) {
+            assert(dsm.find(mt->first) == dsm.end());
             dsm[mt->first] = boost::make_shared<DSTT<ElemT,ResultT> >(annotation);
             dsm[mt->first]->Update((raw.find(mt->first))->second);
         }
@@ -88,15 +118,23 @@ template <template<class,class> class DSTT, typename ElemT, typename ResultT>
 class DerivedStatsIf {
   private:
     typedef std::map<std::string, boost::shared_ptr<DSTT<ElemT,ResultT> > > result_map;
+
     boost::shared_ptr<result_map> dsm_;
 
     boost::shared_ptr<DSTT<ElemT,ResultT> > ds_;
     
     std::string annotation_;
+    
+    bool is_agg_;
+    ElemT agg_;
+    std::map<std::string, ElemT> aggm_;
+    ElemT diff_;
+    std::map<std::string, ElemT> diffm_;
 
+    
   public:
-    DerivedStatsIf(std::string annotation):
-        annotation_(annotation) {}
+    DerivedStatsIf(std::string annotation, bool is_agg = false):
+        annotation_(annotation), is_agg_(is_agg) {}
 
     bool IsResult(void) const {
         if ((!ds_) && (!dsm_)) return false;
@@ -105,20 +143,22 @@ class DerivedStatsIf {
 
     // This is the interface to retrieve the current value
     // of the DerivedStat object.
-    void FillResult(ResultT &res, bool& isset) const {
-        if (!ds_) {
-            isset = false;
-            return;
-        } else isset = ds_->FillResult(res);
+    void FillResult(ResultT &res, bool& isset, bool force=false) const {
+        isset = false;
+        if (ds_) {
+            if (ds_->FillResult(res) || force) {
+                isset = true;
+            }
+        }
     }
 
-    void FillResult(std::map<std::string, ResultT> &mres, bool& isset) const {
+    void FillResult(std::map<std::string, ResultT> &mres, bool& isset, bool force=false) const {
         mres.clear(); 
         if (dsm_) {
             for (typename result_map::const_iterator dit = dsm_->begin();
                     dit != dsm_->end(); dit++) {
                 ResultT res;
-                if (dit->second->FillResult(res)) {
+                if (dit->second->FillResult(res) || force) {
                     mres.insert(std::make_pair(dit->first, res));
                 }
             }
@@ -132,15 +172,30 @@ class DerivedStatsIf {
     void Update(ElemT raw) {
         if (!ds_) {
             ds_ = boost::make_shared<DSTT<ElemT,ResultT> >(annotation_);
+            if (is_agg_) {
+                diff_ = raw;
+                agg_ = raw;
+            }
+        } else {
+            if (is_agg_) {
+                diff_ = raw - agg_;
+                agg_ = agg_ + diff_;
+            }
         }
-        ds_->Update(raw);
+        if (is_agg_) ds_->Update(diff_);
+        else ds_->Update(raw);
     }
     
     void Update(const std::map<std::string, ElemT> & raw, const std::map<std::string, bool> &del) {
         if (!dsm_) {
             dsm_ = boost::make_shared<result_map>();
         }
-        DerivedStatsMerge<DSTT,ElemT,ResultT>(raw, *dsm_, annotation_, del);
+        if (is_agg_) {
+            diffm_ = DerivedStatsAgg<ElemT>(raw, aggm_, del);
+            DerivedStatsMerge<DSTT,ElemT,ResultT>(diffm_, *dsm_, annotation_, del);
+        } else {
+            DerivedStatsMerge<DSTT,ElemT,ResultT>(raw, *dsm_, annotation_, del);
+        }
     }
 };
 
@@ -157,9 +212,16 @@ class DerivedStatsPeriodicIf {
     
     std::string annotation_;
 
+    bool is_agg_;
+    bool init_;
+    ElemT agg_;
+    std::map<std::string, ElemT> aggm_;
+    ElemT diff_;
+    std::map<std::string, ElemT> diffm_;
+
   public:
-    DerivedStatsPeriodicIf(std::string annotation):
-        annotation_(annotation) {}
+    DerivedStatsPeriodicIf(std::string annotation, bool is_agg=false):
+        annotation_(annotation), is_agg_(is_agg), init_(false) {}
 
     bool IsResult(void) const {
         if (ds_ || ds_cache_) return true;
@@ -173,14 +235,28 @@ class DerivedStatsPeriodicIf {
         if (!ds_) {
             ds_ = boost::make_shared<DSTT<ElemT,SubResultT> >(annotation_);
         }
-        ds_->Update(raw);
+        if (is_agg_) {
+            if (!init_) {
+                diff_ = raw;
+                agg_ = raw;
+            } else {
+                diff_ = raw - agg_;
+                agg_ = agg_ + diff_;
+            }
+            ds_->Update(diff_);
+        } else ds_->Update(raw);
+        init_ = true;
     }
 
     void Update(const std::map<std::string, ElemT> & raw, const std::map<std::string, bool> &del) {
         if (!dsm_) {
-            dsm_ = boost::make_shared<result_map >();
+            dsm_ = boost::make_shared<result_map>();
         }
-        DerivedStatsMerge<DSTT,ElemT,SubResultT>(raw, *dsm_, annotation_, del);
+        if (is_agg_) {
+            diffm_ = DerivedStatsAgg<ElemT>(raw, aggm_, del);
+            DerivedStatsMerge<DSTT,ElemT,SubResultT>(diffm_, *dsm_, annotation_, del);
+        } else DerivedStatsMerge<DSTT,ElemT,SubResultT>(raw, *dsm_, annotation_, del);
+        init_ = true;
     }
 
     bool Flush(const ResultT &res) {
@@ -204,7 +280,7 @@ class DerivedStatsPeriodicIf {
 
     // This is the interface to retrieve the current value
     // of the DerivedStat object.
-    void FillResult(ResultT &res, bool& isset) const {
+    void FillResult(ResultT &res, bool& isset, bool force=false) const {
         isset = false;
         if (ds_cache_) {
             // Fill in previous information
@@ -214,7 +290,7 @@ class DerivedStatsPeriodicIf {
         }
         if (ds_) {
             // Fill in current information
-            if (ds_->FillResult(res.staging)) {
+            if (ds_->FillResult(res.staging) || force) {
                 res.__isset.staging = true;
                 isset = true;
             }
@@ -247,7 +323,7 @@ class DerivedStatsPeriodicIf {
 
     // This is the interface to retrieve the current value
     // of the DerivedStat object.
-    void FillResult(std::map<std::string, ResultT> &mres, bool& isset) const {
+    void FillResult(std::map<std::string, ResultT> &mres, bool& isset, bool force=false) const {
         mres.clear();
         if (dsm_cache_) {
             // Fill in previous information
@@ -267,12 +343,12 @@ class DerivedStatsPeriodicIf {
                 typename std::map<std::string, ResultT>::iterator wit =
                         mres.find(dit->first);
                 if (wit != mres.end()) {
-                    if (dit->second->FillResult(wit->second.staging)) {
+                    if (dit->second->FillResult(wit->second.staging) || force) {
                         wit->second.__isset.staging = true;
                     }
                 } else {
                     ResultT res;
-                    if (dit->second->FillResult(res.staging)) {
+                    if (dit->second->FillResult(res.staging) || force) {
                         res.__isset.staging = true;
                         mres.insert(std::make_pair(dit->first, res));
                     }

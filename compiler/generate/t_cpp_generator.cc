@@ -152,34 +152,48 @@ void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, b
   void generate_sandesh_static_rate_limit_log_def(ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_static_rate_limit_mutex_def(ofstream& out, t_sandesh* tsandesh);
   void generate_sandesh_static_rate_limit_buffer_def(ofstream& out, t_sandesh* tsandesh);
-  struct DSInfo {
-    DSInfo(bool is_map, string rawtype, string resulttype, string algo, string annotation,
-          string comptype = string(""), string compattr = string("")) :
-        is_map_(is_map), rawtype_(rawtype), resulttype_(resulttype), algo_(algo),
-        annotation_(annotation), comptype_(comptype), compattr_(compattr) {    
-      assert( (comptype.empty() && compattr.empty()) ||
-              (!comptype.empty() && !compattr.empty()) );
-    }
-    bool is_map_;
-    string rawtype_;
-    string resulttype_;
-    string algo_;
-    string annotation_;
-    string comptype_;
-    string compattr_;
-  };
-  void derived_stats_info(t_struct* tstruct,
-    map<string,DSInfo>& dsmap,
-    // val is set of ds attributes
-    map<string,set<string> >& rawmap);
 
   typedef enum {
       MANDATORY = 0,
       INLINE = 1,
       HIDDEN = 2,
       PERIODIC = 3,
-      MAX =  4
+      HIDDEN_PER = 4,
+      CA_MAX = 5
   } CacheAttribute;
+
+  typedef enum {
+      RM_DIAL = 0,
+      RM_AGG = 1,
+      RM_DIFF = 2,
+      RM_MAX = 3 
+  } RawMetric;
+
+  struct DSInfo {
+    DSInfo(bool is_map, size_t period, CacheAttribute cat,
+          string rawtype, RawMetric rmtype,
+          string resulttype, string algo, string annotation,
+          string compattr = string(""), string subcompattr = string("")) :
+        is_map_(is_map), period_(period), cat_(cat),
+        rawtype_(rawtype), rmtype_(rmtype),
+        resulttype_(resulttype), algo_(algo),
+        annotation_(annotation),
+        compattr_(compattr) , subcompattr_(subcompattr) {} 
+    bool is_map_;
+    size_t period_;
+    CacheAttribute cat_;
+    string rawtype_;
+    RawMetric rmtype_;
+    string resulttype_;
+    string algo_;
+    string annotation_;
+    string compattr_;
+    string subcompattr_;
+  };
+  void derived_stats_info(t_struct* tstruct,
+    map<string,DSInfo>& dsmap,
+    // val is set of ds attributes
+    map<string,set<string> >& rawmap);
 
   void cache_attr_info(t_struct* tstruct, std::map<string, CacheAttribute>& attrs);
 
@@ -1999,7 +2013,7 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
 
         indent(out) << "static void Send(const " << type_name((*f_iter)->get_type()) <<
             "& cdata, SandeshUVE::SendType stype, uint32_t seqno," <<
-            " std::string ctx = \"\");" << endl;
+            " uint32_t cycle, std::string ctx = \"\");" << endl;
 
     } else if (((t_base_type *)t)->is_sandesh_system() ||
                ((t_base_type *)t)->is_sandesh_flow()) {
@@ -2056,7 +2070,7 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
         out << indent() << "static bool UpdateUVE(" <<  dtype <<
             " & _data, " << dtype <<
             " & tdata);" << endl;
-        out << indent() << "bool LoadUVE(SendType stype);" << endl;
+        out << indent() << "bool LoadUVE(SendType stype, uint32_t cycle);" << endl;
     }
 
     out << indent() << "std::string ToString() const;" << endl;
@@ -2198,38 +2212,22 @@ void t_cpp_generator::cache_attr_info(t_struct* tstruct,
         MANDATORY)); 
       continue;
     }
-
-    if (tstruct->annotations_.find("period") != tstruct->annotations_.end()) {
-      // Periodic
-      if (((*m_iter)->annotations_.find("stats") != (*m_iter)->annotations_.end()) ||
-          ((*m_iter)->annotations_.find("mstats") != (*m_iter)->annotations_.end())) {
-        if (jt!=(*m_iter)->annotations_.end()) {
-            // Periodic stats cannot be hidden
-            assert(0);
-        } else {
-            attrs.insert(std::make_pair((*m_iter)->get_name(), PERIODIC));
-        } 
-      } else {
-        if (jt!=(*m_iter)->annotations_.end()) {
-            attrs.insert(std::make_pair((*m_iter)->get_name(), HIDDEN)); 
-        } else {
-            attrs.insert(std::make_pair((*m_iter)->get_name(), INLINE));
-        } 
-      }
+    // DervivedStats attributes are not handled here
+    if (((*m_iter)->annotations_.find("stats") != (*m_iter)->annotations_.end()) ||
+	((*m_iter)->annotations_.find("mstats") != (*m_iter)->annotations_.end())) {
+      continue;
+    }
+    // All raw attributes are Non-periodic
+    if (jt!=(*m_iter)->annotations_.end()) {
+	attrs.insert(std::make_pair((*m_iter)->get_name(), HIDDEN)); 
     } else {
-      // Non-periodic
-      if (jt!=(*m_iter)->annotations_.end()) {
-          attrs.insert(std::make_pair((*m_iter)->get_name(), HIDDEN)); 
-      } else {
-          attrs.insert(std::make_pair((*m_iter)->get_name(), INLINE));
-      }
-    } 
+	attrs.insert(std::make_pair((*m_iter)->get_name(), INLINE));
+    }
   }
 }
 
-
 void t_cpp_generator::derived_stats_info(t_struct* tstruct,
-    // val is rawtype,resulttype,algo,annotation,comptype,compattr
+    // val is rawtype,resulttype,algo,annotation,compattr,subcompattr
     map<string,DSInfo> & dsmap,
     // val is set of ds attributes
     map<string,set<string> >& rawmap) {
@@ -2268,24 +2266,48 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
       string algo = residual.substr(0,rpos);
       string anno = residual.substr(rpos+1, string::npos);
 
-      string rawfullattr = tstr.substr(0,pos);
+      string rawfullattr;
+      string rawperiodattr = tstr.substr(0,pos);
+      size_t ppos = rawperiodattr.find("-");
+      int period = -1;
+      if (ppos != string::npos) {
+        period = atoi(rawperiodattr.substr(0,ppos).c_str());
+        rawfullattr = rawperiodattr.substr(ppos+1, string::npos);
+      } else {
+        rawfullattr = rawperiodattr;
+      }
+        
       size_t cpos = rawfullattr.find('.');
       string rawattr;
       string compattr("");
+      string subcompattr("");
 
       // Does the raw attribute have a composite underneath it?
       if (cpos != string::npos) {
         rawattr = rawfullattr.substr(0,cpos);
-        compattr = rawfullattr.substr(cpos+1, string::npos);
+        string rescomp = rawfullattr.substr(cpos+1, string::npos);
+        size_t upos = rescomp.find('.');
+        if (upos != string::npos) {
+            compattr = rescomp.substr(0,upos);
+            subcompattr = rescomp.substr(upos+1, string::npos);
+        } else {
+            compattr = rescomp;
+        }
       } else {
         rawattr = rawfullattr;
       }
          
       string rawtype;
-      string comptype("");
+      RawMetric rmt = RM_DIAL;
       vector<t_field*>::const_iterator s_iter;
       for (s_iter = members.begin(); s_iter != members.end(); ++s_iter) {
 	if (rawattr.compare((*s_iter)->get_name())==0) {
+          map<string,string>::const_iterator cit =
+              (*s_iter)->annotations_.find("metric");
+          if (cit != (*s_iter)->annotations_.end()) { 
+	    if (cit->second.compare("agg") == 0) rmt = RM_AGG;
+	    else if (cit->second.compare("diff") == 0) rmt = RM_DIFF;
+          }
           t_type* ratype = get_true_type((*s_iter)->get_type());
           t_type* vtype = ratype;
           if (is_ds_map) {
@@ -2294,18 +2316,32 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
           }
           rawtype = type_name(vtype);
           if (!compattr.empty()) {
-            // The raw attribute is a composite.
+            // The raw attribute is a composite/subcomposite
             // Find info for the composite attribute.
             assert(vtype->is_struct());
-            comptype = rawtype;
             rawtype = string("");
-            
             const vector<t_field*>& cmembers = ((t_struct*)vtype)->get_members();
             vector<t_field*>::const_iterator c_iter;
             for (c_iter = cmembers.begin(); c_iter != cmembers.end(); ++c_iter) {
               if (compattr.compare((*c_iter)->get_name())==0) {
                 t_type* catype = get_true_type((*c_iter)->get_type());
-                rawtype = type_name(catype);
+                if (!subcompattr.empty()) {
+                  // The raw attribute is a subcomposite
+                  assert(catype->is_struct());
+                  const vector<t_field*>& umem =
+                          ((t_struct*)catype)->get_members();
+                  vector<t_field*>::const_iterator u_iter;
+                  for (u_iter = umem.begin(); u_iter != umem.end(); ++u_iter) {
+                    if (subcompattr.compare((*u_iter)->get_name())==0) {
+                      t_type* uatype = get_true_type((*u_iter)->get_type());
+                      rawtype = type_name(uatype);
+                      break;
+                    }
+                  }
+                    
+                } else {
+                  rawtype = type_name(catype);
+                }
                 break;
               }
             }
@@ -2314,7 +2350,33 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
 	}
       }
       assert(!rawtype.empty());
-      DSInfo dsi(is_ds_map, rawtype, restype, algo, anno, comptype, compattr);
+
+      bool is_hidden = 
+        (*m_iter)->annotations_.find("hidden") != (*m_iter)->annotations_.end();
+
+      CacheAttribute cat = INLINE;
+      if (tstruct->annotations_.find("period") != tstruct->annotations_.end()) {
+        // By default, DS attributes in periodic structs have period 1
+        if (period==-1) period=1;
+        if (is_hidden) {
+          if (period!=0) cat = HIDDEN_PER;
+          else cat = HIDDEN;
+        } else {
+          if (period!=0) cat = PERIODIC;
+          // else this DS stays INLINE
+        }
+      } else {
+        // DS attributes in non-periodic structs must have period 0
+        if (period==-1) period=0;
+        if (is_hidden) {
+          cat = HIDDEN;
+        }
+        // else this DS stays INLINE
+        assert(period==0);
+      }
+
+      DSInfo dsi(is_ds_map, period, cat, rawtype, rmt,
+          restype, algo, anno, compattr, subcompattr);
 
       // map of derived stats
       dsmap.insert(make_pair((*m_iter)->get_name(), dsi));
@@ -2536,10 +2598,10 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   }
 #ifdef SANDESH
   for (ds_iter = dsinfo.begin(); ds_iter != dsinfo.end(); ++ds_iter) {
-    CacheAttribute cat = (cache_attrs.find(ds_iter->first))->second;
   
-    // val is rawtype,resulttype,algo,annotation,comptype,compattr
-    if (cat == PERIODIC) {
+    // val is rawtype,resulttype,algo,annotation,compattr,subcompattr
+    if ((ds_iter->second.cat_ == PERIODIC) ||
+        (ds_iter->second.cat_ == HIDDEN_PER)) {
       indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" << 
         ds_iter->second.algo_ << ", " << 
         ds_iter->second.rawtype_ << ", " <<
@@ -2620,6 +2682,46 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   out << endl;
 
   if (!pointers) {
+    out <<
+      indent() << "bool operator == (long " <<
+      (members.size() > 0 ? "rhs" : "/* rhs */") << ") const" << endl;
+    scope_up(out);
+    for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+      // Most existing Thrift code does not use isset or optional/required,
+      // so we treat "default" fields as required.
+      t_type* type = get_true_type((*m_iter)->get_type());
+      if (type->is_base_type()) {
+        t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
+        switch (tbase) {
+	case t_base_type::TYPE_BYTE:
+	case t_base_type::TYPE_I16:
+	case t_base_type::TYPE_I32:
+	case t_base_type::TYPE_I64:
+	case t_base_type::TYPE_U16:
+	case t_base_type::TYPE_U32:
+	case t_base_type::TYPE_U64:
+	case t_base_type::TYPE_BOOL:
+	  if ((*m_iter)->get_req() != t_field::T_OPTIONAL) {
+	    out <<
+	      indent() << "if (!((long)" << (*m_iter)->get_name()
+		       << " == rhs))" << endl <<
+	      indent() << "  return false;" << endl;
+	  } else {
+	    out <<
+	      indent() << "if (__isset." << (*m_iter)->get_name()
+		       << " && !((long)"
+		       << (*m_iter)->get_name() << " == rhs))" << endl <<
+	      indent() << "  return false;" << endl;
+	  }
+          break;
+        default:
+          out << indent() << "return false;" << endl;
+          continue;
+        }
+      }
+    }
+    indent(out) << "return true;" << endl;
+    scope_down(out);
     // Generate an equality testing operator.  Make it inline since the compiler
     // will do a better job than we would when deciding whether to inline it.
     out <<
@@ -2805,9 +2907,7 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
               indent() << "  result." << sn << nn << "(get_" << nn <<
                 "() - right.get_" << nn << "()); }" << endl <<
               indent() << "else if (__isset." << nn << ") result." << sn <<
-                nn << "(get_" << nn << "());" << endl <<
-              indent() << "if (!result.get_" << nn << "()) result.__isset." <<
-                nn << " = false;" << endl;
+                nn << "(get_" << nn << "());" << endl; 
           }
         default:
           continue;
@@ -3553,19 +3653,22 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
   vector<t_field*>::const_iterator s_iter;
 
   indent(out) << "bool " << tsandesh->get_name() << 
-    "::LoadUVE(SendType stype) {" << endl; 
+    "::LoadUVE(SendType stype, uint32_t cycle) {" << endl; 
   indent_up();
+  indent(out) << "(void)cycle;" << endl; 
   indent(out) << "bool is_periodic_attr = false;" << endl << endl; 
 
   for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
     string snm = (*s_iter)->get_name(); 
-    CacheAttribute cat = (cache_attrs.find(snm))->second;
-    
-    if (cat == MANDATORY) continue;
 
     // For non-derived stats, setting of attribute would have also set
     // the isset flag
-    if (dsinfo.find(snm) == dsinfo.end()) {
+    map<string,DSInfo>::const_iterator ds_iter = dsinfo.find(snm);
+    if (ds_iter == dsinfo.end()) {
+
+      CacheAttribute cat = (cache_attrs.find(snm))->second;
+      if (cat == MANDATORY) continue;
+
       indent(out) << "if (data.__isset." << snm << ") {" << endl;
       indent_up();
       if (cat == HIDDEN) {
@@ -3580,8 +3683,19 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
     } else {
       indent(out) << "if (data.__dsobj_" << snm << "->IsResult()) {" << endl;
       indent_up();
+      CacheAttribute cat = ds_iter->second.cat_;
       if (cat == HIDDEN) {
         indent(out) << "if (stype != ST_INTROSPECT) data.__isset." << 
+          snm << " = false;" << endl;
+      } else if (cat == HIDDEN_PER) {
+        indent(out) << "if (stype == ST_PERIODIC) {" << endl;
+        indent_up();
+        indent(out) << "if (cycle % " << ds_iter->second.period_ <<
+          " == 0) data.__dsobj_" << snm << "->Flush(data." <<
+          snm << ");" << endl;
+        indent(out) << "data.__isset." << snm << " = false;" << endl;
+        indent_down();
+        indent(out) << "} else if (stype == ST_SYNC) data.__isset." <<
           snm << " = false;" << endl;
       } else if (cat == INLINE) {
         indent(out) << "if (stype == ST_PERIODIC) " << 
@@ -3589,17 +3703,26 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
       } else if (cat == PERIODIC) {
         indent(out) << "if (stype == ST_PERIODIC) {" << endl;
         indent_up();
+
+        indent(out) << "if (cycle % " << ds_iter->second.period_ <<
+          " == 0) {" << endl;
+        indent_up();
+
         indent(out) << "data.__dsobj_" << snm << "->Flush(data." <<
           snm << ");" << endl;
         indent(out) << "data.__dsobj_" << snm << "->FillResult(data." <<
-          snm << ", data.__isset." << snm << ");" << endl;
+          snm << ", data.__isset." << snm << ", true);" << endl;
+
+        indent_down();
+        indent(out) << "} else data.__isset." << snm << " = false;" << endl; 
+
         indent_down();
         indent(out) << "} else if (stype == ST_SYNC) data.__isset." <<
           snm << " = false;" << endl;
       } else assert(0);
           
       indent(out) << "else data.__dsobj_" << snm << "->FillResult(data." <<
-        snm << ", data.__isset." << snm << ");" <<endl;
+        snm << ", data.__isset." << snm << ", true);" <<endl;
 
       if (cat == PERIODIC) {
           indent(out) << "is_periodic_attr |= data.__isset." << snm << ";" << endl;
@@ -3646,26 +3769,29 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
     indent_up();
     indent(out) << "map<string,string>::const_iterator _dci = _dsconf.find(\"" <<
       ds_iter->first << "\");" << endl;
+    if (ds_iter->second.rmtype_ == RM_AGG) {
+        indent(out) << "bool is_agg = true;" << endl;
+    }  else {
+        indent(out) << "bool is_agg = false;" << endl;
+    }
     indent(out) << "assert(_dci != _dsconf.end());" << endl;
 
-    CacheAttribute cat = (cache_attrs.find(ds_iter->first))->second;
-    // val is rawtype,resulttype,algo,annotation,comptype,compattr
-    
     indent(out) << "_data.__dsobj_" << ds_iter->first << ".reset();" << endl;
      
-    if (cat == PERIODIC) {
+    if ((ds_iter->second.cat_ == PERIODIC) ||
+        (ds_iter->second.cat_ == HIDDEN_PER)) {
       indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
         " ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" <<
 	ds_iter->second.algo_ << ", " << 
 	ds_iter->second.rawtype_ << ", " <<
 	ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
-	ds_iter->second.resulttype_ << "> >(_dci->second);" << endl;
+	ds_iter->second.resulttype_ << "> >(_dci->second, is_agg);" << endl;
     } else {
       indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
         " ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" <<
 	ds_iter->second.algo_ << ", " <<
 	ds_iter->second.rawtype_ << ", " << ds_iter->second.resulttype_ <<
-	"> >(_dci->second);" << endl;
+	"> >(_dci->second, is_agg);" << endl;
     }
     indent_down();
     indent(out) << "}" << endl;         
@@ -3684,10 +3810,10 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
 
   for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
     string snm = (*s_iter)->get_name(); 
-    CacheAttribute cat = (cache_attrs.find(snm))->second;
     
     // Only set those attributes that are NOT derived stats results 
     if (dsinfo.find(snm) == dsinfo.end()) {
+      CacheAttribute cat = (cache_attrs.find(snm))->second;
       if ((*s_iter)->get_req() == t_field::T_OPTIONAL) {
         // don't send  non-inline attributes
         if (cat != INLINE) {
@@ -3724,8 +3850,8 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
         }
         set<string>::const_iterator d_iter;
         for (d_iter = r_iter->second.begin(); d_iter != r_iter->second.end(); ++d_iter) {
-          CacheAttribute dat = (cache_attrs.find(*d_iter))->second;
           map<string,DSInfo>::const_iterator c_iter = dsinfo.find(*d_iter);
+          CacheAttribute dat = c_iter->second.cat_;
           
           if (c_iter->second.compattr_.empty()) {
             if (!c_iter->second.is_map_) {
@@ -3737,9 +3863,15 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
                 snm << ");" << endl;
             }
           } else {
+            string getexpr = string("get_") + c_iter->second.compattr_ +
+              string("()");
+            if (!c_iter->second.subcompattr_.empty()) {
+              getexpr += string(".get_") + c_iter->second.subcompattr_ +
+                string("()");
+            }
             if (!c_iter->second.is_map_) {
               indent(out) << "tdata.__dsobj_" << *d_iter << "->Update(_data.get_" <<
-                snm << "().get_" << c_iter->second.compattr_ << "());" << endl;
+                snm << "()." << getexpr << ");" << endl;
             } else {
               indent(out) << "std::map<string," << c_iter->second.rawtype_ << "> temp_" << 
                 *d_iter << ";" << endl;
@@ -3747,8 +3879,8 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
                 "::value_type& _tp, _data.get_" << snm << "()) {" << endl;
               indent_up();
               indent(out) << "temp_" << *d_iter <<
-                ".insert(make_pair(_tp.first, _tp.second.get_" <<
-                c_iter->second.compattr_ << "()));" << endl;
+                ".insert(make_pair(_tp.first, _tp.second." <<
+                getexpr << "));" << endl;
               indent_down();
               indent(out) <<  "}" << endl;
               indent(out) << "tdata.__dsobj_" << *d_iter << "->Update(temp_" <<
@@ -3758,10 +3890,9 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
           }
           // If the DS is inline or mandatory
           if (dat == INLINE) {
-            indent(out) << "send = true;" << endl;
-
             indent(out) << "tdata.__dsobj_" << *d_iter << "->FillResult(_data." <<
               *d_iter << ", _data.__isset." << *d_iter << ");" << endl;
+            indent(out) << "if (_data.__isset." << *d_iter <<") send = true;" << endl;
           }
         }
       }
@@ -4063,10 +4194,10 @@ void t_cpp_generator::generate_sandesh_uve_creator(
     indent(out) << "void " << sname <<
         "::Send(const " << type_name((*f_iter)->get_type()) <<
         "& cdata, SandeshUVE::SendType stype, uint32_t seqno," <<
-        " std::string ctx) {" << endl;
+        " uint32_t cycle, std::string ctx) {" << endl;
     indent_up();
     indent(out) << sname << " *snh = new " << sname << "(seqno, cdata);" << endl;
-    indent(out) << "if (snh->LoadUVE(stype)) {" << endl;
+    indent(out) << "if (snh->LoadUVE(stype, cycle)) {" << endl;
     indent_up();
     indent(out) << "snh->set_context(ctx); snh->set_more(!ctx.empty());" << endl;
     indent(out) << "if (stype == SandeshUVE::ST_SYNC) snh->set_hints(snh->hints() | " <<

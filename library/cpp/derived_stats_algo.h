@@ -90,7 +90,7 @@ class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
   public:
     DSAnomalyEWM (const std::string &annotation, 
             std::string &errstr) :
-                mean_(0), variance_(0), sigma_(0), stddev_(0) {
+                mean_(0), variance_(0), sigma_(0), stddev_(0), psigma_(0) {
         alpha_ = (double) strtod(annotation.c_str(), NULL);
         if ((alpha_ <= 0) || (alpha_ > 1)) {
             errstr = std::string("Invalid alpha ") + annotation;
@@ -102,6 +102,7 @@ class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
     double variance_;
     double sigma_;
     double stddev_;
+    double psigma_;
     
     virtual bool FillResult(AnomalyResult& res) const {
         assert(alpha_ != 0);
@@ -113,7 +114,14 @@ class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
         res.set_state(boost::assign::map_list_of(
             std::string("mean"), meanstr.str())(
             std::string("stddev"), stddevstr.str()));
-        return true;
+       
+        // If sigma was low, and is still low, 
+        // we don't need to send anything 
+        if ((psigma_ < 0.5) && (psigma_ > -0.5) && 
+            (sigma_ < 0.5) && (sigma_ > -0.5))
+            return false;
+        else
+	    return true;
     }
 
     virtual void Update(const ElemT& raw) {
@@ -121,6 +129,7 @@ class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
         variance_ = (1-alpha_)*(variance_ + (alpha_*pow(raw-mean_,2)));
         mean_ = ((1-alpha_)*mean_) + (alpha_*raw);
         stddev_ = sqrt(variance_);
+        psigma_ = sigma_;
         if (stddev_) sigma_ = (raw - mean_) / stddev_;
         else sigma_ = 0;
     }
@@ -221,6 +230,61 @@ class DSEWM {
 };
 
 template <typename ElemT, class NullResT>
+class DSChange {
+  public:
+    DSChange(const std::string &annotation) : init_(false) {}
+
+    bool init_;
+    ElemT value_;
+    ElemT prev_;
+
+    bool FillResult(NullResT &res) const {
+        assert(init_);
+        res = value_;
+	if (prev_ == value_) return false;
+	else return true;
+    }
+
+    void Update(const ElemT& raw) {
+        if (init_) prev_ = value_;
+        value_ = raw;
+        init_ = true;
+    }
+};
+
+template <typename ElemT, class NullResT>
+class DSNon0 {
+  public:
+    DSNon0(const std::string &annotation) {}
+    ElemT value_;
+
+    bool FillResult(NullResT &res) const {
+	res = value_;
+	if (value_ == 0) return false;
+	return true;
+    }
+
+    void Update(const ElemT& raw) {
+        value_ = raw;
+    }
+};
+
+template <typename ElemT, class NullResT>
+class DSNone {
+  public:
+    DSNone(const std::string &annotation) {}
+    ElemT value_;
+
+    bool FillResult(NullResT &res) const {
+        res = value_;
+        return true;
+    }
+    void Update(const ElemT& raw) {
+        value_ = raw;
+    }
+};
+
+template <typename ElemT, class NullResT>
 class DSNull {
   public:
     DSNull(const std::string &annotation): samples_(0) {}
@@ -238,6 +302,7 @@ class DSNull {
     }
 };
 
+/* Deprecated: use metric="agg" on raw stat instead */
 template <typename ElemT, class DiffResT>
 class DSDiff {
   public:

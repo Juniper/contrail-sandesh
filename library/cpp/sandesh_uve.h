@@ -74,7 +74,7 @@ public:
     virtual ~SandeshUVEPerTypeMap() { }
     virtual uint32_t TypeSeq() = 0;
     virtual uint32_t SyncUVE(const std::string &table, SandeshUVE::SendType st,
-            const uint32_t seqno, const std::string &ctx) const = 0;
+            uint32_t seqno, uint32_t cycle, const std::string &ctx) const = 0;
     virtual bool InitDerivedStats(
             const std::map<std::string,std::string> & dsconf) = 0;
     virtual bool SendUVE(const std::string& table, const std::string& name,
@@ -232,7 +232,7 @@ public:
 
     uint32_t SyncUVE(const std::string &table,
             SandeshUVE::SendType st,
-            const uint32_t seqno,
+            uint32_t seqno, uint32_t cycle,
             const std::string &ctx) const {
         // Global lock is needed for iterator
         tbb::mutex::scoped_lock lock(uve_mutex_);
@@ -252,7 +252,7 @@ public:
                                     " seq " << uit->second->seqno);
                     }
                     T::Send(uit->second->data, st,
-                            uit->second->seqno, ctx);
+                            uit->second->seqno, cycle, ctx);
                     count++;
                 }
             }
@@ -271,7 +271,7 @@ public:
                 sent = true;
                 T::Send(uve_entry->second->data,
                     (ctx.empty() ? SandeshUVE::ST_INTROSPECT : SandeshUVE::ST_SYNC),
-                    uve_entry->second->seqno, ctx);
+                    uve_entry->second->seqno, 0, ctx);
             }
         }
         return sent;
