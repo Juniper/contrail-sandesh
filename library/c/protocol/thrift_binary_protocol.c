@@ -53,7 +53,9 @@ thrift_bitwise_cast_double (u_int64_t v)
 }
 #endif
 
-static inline int32_t
+/* Write methods */
+
+int32_t
 thrift_binary_protocol_write_byte (ThriftProtocol *protocol, const int8_t value,
                                    int *error)
 {
@@ -66,7 +68,7 @@ thrift_binary_protocol_write_byte (ThriftProtocol *protocol, const int8_t value,
   }
 }
 
-static inline int32_t
+int32_t
 thrift_binary_protocol_write_i16 (ThriftProtocol *protocol, const int16_t value,
                                   int *error)
 {
@@ -81,7 +83,7 @@ thrift_binary_protocol_write_i16 (ThriftProtocol *protocol, const int16_t value,
 
 }
 
-static inline int32_t
+int32_t
 thrift_binary_protocol_write_u16 (ThriftProtocol *protocol, const u_int16_t value,
                                   int *error)
 {
@@ -95,7 +97,7 @@ thrift_binary_protocol_write_u16 (ThriftProtocol *protocol, const u_int16_t valu
   }
 }
 
-static inline int32_t
+int32_t
 thrift_binary_protocol_write_i32 (ThriftProtocol *protocol, const int32_t value,
                                   int *error)
 {
@@ -109,7 +111,7 @@ thrift_binary_protocol_write_i32 (ThriftProtocol *protocol, const int32_t value,
   }
 }
 
-static inline int32_t
+int32_t
 thrift_binary_protocol_write_u32 (ThriftProtocol *protocol, const u_int32_t value,
                                   int *error)
 {
@@ -123,7 +125,7 @@ thrift_binary_protocol_write_u32 (ThriftProtocol *protocol, const u_int32_t valu
   }
 }
 
-static inline int32_t
+int32_t
 thrift_binary_protocol_write_i64 (ThriftProtocol *protocol, const int64_t value,
                                   int *error)
 {
@@ -138,7 +140,7 @@ thrift_binary_protocol_write_i64 (ThriftProtocol *protocol, const int64_t value,
   }
 }
 
-static inline int32_t
+int32_t
 thrift_binary_protocol_write_u64 (ThriftProtocol *protocol, const uint64_t value,
                                   int *error)
 {
@@ -153,49 +155,12 @@ thrift_binary_protocol_write_u64 (ThriftProtocol *protocol, const uint64_t value
   }
 }
 
-static inline int32_t
+int32_t
 thrift_binary_protocol_write_bool (ThriftProtocol *protocol,
                                    const u_int8_t value, int *error)
 {
   u_int8_t tmp = value ? 1 : 0;
   return thrift_binary_protocol_write_byte (protocol, tmp, error);
-}
-
-int32_t
-thrift_binary_protocol_write_message_begin (ThriftProtocol *protocol,
-    const char *name, const ThriftMessageType message_type,
-    const int32_t seqid, int *error)
-{
-  int32_t version = (THRIFT_BINARY_PROTOCOL_VERSION_1)
-                   | ((int32_t) message_type);
-  int32_t ret;
-  int32_t xfer = 0;
-
-  if ((ret = thrift_binary_protocol_write_i32 (protocol, version, error)) < 0)
-  {
-    return -1;
-  }
-  xfer += ret;
-  if ((ret = thrift_binary_protocol_write_string (protocol, name, error)) < 0)
-  {
-    return -1;
-  }
-  xfer += ret;
-  if ((ret = thrift_binary_protocol_write_i32 (protocol, seqid, error)) < 0)
-  {
-    return -1;
-  }
-  xfer += ret;
-  return xfer;
-}
-
-int32_t
-thrift_binary_protocol_write_message_end (ThriftProtocol *protocol ,
-                                          int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (error);
-  return 0;
 }
 
 int32_t
@@ -211,35 +176,6 @@ thrift_binary_protocol_write_sandesh_begin (ThriftProtocol *protocol,
   }
   xfer += ret;
   return xfer;
-}
-
-int32_t
-thrift_binary_protocol_write_sandesh_end (ThriftProtocol *protocol ,
-                                          int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (error);
-  return 0;
-}
-
-int32_t
-thrift_binary_protocol_write_struct_begin (ThriftProtocol *protocol ,
-                                           const char *name ,
-                                           int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (name);
-  THRIFT_UNUSED_VAR (error);
-  return 0;
-}
-
-int32_t
-thrift_binary_protocol_write_struct_end (ThriftProtocol *protocol ,
-                                         int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (error);
-  return 0;
 }
 
 int32_t
@@ -267,57 +203,11 @@ thrift_binary_protocol_write_field_begin (ThriftProtocol *protocol,
 }
 
 int32_t
-thrift_binary_protocol_write_field_end (ThriftProtocol *protocol ,
-                                        int *error )
-{
-  return 0;
-}
-
-int32_t
 thrift_binary_protocol_write_field_stop (ThriftProtocol *protocol,
                                          int *error)
 {
 
   return thrift_binary_protocol_write_byte (protocol, (int8_t) T_STOP, error);
-}
-
-int32_t
-thrift_binary_protocol_write_map_begin (ThriftProtocol *protocol,
-                                        const ThriftType key_type,
-                                        const ThriftType value_type,
-                                        const u_int32_t size,
-                                        int *error)
-{
-  int32_t ret;
-  int32_t xfer = 0;
-
-  if ((ret = thrift_binary_protocol_write_byte (protocol, (int8_t) key_type,
-                                         error)) < 0)
-  {
-    return -1;
-  }
-  xfer += ret;
-  if ((ret = thrift_binary_protocol_write_byte (protocol, (int8_t) value_type,
-                                         error)) < 0)
-  {
-    return -1;
-  }
-  xfer += ret;
-  if ((ret = thrift_binary_protocol_write_i32 (protocol, (int32_t) size, error)) < 0)
-  {
-    return -1;
-  }
-  xfer += ret;
-  return xfer;
-}
-
-int32_t
-thrift_binary_protocol_write_map_end (ThriftProtocol *protocol ,
-                                      int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (error);
-  return 0;
 }
 
 int32_t
@@ -343,34 +233,6 @@ thrift_binary_protocol_write_list_begin (ThriftProtocol *protocol,
   xfer += ret;
 
   return xfer;
-}
-
-int32_t
-thrift_binary_protocol_write_list_end (ThriftProtocol *protocol ,
-                                       int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (error);
-  return 0;
-}
-
-int32_t
-thrift_binary_protocol_write_set_begin (ThriftProtocol *protocol,
-                                        const ThriftType element_type,
-                                        const u_int32_t size,
-                                        int *error)
-{
-  return thrift_binary_protocol_write_list_begin (protocol, element_type,
-                                           size, error);
-}
-
-int32_t
-thrift_binary_protocol_write_set_end (ThriftProtocol *protocol ,
-                                      int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (error);
-  return 0;
 }
 
 int32_t
@@ -487,60 +349,7 @@ thrift_binary_protocol_write_binary (ThriftProtocol *protocol,
   return xfer;
 }
 
-int32_t
-thrift_binary_protocol_read_message_begin (ThriftProtocol *protocol,
-                                           char **name,
-                                           ThriftMessageType *message_type,
-                                           int32_t *seqid, int *error)
-{
-  int32_t ret;
-  int32_t xfer = 0;
-  int32_t sz;
-
-  if ((ret = thrift_binary_protocol_read_i32 (protocol, &sz, error)) < 0)
-  {
-    return -1;
-  }
-  xfer += ret;
-
-  if (sz < 0)
-  {
-    /* check for version */
-    u_int32_t version = sz & THRIFT_BINARY_PROTOCOL_VERSION_MASK;
-    if (version != THRIFT_BINARY_PROTOCOL_VERSION_1)
-    {
-      *error = THRIFT_PROTOCOL_ERROR_BAD_VERSION;
-      os_log(OS_LOG_ERR, "Expected version %d, got %d",
-             THRIFT_BINARY_PROTOCOL_VERSION_1, version);
-      return -1;
-    }
-
-    *message_type = (ThriftMessageType) (sz & 0x000000ff);
-
-    if ((ret = thrift_binary_protocol_read_string (protocol, name, error)) < 0)
-    {
-      return -1;
-    }
-    xfer += ret;
-
-    if ((ret = thrift_binary_protocol_read_i32 (protocol, seqid, error)) < 0)
-    {
-      return -1;
-    }
-    xfer += ret;
-  }
-  return xfer;
-}
-
-int32_t
-thrift_binary_protocol_read_message_end (ThriftProtocol *protocol ,
-                                         int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (error);
-  return 0;
-}
-
+/* Read methods */
 int32_t
 thrift_binary_protocol_read_sandesh_begin (ThriftProtocol *protocol,
                                            char **name,
@@ -558,15 +367,6 @@ thrift_binary_protocol_read_sandesh_begin (ThriftProtocol *protocol,
 }
 
 int32_t
-thrift_binary_protocol_read_sandesh_end (ThriftProtocol *protocol ,
-                                         int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (error);
-  return 0;
-}
-
-int32_t
 thrift_binary_protocol_read_struct_begin (ThriftProtocol *protocol ,
                                           char **name,
                                           int *error )
@@ -574,15 +374,6 @@ thrift_binary_protocol_read_struct_begin (ThriftProtocol *protocol ,
   THRIFT_UNUSED_VAR (protocol);
   THRIFT_UNUSED_VAR (error);
   *name = NULL;
-  return 0;
-}
-
-int32_t
-thrift_binary_protocol_read_struct_end (ThriftProtocol *protocol ,
-                                        int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (error);
   return 0;
 }
 
@@ -626,58 +417,6 @@ thrift_binary_protocol_read_field_end (ThriftProtocol *protocol ,
 }
 
 int32_t
-thrift_binary_protocol_read_map_begin (ThriftProtocol *protocol,
-                                       ThriftType *key_type,
-                                       ThriftType *value_type,
-                                       u_int32_t *size,
-                                       int *error)
-{
-  int32_t ret;
-  int32_t xfer = 0;
-  int8_t k, v;
-  int32_t sizei;
-
-  if ((ret = thrift_binary_protocol_read_byte (protocol, &k, error)) < 0)
-  {
-    return -1;
-  }
-  xfer += ret;
-  *key_type = (ThriftType) k;
-
-  if ((ret = thrift_binary_protocol_read_byte (protocol, &v, error)) < 0)
-  {
-    return -1;
-  }
-  xfer += ret;
-  *value_type = (ThriftType) v;
-
-  if ((ret = thrift_binary_protocol_read_i32 (protocol, &sizei, error)) <0)
-  {
-    return -1;
-  }
-  xfer += ret;
-
-  if (sizei < 0)
-  {
-    *error = THRIFT_PROTOCOL_ERROR_NEGATIVE_SIZE;
-    os_log(OS_LOG_ERR, "Got negative size of %d", sizei);
-    return -1;
-  }
-
-  *size = (u_int32_t) sizei;
-  return xfer;
-}
-
-int32_t
-thrift_binary_protocol_read_map_end (ThriftProtocol *protocol ,
-                                     int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (error);
-  return 0;
-}
-
-int32_t
 thrift_binary_protocol_read_list_begin (ThriftProtocol *protocol,
                                         ThriftType *element_type,
                                         u_int32_t *size, int *error)
@@ -714,25 +453,6 @@ thrift_binary_protocol_read_list_begin (ThriftProtocol *protocol,
 int32_t
 thrift_binary_protocol_read_list_end (ThriftProtocol *protocol ,
                                       int *error )
-{
-  THRIFT_UNUSED_VAR (protocol);
-  THRIFT_UNUSED_VAR (error);
-  return 0;
-}
-
-int32_t
-thrift_binary_protocol_read_set_begin (ThriftProtocol *protocol,
-                                       ThriftType *element_type,
-                                       u_int32_t *size, int *error)
-{
-
-
-  return thrift_binary_protocol_read_list_begin (protocol, element_type, size, error);
-}
-
-int32_t
-thrift_binary_protocol_read_set_end (ThriftProtocol *protocol ,
-                                     int *error )
 {
   THRIFT_UNUSED_VAR (protocol);
   THRIFT_UNUSED_VAR (error);
@@ -1048,8 +768,6 @@ thrift_binary_protocol_read_binary (ThriftProtocol *protocol,
 void
 thrift_binary_protocol_init (ThriftBinaryProtocol *protocol)
 {
-  protocol->write_message_begin = thrift_binary_protocol_write_message_begin;
-  protocol->write_message_end = thrift_binary_protocol_write_message_end;
   protocol->write_sandesh_begin = thrift_binary_protocol_write_sandesh_begin;
   protocol->write_sandesh_end = thrift_binary_protocol_write_sandesh_end;
   protocol->write_struct_begin = thrift_binary_protocol_write_struct_begin;
@@ -1057,12 +775,8 @@ thrift_binary_protocol_init (ThriftBinaryProtocol *protocol)
   protocol->write_field_begin = thrift_binary_protocol_write_field_begin;
   protocol->write_field_end = thrift_binary_protocol_write_field_end;
   protocol->write_field_stop = thrift_binary_protocol_write_field_stop;
-  protocol->write_map_begin = thrift_binary_protocol_write_map_begin;
-  protocol->write_map_end = thrift_binary_protocol_write_map_end;
   protocol->write_list_begin = thrift_binary_protocol_write_list_begin;
   protocol->write_list_end = thrift_binary_protocol_write_list_end;
-  protocol->write_set_begin = thrift_binary_protocol_write_set_begin;
-  protocol->write_set_end = thrift_binary_protocol_write_set_end;
   protocol->write_bool = thrift_binary_protocol_write_bool;
   protocol->write_byte = thrift_binary_protocol_write_byte;
   protocol->write_i16 = thrift_binary_protocol_write_i16;
@@ -1078,20 +792,14 @@ thrift_binary_protocol_init (ThriftBinaryProtocol *protocol)
   protocol->write_binary = thrift_binary_protocol_write_binary;
   protocol->write_xml = thrift_binary_protocol_write_string;
   protocol->write_uuid_t = thrift_binary_protocol_write_uuid_t;
-  protocol->read_message_begin = thrift_binary_protocol_read_message_begin;
-  protocol->read_message_end = thrift_binary_protocol_read_message_end;
   protocol->read_sandesh_begin = thrift_binary_protocol_read_sandesh_begin;
   protocol->read_sandesh_end = thrift_binary_protocol_read_sandesh_end;
   protocol->read_struct_begin = thrift_binary_protocol_read_struct_begin;
   protocol->read_struct_end = thrift_binary_protocol_read_struct_end;
   protocol->read_field_begin = thrift_binary_protocol_read_field_begin;
   protocol->read_field_end = thrift_binary_protocol_read_field_end;
-  protocol->read_map_begin = thrift_binary_protocol_read_map_begin;
-  protocol->read_map_end = thrift_binary_protocol_read_map_end;
   protocol->read_list_begin = thrift_binary_protocol_read_list_begin;
   protocol->read_list_end = thrift_binary_protocol_read_list_end;
-  protocol->read_set_begin = thrift_binary_protocol_read_set_begin;
-  protocol->read_set_end = thrift_binary_protocol_read_set_end;
   protocol->read_bool = thrift_binary_protocol_read_bool;
   protocol->read_byte = thrift_binary_protocol_read_byte;
   protocol->read_i16 = thrift_binary_protocol_read_i16;

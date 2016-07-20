@@ -24,10 +24,6 @@
 extern "C" {
 #endif
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
-
 /* this macro is called to satisfy -Wall hardcore compilation */
 #ifndef THRIFT_UNUSED_VAR
 # define THRIFT_UNUSED_VAR(x) ((void) x)

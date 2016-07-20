@@ -15,7 +15,6 @@ libsandeshc = env.Library(target = 'sandesh-c',
                           source = ['sandesh.c',
                                     'protocol/thrift_protocol.c',
                                     'protocol/thrift_binary_protocol.c',
-                                    'transport/thrift_transport.c',
                                     'transport/thrift_memory_buffer.c',
                                     'transport/thrift_fake_transport.c',
                                    ])
