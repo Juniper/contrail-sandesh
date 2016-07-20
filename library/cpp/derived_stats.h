@@ -25,6 +25,35 @@ class SandeshStructDeleteTrait;
 namespace contrail {
 namespace sandesh {
 
+template<typename ElemT>
+std::map<std::string, ElemT> DerivedStatsAgg(const std::map<std::string, ElemT> & raw,
+        std::map<std::string, ElemT> & agg,
+        const std::map<std::string, bool> &del) {
+
+    std::map<std::string, ElemT> diff;
+
+    typename std::map<std::string, ElemT>::const_iterator rit;
+    typename std::map<std::string, ElemT>::iterator ait;
+   
+    // Go through all raw elements to generate diff and update agg 
+    for (rit=raw.begin(); rit!= raw.end(); rit++) {
+        ait=agg.find(rit->first);
+        // The aggregate already has this element
+        if (ait!=agg.end()) {
+            diff[rit->first] = rit->second - ait->second;
+            // Remove from agg if this element is marked for deletion
+            // (It will still be in the diff)
+            if (!del.at(rit->first)) ait->second = ait->second + diff[rit->first];
+            else agg.erase(ait);
+        } else {
+            diff[rit->first] = rit->second;
+            if (!del.at(rit->first)) agg[rit->first] = diff[rit->first]; 
+        }
+    }
+    return diff;
+}  
+
+ 
 template<template<class,class> class DSTT, typename ElemT, typename ResultT>
 void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
         std::map<std::string, boost::shared_ptr<DSTT<ElemT,ResultT> > > & dsm,
@@ -78,6 +107,7 @@ void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
         rit = raw.find(mt->first);
         dlt = del.find(mt->first);
         if ((mt->second == false) && (!dlt->second)) {
+            assert(dsm.find(mt->first) == dsm.end());
             dsm[mt->first] = boost::make_shared<DSTT<ElemT,ResultT> >(annotation);
             dsm[mt->first]->Update((raw.find(mt->first))->second);
         }
@@ -88,15 +118,23 @@ template <template<class,class> class DSTT, typename ElemT, typename ResultT>
 class DerivedStatsIf {
   private:
     typedef std::map<std::string, boost::shared_ptr<DSTT<ElemT,ResultT> > > result_map;
+
     boost::shared_ptr<result_map> dsm_;
 
     boost::shared_ptr<DSTT<ElemT,ResultT> > ds_;
     
     std::string annotation_;
+    
+    bool is_agg_;
+    ElemT agg_;
+    std::map<std::string, ElemT> aggm_;
+    ElemT diff_;
+    std::map<std::string, ElemT> diffm_;
 
+    
   public:
-    DerivedStatsIf(std::string annotation):
-        annotation_(annotation) {}
+    DerivedStatsIf(std::string annotation, bool is_agg = false):
+        annotation_(annotation), is_agg_(is_agg) {}
 
     bool IsResult(void) const {
         if ((!ds_) && (!dsm_)) return false;
@@ -132,15 +170,30 @@ class DerivedStatsIf {
     void Update(ElemT raw) {
         if (!ds_) {
             ds_ = boost::make_shared<DSTT<ElemT,ResultT> >(annotation_);
+            if (is_agg_) {
+                diff_ = raw;
+                agg_ = raw;
+            }
+        } else {
+            if (is_agg_) {
+                diff_ = raw - agg_;
+                agg_ = agg_ + diff_;
+            }
         }
-        ds_->Update(raw);
+        if (is_agg_) ds_->Update(diff_);
+        else ds_->Update(raw);
     }
     
     void Update(const std::map<std::string, ElemT> & raw, const std::map<std::string, bool> &del) {
         if (!dsm_) {
             dsm_ = boost::make_shared<result_map>();
         }
-        DerivedStatsMerge<DSTT,ElemT,ResultT>(raw, *dsm_, annotation_, del);
+        if (is_agg_) {
+            diffm_ = DerivedStatsAgg<ElemT>(raw, aggm_, del);
+            DerivedStatsMerge<DSTT,ElemT,ResultT>(diffm_, *dsm_, annotation_, del);
+        } else {
+            DerivedStatsMerge<DSTT,ElemT,ResultT>(raw, *dsm_, annotation_, del);
+        }
     }
 };
 
@@ -157,9 +210,16 @@ class DerivedStatsPeriodicIf {
     
     std::string annotation_;
 
+    bool is_agg_;
+    bool init_;
+    ElemT agg_;
+    std::map<std::string, ElemT> aggm_;
+    ElemT diff_;
+    std::map<std::string, ElemT> diffm_;
+
   public:
-    DerivedStatsPeriodicIf(std::string annotation):
-        annotation_(annotation) {}
+    DerivedStatsPeriodicIf(std::string annotation, bool is_agg=false):
+        annotation_(annotation), is_agg_(is_agg), init_(false) {}
 
     bool IsResult(void) const {
         if (ds_ || ds_cache_) return true;
@@ -173,14 +233,28 @@ class DerivedStatsPeriodicIf {
         if (!ds_) {
             ds_ = boost::make_shared<DSTT<ElemT,SubResultT> >(annotation_);
         }
-        ds_->Update(raw);
+        if (is_agg_) {
+            if (!init_) {
+                diff_ = raw;
+                agg_ = raw;
+            } else {
+                diff_ = raw - agg_;
+                agg_ = agg_ + diff_;
+            }
+            ds_->Update(diff_);
+        } else ds_->Update(raw);
+        init_ = true;
     }
 
     void Update(const std::map<std::string, ElemT> & raw, const std::map<std::string, bool> &del) {
         if (!dsm_) {
-            dsm_ = boost::make_shared<result_map >();
+            dsm_ = boost::make_shared<result_map>();
         }
-        DerivedStatsMerge<DSTT,ElemT,SubResultT>(raw, *dsm_, annotation_, del);
+        if (is_agg_) {
+            diffm_ = DerivedStatsAgg<ElemT>(raw, aggm_, del);
+            DerivedStatsMerge<DSTT,ElemT,SubResultT>(diffm_, *dsm_, annotation_, del);
+        } else DerivedStatsMerge<DSTT,ElemT,SubResultT>(raw, *dsm_, annotation_, del);
+        init_ = true;
     }
 
     bool Flush(const ResultT &res) {
