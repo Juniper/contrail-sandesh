@@ -70,7 +70,7 @@ env.Alias('src/sandesh:sandesh_pre_c_test', sandesh_pre_c_test)
 
 sandesh_c_test = env.UnitTest('sandesh_c_test',  
                               SandeshCTestGenSrcs +
-                              env['SandeshBufferTestGenCObjs'] +  
+                              env['SandeshBufferTestGenCObjs'] +
                               ['sandesh_c_test.cc']
                               )
 

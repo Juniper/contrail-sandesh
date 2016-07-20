@@ -31,6 +31,74 @@ extern "C" {
 typedef ThriftProtocol ThriftBinaryProtocol;
 
 void thrift_binary_protocol_init (ThriftBinaryProtocol *protocol);
+int32_t thrift_binary_protocol_skip_from_buffer (uint8_t *buf, const uint32_t buflen,
+                                              ThriftType type, int *error);
+
+/* Write to ThriftTransport */
+static inline int32_t
+thrift_binary_protocol_write_sandesh_end (ThriftProtocol *protocol, int *error)
+{
+  THRIFT_UNUSED_VAR (protocol);
+  THRIFT_UNUSED_VAR (error);
+  return 0;
+}
+
+static inline int32_t
+thrift_binary_protocol_write_struct_begin (ThriftProtocol *protocol,
+                                           const char *name,
+                                           int *error )
+{
+  THRIFT_UNUSED_VAR (protocol);
+  THRIFT_UNUSED_VAR (name);
+  THRIFT_UNUSED_VAR (error);
+  return 0;
+}
+
+static inline int32_t
+thrift_binary_protocol_write_struct_end (ThriftProtocol *protocol ,
+                                         int *error )
+{
+  THRIFT_UNUSED_VAR (protocol);
+  THRIFT_UNUSED_VAR (error);
+  return 0;
+}
+
+static inline int32_t
+thrift_binary_protocol_write_field_end (ThriftProtocol *protocol ,
+                                        int *error )
+{
+  THRIFT_UNUSED_VAR (protocol);
+  THRIFT_UNUSED_VAR (error);
+  return 0;
+}
+
+static inline int32_t
+thrift_binary_protocol_write_list_end (ThriftProtocol *protocol ,
+                                       int *error )
+{
+  THRIFT_UNUSED_VAR (protocol);
+  THRIFT_UNUSED_VAR (error);
+  return 0;
+}
+
+/* Read from ThriftTransport */
+static inline int32_t
+thrift_binary_protocol_read_sandesh_end (ThriftProtocol *protocol ,
+                                         int *error )
+{
+  THRIFT_UNUSED_VAR (protocol);
+  THRIFT_UNUSED_VAR (error);
+  return 0;
+}
+
+static inline int32_t
+thrift_binary_protocol_read_struct_end (ThriftProtocol *protocol ,
+                                        int *error )
+{
+  THRIFT_UNUSED_VAR (protocol);
+  THRIFT_UNUSED_VAR (error);
+  return 0;
+}
 
 #ifdef __cplusplus
 }
