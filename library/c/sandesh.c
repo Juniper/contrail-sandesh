@@ -35,24 +35,38 @@ sandesh_find_info (sandesh_info_t *infos, const char *name) {
 static int32_t
 sandesh_decode_one (u_int8_t *buf, u_int32_t buf_len, sandesh_find_info_fn sinfo_find_fn,
                     int *error) {
-    int32_t rxfer, ret;
+    int32_t rxfer = 0, ret, sread_len = 0;
     char *sname = NULL;
-    ThriftBinaryProtocol protocol;
-    ThriftMemoryBuffer transport;
     sandesh_info_t *sinfo;
     void *sandesh;
-
-    /* Initialize the transport and protocol */
-    thrift_memory_buffer_init(&transport, buf, buf_len);
-    thrift_protocol_init(&protocol, T_PROTOCOL_BINARY, (ThriftTransport *)&transport);
-    thrift_memory_buffer_wrote_bytes(&transport, buf_len);
+    union {
+        void * b[4];
+        int32_t all;
+    } bytes4;
 
     /* Read the sandesh name */
-    rxfer = thrift_protocol_read_sandesh_begin(&protocol,
-                                               &sname,
-                                               error);
-    if (rxfer < 0) {
-        os_log(OS_LOG_ERR, "Read sandesh begin FAILED (%d)", *error);
+    if (buf_len < rxfer + 4) {
+        os_log(OS_LOG_ERR, "Read sandesh begin FAILED");
+        ret = -1;
+        goto exit;
+    }
+    memcpy(bytes4.b, buf + rxfer, 4);
+    rxfer += 4;
+    sread_len = ntohl(bytes4.all);
+    if (sread_len > 0) {
+        if (buf_len < rxfer + sread_len) {
+            os_log(OS_LOG_ERR, "Read sandesh begin: Length(%d) FAILED",
+                sread_len);
+            ret = -1;
+            goto exit;
+        }
+        sname = os_malloc(sread_len + 1);
+        memcpy(sname, buf + rxfer, sread_len);
+        sname[sread_len] = 0;
+        rxfer += sread_len;
+    } else {
+        os_log(OS_LOG_ERR, "Read sandesh begin: Length(%d) INVALID",
+            sread_len);
         ret = -1;
         goto exit;
     }
@@ -75,17 +89,8 @@ sandesh_decode_one (u_int8_t *buf, u_int32_t buf_len, sandesh_find_info_fn sinfo
         goto exit;
     }
 
-    /*
-     * Reinitialize the transport and protocol, this is needed so that
-     * the sandesh name read above is done again in the sandesh type specific
-     * read function
-     */
-    thrift_memory_buffer_init(&transport, buf, buf_len);
-    thrift_protocol_init(&protocol, T_PROTOCOL_BINARY, (ThriftTransport *)&transport);
-    thrift_memory_buffer_wrote_bytes(&transport, buf_len);
-
     /* Now, read the sandesh */
-    rxfer = sinfo->read(sandesh, &protocol, error);
+    rxfer = sinfo->read_binary_from_buffer(sandesh, buf, buf_len, error);
     if (rxfer < 0) {
         os_log(OS_LOG_ERR, "%s read FAILED (%d)", sname, *error);
         sinfo->free(sandesh);
@@ -145,8 +150,6 @@ int32_t
 sandesh_encode (void *sandesh, const char *sname,
                 sandesh_find_info_fn sinfo_find_fn, u_int8_t *buf,
                 u_int32_t buf_len, int *error) {
-    ThriftBinaryProtocol protocol;
-    ThriftMemoryBuffer transport;
     sandesh_info_t *sinfo;
     int32_t wxfer;
 
@@ -158,12 +161,8 @@ sandesh_encode (void *sandesh, const char *sname,
         return -1;
     }
 
-    /* Initialize the transport and protocol */
-    thrift_memory_buffer_init(&transport, buf, buf_len);
-    thrift_protocol_init(&protocol, T_PROTOCOL_BINARY, (ThriftTransport *)&transport);
-
     /* Now, write the sandesh */
-    wxfer = sinfo->write(sandesh, &protocol, error);
+    wxfer = sinfo->write_binary_to_buffer(sandesh, buf, buf_len, error);
     if (wxfer < 0) {
 #ifdef __KERNEL__
         if (vrouter_dbg) {

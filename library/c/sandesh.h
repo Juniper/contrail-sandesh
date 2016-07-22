@@ -54,7 +54,7 @@ MALLOC_DECLARE(M_VROUTER);
 #endif /* __FreeBSD__ */
 
 extern int vrouter_dbg;
-#else
+#else /* __KERNEL__ */
 
 #include <stdlib.h>
 #include <string.h>
@@ -76,7 +76,7 @@ extern int vrouter_dbg;
 typedef unsigned char uuid_t[16];
 
 typedef struct ipaddr_s {
-    uint16_t iptype; // AF_INET or AF_INET6
+    uint8_t iptype; // AF_INET or AF_INET6
     union {
         struct in_addr ipv4;
         struct in6_addr ipv6;
@@ -112,7 +112,9 @@ typedef struct sandesh_info_s {
     const char *name;
     u_int32_t size;
     int32_t (*read) (void *, ThriftProtocol *, int *);
+    int32_t (*read_binary_from_buffer) (void *, uint8_t *, const size_t, int *);
     int32_t (*write) (void *, ThriftProtocol *, int *);
+    int32_t (*write_binary_to_buffer) (void *, uint8_t *, const size_t, int *);
     void (*process) (void *);
     void (*free) (void *);
 } sandesh_info_t ;

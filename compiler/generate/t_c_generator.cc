@@ -122,9 +122,7 @@ class t_c_generator : public t_oop_generator {
   string base_type_name(t_base_type *type);
   string type_to_enum(t_type *type);
   string constant_value(string name, t_type *type, t_const_value *value);
-  string function_signature(t_function *tfunction);
   string argument_list(t_struct *tstruct);
-  string xception_list(t_struct *tstruct);
   string declare_field(t_field *tfield, bool init=false, bool pointer=false, bool constant=false, bool reference=false);
 
   /* generation functions */
@@ -135,25 +133,83 @@ class t_c_generator : public t_oop_generator {
   void generate_object(t_sandesh *tsandesh);
   void generate_object_internal(string name, const vector<t_field *> &members, bool is_sandesh);
   void generate_struct_writer(ofstream &out, string name, const vector<t_field *> &fields, bool is_sandesh, bool is_function=true);
+  void generate_struct_writer_to_buffer(ofstream &out, string name, const vector<t_field *> &fields, bool is_sandesh, bool is_function=true);
   void generate_struct_reader(ofstream &out, string name, const vector<t_field *> &fields, bool is_sandesh, bool is_function=true);
+  void generate_struct_reader_from_buffer(ofstream &out, string name, const vector<t_field *> &fields, bool is_sandesh, bool is_function=true);
   void generate_struct_deleter(ofstream &out, string name, const vector<t_field *> &fields, bool is_sandesh, bool is_function=true);
 
+  void generate_buffer_bounds_chk(ofstream &out, string length, int error_ret);
+  void generate_buffer_incr_offset(ofstream &out, string length);
+
+  void generate_write_buffer_memcpy(ofstream &out, string source, string length, bool ref);
+  void generate_write_buffer_memcpy_incr_offset(ofstream &out, string source, string length, bool ref);
+  void generate_write_buffer_chk_memcpy_incr_offset(ofstream &out, string source, string length, int error_ret, bool ref);
+  void generate_write_buffer_binary(ofstream &out, string buf, string buf_len, int error_ret);
+
+  void generate_struct_begin_writer_to_buffer(ofstream &out, string name, bool is_sandesh, int error_ret);
+  void generate_struct_end_writer_to_buffer(ofstream &out, bool is_sandesh);
+  void generate_field_begin_writer_to_buffer(ofstream &out, string key, string field_type, int error_ret);
+  void generate_field_end_writer_to_buffer(ofstream &out);
+  void generate_field_stop_writer_to_buffer(ofstream &out, int error_ret);
+  void generate_list_begin_writer_to_buffer(ofstream &out, string element_type, string length, int error_ret);
+  void generate_list_end_writer_to_buffer(ofstream &out);
+
+  void generate_serialize_bool_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_byte_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_i16_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_i32_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_i64_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_u16_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_u32_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_u64_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_string_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_xml_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_ipaddr_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_uuid_t_to_buffer(ofstream &out, string name, int error_ret);
+  void generate_serialize_double_to_buffer(ofstream &out, string name, int error_ret);
+
+  void generate_read_buffer_memcpy(ofstream &out, string dest, string length, bool ref);
+  void generate_read_buffer_memcpy_incr_offset(ofstream &out, string dest, string length, bool ref);
+  void generate_read_buffer_chk_memcpy_incr_offset(ofstream &out, string dest, string length, int error_ret, bool ref);
+
+  void generate_struct_begin_reader_from_buffer(ofstream &out, string name, bool is_sandesh, int error_ret);
+  void generate_struct_end_reader_from_buffer(ofstream &out, bool is_sandesh);
+  void generate_field_begin_reader_from_buffer(ofstream &out, string field_type, string field_id, int error_ret);
+  void generate_field_end_reader_from_buffer(ofstream &out);
+  void generate_list_begin_reader_from_buffer(ofstream &out, string element_size, int error_ret);
+  void generate_list_end_reader_from_buffer(ofstream &out);
+
+  void generate_deserialize_bool_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_byte_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_i16_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_i32_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_i64_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_u16_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_u32_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_u64_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_string_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_xml_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_ipaddr_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_uuid_t_from_buffer(ofstream &out, string name, int error_ret);
+  void generate_deserialize_double_from_buffer(ofstream &out, string name, int error_ret);
+
   void generate_serialize_field(ofstream &out, t_field *tfield, string prefix, string suffix, int error_ret);
+  void generate_serialize_field_to_buffer(ofstream &out, t_field *tfield, string prefix, string suffix, int error_ret);
   void generate_serialize_struct(ofstream &out, t_struct *tstruct, string prefix, int error_ret);
+  void generate_serialize_struct_to_buffer(ofstream &out, t_struct *tstruct, string prefix, int error_ret);
   void generate_serialize_container(ofstream &out, t_type *ttype, string prefix, int error_ret);
-  void generate_serialize_map_element(ofstream &out, t_map *tmap, string key, string value, int error_ret);
-  void generate_serialize_set_element(ofstream &out, t_set *tset, string element, int error_ret);
+  void generate_serialize_container_to_buffer(ofstream &out, t_type *ttype, string prefix, int error_ret);
   void generate_serialize_list_element(ofstream &out, t_list *tlist, string list, string index, int error_ret);
+  void generate_serialize_list_element_to_buffer(ofstream &out, t_list *tlist, string list, string index, int error_ret);
 
   void generate_deserialize_field(ofstream &out, t_field *tfield, string prefix, string suffix, int error_ret);
+  void generate_deserialize_field_from_buffer(ofstream &out, t_field *tfield, string prefix, string suffix, int error_ret);
   void generate_deserialize_struct(ofstream &out, t_struct *tstruct, string prefix, int error_ret);
+  void generate_deserialize_struct_from_buffer(ofstream &out, t_struct *tstruct, string prefix, int error_ret);
   void generate_deserialize_container(ofstream &out, t_type *ttype, string prefix, int error_ret);
-  void generate_deserialize_map_element(ofstream &out, t_map *tmap, string prefix, int error_ret);
-  void generate_deserialize_set_element(ofstream &out, t_set *tset, string prefix, int error_ret);
+  void generate_deserialize_container_from_buffer(ofstream &out, t_type *ttype, string prefix, int error_ret);
   void generate_deserialize_list_element(ofstream &out, t_list *tlist, string prefix, string index, int error_ret);
-
-  string generate_new_hash_from_type(t_type * ttype);
-  string generate_new_array_from_type(t_type * ttype); 
+  void generate_deserialize_list_element_from_buffer(ofstream &out, t_list *tlist, string prefix, string index, int error_ret);
 };
 
 /**
@@ -400,24 +456,30 @@ void t_c_generator::generate_sandesh_info () {
     string sandesh_name_u = initial_caps_to_underscores(sandesh_name);
     out << indent() << "{" << endl;
     indent_up();
-    out << indent() << ".name = \"" << sandesh_name << "\"," << endl;
-    out << indent() << ".size = sizeof(" << sandesh_name << ")," << endl;
-    out << indent() << ".read = " << sandesh_name_u << "_read," << endl;
-    out << indent() << ".write = " << sandesh_name_u << "_write," << endl;
-    out << indent() << ".process = " << sandesh_name_u << "_process," << endl;
-    out << indent() << ".free = " << sandesh_name_u << "_free," << endl;
+    out <<
+      indent() << ".name = \"" << sandesh_name << "\"," << endl <<
+      indent() << ".size = sizeof(" << sandesh_name << ")," << endl <<
+      indent() << ".read = " << sandesh_name_u << "_read," << endl <<
+      indent() << ".read_binary_from_buffer = " << sandesh_name_u << "_read_binary_from_buffer," << endl <<
+      indent() << ".write = " << sandesh_name_u << "_write," << endl <<
+      indent() << ".write_binary_to_buffer = " << sandesh_name_u << "_write_binary_to_buffer," << endl <<
+      indent() << ".process = " << sandesh_name_u << "_process," << endl <<
+      indent() << ".free = " << sandesh_name_u << "_free," << endl;
     indent_down();
     out << indent() << "}," << endl;
   }
   // Add end of array marker
   out << indent() << "{" << endl;
   indent_up();
-  out << indent() << ".name = NULL," << endl;
-  out << indent() << ".size = 0," << endl;
-  out << indent() << ".read = NULL," << endl;
-  out << indent() << ".write = NULL," << endl;
-  out << indent() << ".process = NULL," << endl;
-  out << indent() << ".free = NULL," << endl;
+  out <<
+    indent() << ".name = NULL," << endl <<
+    indent() << ".size = 0," << endl <<
+    indent() << ".read = NULL," << endl <<
+    indent() << ".read_binary_from_buffer = NULL," << endl <<
+    indent() << ".write = NULL," << endl <<
+    indent() << ".write_binary_to_buffer = NULL," << endl <<
+    indent() << ".process = NULL," << endl <<
+    indent() << ".free = NULL," << endl;
   indent_down();
   out << indent() << "}, " << endl;
   indent_down();
@@ -703,30 +765,6 @@ string t_c_generator::constant_value(string name, t_type *type, t_const_value *v
 }
 
 /**
- * Renders a function signature of the form 'type name(args)'
- *
- * @param tfunction Function definition
- * @return String of rendered function definition
- */
-string t_c_generator::function_signature(t_function* tfunction) {
-  t_type* ttype = tfunction->get_returntype();
-  t_struct* arglist = tfunction->get_arglist();
-  t_struct* xlist = tfunction->get_xceptions();
-  string fname = initial_caps_to_underscores(tfunction->get_name());
-
-  bool has_return = !ttype->is_void();
-  bool has_args = arglist->get_members().size() == 0;
-  bool has_xceptions = xlist->get_members().size() == 0;
-  return
-    "gboolean " + this->nspace_lc + fname + " (" + this->nspace
-    + service_name_ + "If * iface"
-    + (has_return ? ", " + type_name(ttype) + "* _return" : "")
-    + (has_args ? "" : (", " + argument_list (arglist))) 
-    + (has_xceptions ? "" : (", " + xception_list (xlist)))
-    + ", GError ** error)";
-}
-
-/**
  * Renders a field list
  *
  * @param tstruct The struct definition
@@ -749,31 +787,6 @@ string t_c_generator::argument_list (t_struct* tstruct) {
   }
   return result;
 }
-
-/**
- * Renders mutable exception lists
- *
- * @param tstruct The struct definition
- * @return Comma sepearated list of all field names in that struct
- */
-string t_c_generator::xception_list (t_struct* tstruct) {
-  string result = "";
-
-  const vector<t_field*>& fields = tstruct->get_members();
-  vector<t_field*>::const_iterator f_iter;
-  bool first = true;
-  for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
-    if (first) {
-      first = false;
-    } else {
-      result += ", ";
-    }
-    result += type_name((*f_iter)->get_type(), false, false) + "* " +
-              (*f_iter)->get_name();
-  }
-  return result;
-}
-
 
 /**
  * Declares a field, including any necessary initialization.
@@ -944,8 +957,18 @@ void t_c_generator::generate_object_internal(string name,
   f_types_ <<
     "int32_t " <<
     this->nspace_lc << name_u <<
+    "_write_binary_to_buffer (" << dtname <<
+    "* w" << dvname << ", uint8_t *buf, const size_t buf_len, int *error);" << endl;
+  f_types_ <<
+    "int32_t " <<
+    this->nspace_lc << name_u <<
     "_read (" << dtname <<
     "* r" << dvname << ", ThriftProtocol *protocol, int *error);" << endl;
+  f_types_ <<
+    "int32_t " <<
+    this->nspace_lc << name_u <<
+    "_read_binary_from_buffer (" << dtname <<
+    "* r" << dvname << ", uint8_t *buf, const size_t buf_len, int *error);" << endl;
   f_types_ <<
     "void " <<
     this->nspace_lc << name_u <<
@@ -961,7 +984,9 @@ void t_c_generator::generate_object_internal(string name,
   // start writing the object implementation .c file
   // generate struct I/O methods
   generate_struct_reader (f_types_impl_, name, members, is_sandesh);
+  generate_struct_reader_from_buffer (f_types_impl_, name, members, is_sandesh);
   generate_struct_writer (f_types_impl_, name, members, is_sandesh);
+  generate_struct_writer_to_buffer (f_types_impl_, name, members, is_sandesh);
   generate_struct_deleter (f_types_impl_, name, members, is_sandesh);
 }
 
@@ -1041,6 +1066,244 @@ void t_c_generator::generate_struct_deleter (ofstream &out,
       }
     }
   }
+  indent_down();
+  indent(out) <<
+    "}" << endl <<
+    endl;
+}
+
+void t_c_generator::generate_buffer_bounds_chk(ofstream &out,
+                                               string length,
+                                               int error_ret) {
+  out <<
+    indent() << "if (Xbuflen < Xoffset + " << length << ") {" << endl <<
+    indent() << "  return " << error_ret << ";" << endl <<
+    indent() << "}" << endl;
+}
+
+void t_c_generator::generate_buffer_incr_offset(ofstream &out,
+                                                string length) {
+  out <<
+    indent() << "Xoffset += " << length << ";" << endl;
+}
+
+void t_c_generator::generate_write_buffer_memcpy(ofstream &out,
+                                                 string source,
+                                                 string length,
+                                                 bool ref) {
+  if (ref) {
+    out <<
+      indent() << "memcpy (Xbuf + Xoffset, &" << source << ", " <<
+        length << ");" << endl;
+  } else {
+    out <<
+      indent() << "memcpy (Xbuf + Xoffset, " << source << ", " <<
+        length << ");" << endl;
+  }
+}
+
+void t_c_generator::generate_read_buffer_memcpy(ofstream &out,
+                                                string dest,
+                                                string length,
+                                                bool ref) {
+  if (ref) {
+    out <<
+      indent() << "memcpy (&" << dest << ", Xbuf + Xoffset, " <<
+        length << ");" << endl;
+  } else {
+    out <<
+      indent() << "memcpy (" << dest << ", Xbuf + Xoffset, " <<
+        length << ");" << endl;
+  }
+}
+
+void t_c_generator::generate_write_buffer_memcpy_incr_offset(ofstream &out,
+                                                             string source,
+                                                             string length,
+                                                             bool ref) {
+  generate_write_buffer_memcpy (out, source, length, ref);
+  generate_buffer_incr_offset (out, length);
+}
+
+void t_c_generator::generate_read_buffer_memcpy_incr_offset(ofstream &out,
+                                                            string dest,
+                                                            string length,
+                                                            bool ref) {
+  generate_read_buffer_memcpy (out, dest, length, ref);
+  generate_buffer_incr_offset (out, length);
+}
+
+void t_c_generator::generate_write_buffer_chk_memcpy_incr_offset(ofstream &out,
+                                                                 string source,
+                                                                 string length,
+                                                                 int error_ret,
+                                                                 bool ref) {
+  generate_buffer_bounds_chk (out, length, error_ret);
+  generate_write_buffer_memcpy_incr_offset (out, source, length, ref);
+}
+
+void t_c_generator::generate_read_buffer_chk_memcpy_incr_offset(ofstream &out,
+                                                                string dest,
+                                                                string length,
+                                                                int error_ret,
+                                                                bool ref) {
+  generate_buffer_bounds_chk (out, length, error_ret);
+  generate_read_buffer_memcpy_incr_offset (out, dest, length, ref);
+}
+
+void t_c_generator::generate_write_buffer_binary(ofstream &out, string buf,
+                                             string buf_len, int error_ret) {
+  string nbuf_len(tmp("Xnbuflen"));
+  generate_buffer_bounds_chk (out, "4", error_ret);
+  scope_up(out);
+  out <<
+    indent() << "int32_t " << nbuf_len << " = htonl (" <<
+      buf_len << ");" << endl;
+  generate_write_buffer_memcpy_incr_offset (out, nbuf_len, "4", true);
+  scope_down(out);
+  generate_write_buffer_chk_memcpy_incr_offset (out, buf, buf_len, error_ret,
+    false);
+}
+
+void t_c_generator::generate_struct_begin_writer_to_buffer(ofstream &out,
+                                                    string name,
+                                                    bool is_sandesh,
+                                                    int error_ret) {
+  if (is_sandesh) {
+    ostringstream os;
+    os << name.length();
+    string name_len(os.str());
+    out <<
+      indent() << "/* thrift_protocol_write_sandesh_begin */" << endl;
+    generate_write_buffer_binary (out, "\"" + name + "\"", name_len,
+                                     error_ret);
+  } else {
+    out << indent() << "/* thrift_protocol_write_struct_begin */" << endl;
+  }
+}
+
+void t_c_generator::generate_struct_begin_reader_from_buffer(ofstream &out,
+                                                    string name,
+                                                    bool is_sandesh,
+                                                    int error_ret) {
+  if (is_sandesh) {
+    out <<
+      indent() << "/* thrift_protocol_read_sandesh_begin */" << endl;
+    generate_deserialize_string_from_buffer (out, name, error_ret);
+    out <<
+      indent() << "if (" << name << ") { os_free (" << name << "); " <<
+        name << " = NULL; }" << endl << endl;
+  } else {
+    out << indent() << "/* thrift_protocol_read_struct_begin */" << endl;
+  }
+}
+
+void t_c_generator::generate_struct_end_writer_to_buffer(ofstream &out,
+                                                         bool is_sandesh) {
+  if (is_sandesh) {
+    out << indent() << "/* thrift_protocol_write_sandesh_send */" << endl;
+  } else {
+    out << indent() << "/* thrift_protocol_write_struct_send */" << endl;
+  }
+}
+
+void t_c_generator::generate_struct_end_reader_from_buffer(ofstream &out,
+                                                           bool is_sandesh) {
+  if (is_sandesh) {
+    out << indent() << "/* thrift_protocol_read_sandesh_send */" << endl;
+  } else {
+    out << indent() << "/* thrift_protocol_read_struct_send */" << endl;
+  }
+}
+
+void t_c_generator::generate_field_stop_writer_to_buffer(ofstream &out,
+                                                         int error_ret) {
+  string field_stop(tmp("Xfield_stop"));
+  out << endl <<
+    indent() << "/* thrift_protocol_field_stop */" << endl;
+  generate_buffer_bounds_chk (out, "1", error_ret);
+  scope_up(out);
+  out <<
+    indent() << "int8_t " << field_stop << " = (int8_t) T_STOP;" << endl;
+  generate_write_buffer_memcpy_incr_offset (out, field_stop, "1", true);
+  scope_down(out);
+}
+
+void t_c_generator::generate_struct_writer_to_buffer(ofstream &out,
+                                                     string name,
+                                                     const vector<t_field *> &fields,
+                                                     bool is_sandesh,
+                                                     bool is_function) {
+  string name_u = initial_caps_to_underscores(name);
+  string wname = "w" + name_u;
+  string sname = is_sandesh ? "sandesh" : "struct";
+  string dname = is_sandesh ? "void" : name;
+  string dwname = is_sandesh ? "wsandesh" : wname;
+
+  vector <t_field *>::const_iterator f_iter;
+  int error_ret = 0;
+
+  if (is_function) {
+    error_ret = -1;
+    indent(out) <<
+      "int32_t" << endl <<
+      this->nspace_lc << name_u << "_write_binary_to_buffer (" <<
+      dname << "* " << dwname <<
+      ", uint8_t *Xbuf, const size_t Xbuflen, int *Xerror)" << endl;
+  }
+  indent(out) << "{" << endl;
+  indent_up();
+
+  out <<
+    indent() << "int32_t Xret;" << endl <<
+    indent() << "int32_t Xoffset = 0;" << endl <<
+    indent() << "u_int32_t Xi;" << endl <<
+    endl;
+
+  if (is_sandesh) {
+    out << indent() << name << "* " << wname << " = " <<
+      "(" << name << "* ) " << dwname << ";" <<
+      endl << endl;
+  }
+
+  // satisfy -Wall in case we don't use some variables
+  out <<
+    indent() << "/* satisfy -Wall in case these aren't used */" << endl <<
+    indent() << "THRIFT_UNUSED_VAR (Xret);" << endl <<
+    indent() << "THRIFT_UNUSED_VAR (Xi);" << endl <<
+    indent() << "THRIFT_UNUSED_VAR (" << wname << ");" << endl;
+
+  out << endl;
+
+  generate_struct_begin_writer_to_buffer(out, name, is_sandesh, error_ret);
+
+  for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
+    // Ignore auto generated fields
+    if ((*f_iter)->get_auto_generated()) {
+      continue;
+    }
+    if ((*f_iter)->get_req() == t_field::T_OPTIONAL) {
+      indent(out) << "if (" << wname << "->__isset_" << (*f_iter)->get_name() << " == 1) {" << endl;
+      indent_up();
+    }
+    ostringstream key_os;
+    key_os << (*f_iter)->get_key();
+    string key(key_os.str());
+    string tenum(type_to_enum((*f_iter)->get_type()));
+    generate_field_begin_writer_to_buffer (out, key, tenum, error_ret);
+    generate_serialize_field_to_buffer (out, *f_iter, wname + "->", "", error_ret);
+    generate_field_end_writer_to_buffer (out);
+    if ((*f_iter)->get_req() == t_field::T_OPTIONAL) {
+      indent(out) << "if (" << wname << "->__isset_" << (*f_iter)->get_name() << " == 1) {" << endl;
+      indent_up();
+    }
+  }
+  generate_field_stop_writer_to_buffer(out, error_ret);
+  generate_struct_end_writer_to_buffer(out, is_sandesh);
+  if (is_function) {
+    indent(out) << "return Xoffset;" << endl;
+  }
+
   indent_down();
   indent(out) <<
     "}" << endl <<
@@ -1349,6 +1612,610 @@ void t_c_generator::generate_struct_reader(ofstream &out,
     endl;
 }
 
+/**
+ * Generates code to read Thrift structures from a buffer.
+ */
+void t_c_generator::generate_struct_reader_from_buffer(ofstream &out,
+                                           string name,
+                                           const vector <t_field *> &fields,
+                                           bool is_sandesh,
+                                           bool is_function) {
+  string name_u = initial_caps_to_underscores(name);
+  string rname = "r" + name_u;
+  int error_ret = 0;
+  vector <t_field *>::const_iterator f_iter;
+  string sname = is_sandesh ? "sandesh" : "struct";
+  string dname = is_sandesh ? "void" : name;
+  string drname = is_sandesh ? "rsandesh" : rname;
+
+  if (is_function) {
+    error_ret = -1;
+    indent(out) <<
+      "/* reads a " << name_u << " " << sname << " */" << endl <<
+      "int32_t" << endl <<
+      this->nspace_lc << name_u <<
+          "_read_binary_from_buffer (" << dname <<
+          " *" << drname << ", uint8_t *Xbuf, const size_t Xbuflen, int *Xerror)" << endl;
+  }
+
+  indent(out) << "{" << endl;
+  indent_up();
+
+  // declare stack temp variables
+  out <<
+    indent() << "int32_t Xret;" << endl <<
+    indent() << "int32_t Xoffset = 0;" << endl <<
+    indent() << "char *Xname;" << endl <<
+    indent() << "ThriftType Xftype;" << endl <<
+    indent() << "int16_t Xfid;" << endl <<
+    indent() << "u_int32_t Xi;" << endl;
+
+  if (is_sandesh) {
+    out << indent() << name << "* " << rname << " = " <<
+      "(" << name << "* ) " << drname << ";" << endl;
+  }
+
+  for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
+    // Ignore auto generated fields
+    if ((*f_iter)->get_auto_generated()) {
+      continue;
+    }
+    if ((*f_iter)->get_req() == t_field::T_REQUIRED) {
+      indent(out) << "u_int8_t isset_" << (*f_iter)->get_name() << " = 0;" << endl;
+    }
+  }
+
+  // satisfy -Wall in case we don't use some variables
+  out <<
+    indent() << "/* satisfy -Wall in case these aren't used */" << endl <<
+    indent() << "THRIFT_UNUSED_VAR (Xret);" << endl <<
+    indent() << "THRIFT_UNUSED_VAR (Xname);" << endl <<
+    indent() << "THRIFT_UNUSED_VAR (Xi);" << endl <<
+    indent() << "THRIFT_UNUSED_VAR (" << rname << ");" << endl;
+
+  out << endl;
+
+  // read the beginning of the structure marker
+  out <<
+    indent() << "/* read the " << sname << " begin marker */" << endl;
+  generate_struct_begin_reader_from_buffer (out, "Xname", is_sandesh, error_ret);
+
+  // read the struct fields
+  out <<
+    indent() << "/* read the struct fields */" << endl <<
+    indent() << "while (1)" << endl;
+  scope_up(out);
+
+  // read beginning field marker
+  out <<
+    indent() << "/* read the beginning of a field */" << endl;
+  generate_field_begin_reader_from_buffer (out, "Xftype", "Xfid", error_ret);
+  out << endl;
+
+  // switch depending on the field type
+  indent(out) <<
+    "switch (Xfid)" << endl;
+
+  // start switch
+  scope_up(out);
+
+  // generate deserialization code for known types
+  for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
+    // Ignore auto generated fields
+    if ((*f_iter)->get_auto_generated()) {
+      continue;
+    }
+    indent(out) <<
+      "case " << (*f_iter)->get_key() << ":" << endl;
+    indent_up();
+    indent(out) <<
+      "if (Xftype == " << type_to_enum ((*f_iter)->get_type()) << ")" << endl;
+    indent(out) <<
+      "{" << endl;
+
+
+    indent_up();
+    // generate deserialize field
+    generate_deserialize_field_from_buffer (out, *f_iter, rname + "->", "", error_ret);
+    indent_down();
+
+    out <<
+      indent() << "} else {" << endl <<
+      indent() << "  if ((Xret = thrift_binary_protocol_skip_from_buffer (Xbuf + Xoffset, Xbuflen - Xoffset, Xftype, Xerror)) < 0)" << endl <<
+      indent() << "    return " << error_ret << ";" << endl <<
+      indent() << "  Xoffset += Xret;" << endl <<
+      indent() << "}" << endl <<
+      indent() << "break;" << endl;
+    indent_down();
+  }
+
+  // create the default case
+  out <<
+    indent() << "default:" << endl <<
+    indent() << "  if ((Xret = thrift_binary_protocol_skip_from_buffer (Xbuf + Xoffset, Xbuflen - Xoffset, Xftype, Xerror)) < 0)" << endl <<
+    indent() << "    return " << error_ret << ";" << endl <<
+    indent() << "  Xoffset += Xret;" << endl <<
+    indent() << "  break;" << endl;
+
+  // end switch
+  scope_down(out);
+
+  // read field end marker
+  generate_field_end_reader_from_buffer (out);
+
+  // end while loop
+  scope_down(out);
+  out << endl;
+
+  // read the end of the structure
+  generate_struct_end_reader_from_buffer (out, is_sandesh);
+
+  // if a required field is missing, throw an error
+  for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
+    // Ignore auto generated fields
+    if ((*f_iter)->get_auto_generated()) {
+      continue;
+    }
+    if ((*f_iter)->get_req() == t_field::T_REQUIRED) {
+      out <<
+        indent() << "if (!isset_" << (*f_iter)->get_name() << ")" << endl <<
+        indent() << "{" << endl <<
+        indent() << "  *error = THRIFT_PROTOCOL_ERROR_INVALID_DATA;" << endl <<
+        indent() << "  syslog(LOG_ERROR, \"THRIFT_PROTOCOL_ERROR: missing field\");" << endl <<
+        indent() << "  return -1;" << endl <<
+        indent() << "}" << endl <<
+        endl;
+    }
+  }
+
+  if (is_function) {
+    indent(out) <<
+      "return Xoffset;" << endl;
+  }
+
+  // end the function/structure
+  indent_down();
+  indent(out) <<
+    "}" << endl <<
+    endl;
+}
+
+void t_c_generator::generate_field_begin_writer_to_buffer(ofstream &out,
+                                              string key,
+                                              string field_type,
+                                              int error_ret) {
+  out <<
+    indent() << "/* thrift_protocol_write_field_begin */" << endl;
+  generate_buffer_bounds_chk (out, "1", error_ret);
+  string field_type8(tmp("Xfield_type8"));
+  scope_up(out);
+  out <<
+    indent() << "int8_t " << field_type8 << " = (int8_t) " <<
+    field_type << ";" << endl;
+  generate_write_buffer_memcpy_incr_offset (out, field_type8,
+                                            "1", true);
+  scope_down(out);
+  generate_buffer_bounds_chk (out, "2", error_ret);
+  string nkey(tmp("Xnfield_id"));
+  scope_up(out);
+  out <<
+    indent() << "int16_t " << nkey << " = htons (" << key << ");" << endl;
+  generate_write_buffer_memcpy_incr_offset (out, nkey, "2", true);
+  scope_down(out);
+  out << endl;
+}
+
+void t_c_generator::generate_field_begin_reader_from_buffer(ofstream &out,
+                                              string field_type,
+                                              string field_id,
+                                              int error_ret) {
+  out <<
+    indent() << "/* thrift_protocol_read_field_begin */" << endl;
+  generate_deserialize_byte_from_buffer (out, field_type, error_ret);
+  // check for field STOP marker
+  out <<
+    indent() << "/* break if we get a STOP field */" << endl <<
+    indent() << "if (" << field_type << " == T_STOP)" << endl <<
+    indent() << "{" << endl <<
+    indent() << "  break;" << endl <<
+    indent() << "}" << endl;
+  out <<
+    indent() << " else" << endl;
+  scope_up(out);
+  generate_deserialize_i16_from_buffer (out, field_id, error_ret);
+  scope_down(out);
+}
+
+void t_c_generator::generate_field_end_writer_to_buffer(ofstream &out) {
+  out <<
+    indent() << "/* thrift_protocol_write_field_end */" << endl;
+}
+
+void t_c_generator::generate_field_end_reader_from_buffer(ofstream &out) {
+  out <<
+    indent() << "/* thrift_protocol_read_field_end */" << endl;
+}
+
+void t_c_generator::generate_serialize_bool_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  string nbool(tmp("Xbool"));
+  out <<
+    indent() << "/* thrift_protocol_write_bool */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "uint8_t " << nbool << " = " << name << " ? 1 : 0;" << endl;
+  generate_serialize_byte_to_buffer (out, nbool, error_ret);
+  scope_down(out);
+}
+
+void t_c_generator::generate_deserialize_bool_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out <<
+    indent() << "/* thrift_protocol_read_bool */" << endl;
+  scope_up(out);
+  out << indent() << "void * b[1];" << endl;
+  generate_read_buffer_chk_memcpy_incr_offset (out, "b", "1", error_ret,
+                                               false);
+  out <<
+    indent() << name << " = *(int8_t *) b != 0;" << endl;
+  scope_down(out);
+}
+
+void t_c_generator::generate_serialize_byte_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out <<
+    indent() << "/* thrift_protocol_write_byte */" << endl;
+  generate_write_buffer_chk_memcpy_incr_offset (out, name, "1", error_ret,
+                                                true);
+}
+
+void t_c_generator::generate_deserialize_byte_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out <<
+    indent() << "/* thrift_protocol_read_byte */" << endl;
+  scope_up(out);
+  out << indent() << "void * b[1];" << endl;
+  generate_read_buffer_chk_memcpy_incr_offset (out, "b", "1", error_ret,
+                                                false);
+  out <<
+    indent() << name << " = *(int8_t *) b;" << endl;
+  scope_down(out);;
+}
+
+void t_c_generator::generate_serialize_i16_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  string ni16(tmp("Xni16"));
+  out << indent() << "/* thrift_protocol_write_i16 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "int16_t " << ni16 << " = htons (" << name << ");" << endl;
+  generate_write_buffer_chk_memcpy_incr_offset (out, ni16, "2", error_ret,
+                                                true);
+  scope_down(out);
+}
+
+void t_c_generator::generate_deserialize_i16_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out << indent() << "/* thrift_protocol_read_i16 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "union {"<< endl <<
+    indent() << "  void * b[2];" << endl <<
+    indent() << "  int16_t all;" << endl <<
+    indent() << "} bytes;" << endl;
+  generate_read_buffer_chk_memcpy_incr_offset (out, "bytes.b", "2", error_ret,
+                                               false);
+  out <<
+    indent() << name << " = ntohs (bytes.all);" << endl;
+  scope_down(out);
+}
+
+void t_c_generator::generate_serialize_u16_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  string nu16(tmp("Xnu16"));
+  out << indent() << "/* thrift_protocol_write_u16 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "uint16_t " << nu16 << " = htons (" << name << ");" << endl;
+  generate_write_buffer_chk_memcpy_incr_offset (out, nu16, "2", error_ret,
+                                                true);
+  scope_down(out);
+}
+
+void t_c_generator::generate_deserialize_u16_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out << indent() << "/* thrift_protocol_read_u16 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "union {"<< endl <<
+    indent() << "  void * b[2];" << endl <<
+    indent() << "  uint16_t all;" << endl <<
+    indent() << "} bytes;" << endl;
+  generate_read_buffer_chk_memcpy_incr_offset (out, "bytes.b", "2", error_ret,
+                                               false);
+  out <<
+    indent() << name << " = ntohs (bytes.all);" << endl;
+  scope_down(out);
+}
+
+void t_c_generator::generate_serialize_i32_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  string ni32(tmp("Xni32"));
+  out << indent() << "/* thrift_protocol_write_i32 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "int32_t " << ni32 << " = htonl (" << name << ");" << endl;
+  generate_write_buffer_chk_memcpy_incr_offset (out, ni32, "4", error_ret,
+                                                true);
+  scope_down(out);
+}
+
+void t_c_generator::generate_deserialize_i32_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out << indent() << "/* thrift_protocol_read_i32 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "union {"<< endl <<
+    indent() << "  void * b[4];" << endl <<
+    indent() << "  int32_t all;" << endl <<
+    indent() << "} bytes;" << endl;
+  generate_read_buffer_chk_memcpy_incr_offset (out, "bytes.b", "4", error_ret,
+                                               false);
+  out <<
+    indent() << name << " = ntohl (bytes.all);" << endl;
+  scope_down(out);
+}
+
+void t_c_generator::generate_serialize_u32_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  string nu32(tmp("Xnu32"));
+  out << indent() << "/* thrift_protocol_write_u32 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "uint32_t " << nu32 << " = htonl (" << name << ");" << endl;
+  generate_write_buffer_chk_memcpy_incr_offset (out, nu32, "4", error_ret,
+                                                true);
+  scope_down(out);
+}
+
+void t_c_generator::generate_deserialize_u32_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out << indent() << "/* thrift_protocol_read_u32 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "union {"<< endl <<
+    indent() << "  void * b[4];" << endl <<
+    indent() << "  uint32_t all;" << endl <<
+    indent() << "} bytes;" << endl;
+  generate_read_buffer_chk_memcpy_incr_offset (out, "bytes.b", "4", error_ret,
+                                               false);
+  out <<
+    indent() << name << " = ntohl (bytes.all);" << endl;
+  scope_down(out);
+}
+
+void t_c_generator::generate_serialize_i64_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  string ni64(tmp("Xni64"));
+  out << indent() << "/* thrift_protocol_write_i64 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "int64_t " << ni64 << ";" << endl <<
+    indent() << "os_put_value64((uint8_t *)&" << ni64 << ", " << name <<
+      ");" << endl;
+  generate_write_buffer_chk_memcpy_incr_offset (out, ni64, "8", error_ret,
+                                                true);
+  scope_down(out);
+}
+
+void t_c_generator::generate_deserialize_i64_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out << indent() << "/* thrift_protocol_read_i64 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "void * b[8];" << endl;
+  generate_read_buffer_chk_memcpy_incr_offset (out, "b", "8", error_ret,
+                                               false);
+  out <<
+    indent() << name << " = os_get_value64((uint8_t *)b);" << endl;
+  scope_down(out);
+}
+
+void t_c_generator::generate_serialize_u64_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  string nu64(tmp("Xnu64"));
+  out << indent() << "/* thrift_protocol_write_u64 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "uint64_t " << nu64 << ";" << endl <<
+    indent() << "os_put_value64((uint8_t *)&" << nu64 << ", " << name <<
+      ");" << endl;
+  generate_write_buffer_chk_memcpy_incr_offset (out, nu64, "8", error_ret,
+                                                true);
+  scope_down(out);
+}
+
+void t_c_generator::generate_deserialize_u64_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out << indent() << "/* thrift_protocol_read_u64 */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "void * b[8];" << endl;
+  generate_read_buffer_chk_memcpy_incr_offset (out, "b", "8", error_ret,
+                                               false);
+  out <<
+    indent() << name << " = os_get_value64((uint8_t *)b);" << endl;
+  scope_down(out);
+}
+
+void t_c_generator::generate_serialize_xml_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  generate_serialize_string_to_buffer(out, name, error_ret);
+}
+
+void t_c_generator::generate_deserialize_xml_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  generate_deserialize_string_from_buffer(out, name, error_ret);
+}
+
+void t_c_generator::generate_serialize_string_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  string s_strlen(tmp("Xsstrlen"));
+  out << indent() << "/* thrift_protocol_write_string */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "int32_t " << s_strlen << " = " << name <<
+      " != NULL ? strlen (" << name << ") : 0;" << endl;
+  generate_write_buffer_binary (out, name, s_strlen, error_ret);
+  scope_down(out);
+}
+
+void t_c_generator::generate_deserialize_string_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  string s_strlen(tmp("Xread_len"));
+  out << indent() << "/* thrift_protocol_read_string */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "int32_t " << s_strlen << " = 0;" << endl;
+  generate_deserialize_i32_from_buffer (out, s_strlen, error_ret);
+  out <<
+    indent() << "if (" << s_strlen << " > 0)" << endl;
+  scope_up(out);
+  out <<
+    indent() << "if (Xbuflen < Xoffset + " << s_strlen << ") {" << endl <<
+    indent() << "  return " << error_ret << ";" << endl <<
+    indent() << "}" << endl <<
+    indent() << name << " = os_malloc (" << s_strlen << " + 1);" << endl;
+  generate_read_buffer_memcpy_incr_offset (out, name, s_strlen, false);
+  out <<
+    indent() << name << "[" << s_strlen << "] = 0;" << endl;
+  scope_down(out);
+  out <<
+    indent() << " else" << endl;
+  scope_up(out);
+  out <<
+    indent() << name << " = NULL;" << endl;
+  scope_down(out);
+  scope_down(out);
+}
+
+void t_c_generator::generate_serialize_ipaddr_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out <<
+    indent() << "/* thrift_protocol_write_ipaddr */" << endl;
+  string iptype(name + ".iptype");
+  out <<
+    indent() << "if (" << iptype << " == AF_INET)" << endl;
+  scope_up(out);
+  generate_write_buffer_chk_memcpy_incr_offset (out, iptype, "1", error_ret,
+                                                true);
+  string ipv4(name + ".ipv4");
+  generate_write_buffer_chk_memcpy_incr_offset (out, ipv4, "4", error_ret,
+                                                true);
+  scope_down(out);
+  out <<
+    indent() << " else if (" << iptype << " == AF_INET6)" << endl;
+  scope_up(out);
+  generate_write_buffer_chk_memcpy_incr_offset (out, iptype, "1", error_ret,
+                                                true);
+  string ipv6(name + ".ipv6");
+  generate_write_buffer_chk_memcpy_incr_offset (out, ipv6, "16", error_ret,
+                                                true);
+  scope_down(out);
+  out <<
+    indent() << " else" << endl;
+  scope_up(out);
+  out <<
+    indent() << "return -1;" << endl;
+  scope_down(out);
+}
+
+void t_c_generator::generate_deserialize_ipaddr_from_buffer(ofstream &out,
+                                                string name,
+                                                int error_ret) {
+  out <<
+    indent() << "/* thrift_protocol_read_ipaddr */" << endl;
+  string iptype(name + ".iptype");
+  generate_deserialize_byte_from_buffer (out, iptype, error_ret);
+  out <<
+    indent() << "if (" << iptype << " == AF_INET)" << endl;
+  scope_up(out);
+  string ipv4(name + ".ipv4");
+  generate_read_buffer_chk_memcpy_incr_offset (out, ipv4, "4", error_ret,
+                                               true);
+  scope_down(out);
+  out <<
+    indent() << "else if (" << iptype << " == AF_INET6)" << endl;
+  scope_up(out);
+  string ipv6(name + ".ipv6");
+  generate_read_buffer_chk_memcpy_incr_offset (out, ipv6, "16", error_ret,
+                                               true);
+  scope_down(out);
+  out <<
+    indent() << " else" << endl;
+  scope_up(out);
+  out <<
+    indent() << "return -1;" << endl;
+  scope_down(out);
+}
+
+void t_c_generator::generate_serialize_uuid_t_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out <<
+    indent() << "/* thrift_protocol_write_uuid_t */" << endl;
+  generate_write_buffer_chk_memcpy_incr_offset (out, name, "16", error_ret,
+                                                true);
+}
+
+void t_c_generator::generate_deserialize_uuid_t_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out <<
+    indent() << "/* thrift_protocol_read_uuid_t */" << endl;
+  generate_read_buffer_chk_memcpy_incr_offset (out, name, "16", error_ret,
+                                                true);
+}
+
+void t_c_generator::generate_serialize_double_to_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out <<
+    indent() << "/* thrift_protocol_write_double */" << endl <<
+    indent() << "/* NOT SUPPORTED */" << endl <<
+    indent() << "return " << error_ret << ";" << endl;
+}
+
+void t_c_generator::generate_deserialize_double_from_buffer(ofstream &out,
+                                              string name,
+                                              int error_ret) {
+  out <<
+    indent() << "/* thrift_protocol_read_double */" << endl <<
+    indent() << "/* NOT SUPPORTED */" << endl <<
+    indent() << "return " << error_ret << ";" << endl;
+}
+
 void t_c_generator::generate_serialize_field(ofstream &out,
                                                   t_field *tfield,
                                                   string prefix,
@@ -1411,9 +2278,7 @@ void t_c_generator::generate_serialize_field(ofstream &out,
           break;
         case t_base_type::TYPE_STRING:
           if (((t_base_type *) type)->is_binary()) {
-            out << "binary (protocol, ((GByteArray *) " << name <<
-                   ")->data, ((GByteArray *) " << name <<
-                   ")->len";
+            throw "CANNOT GENERATE SERIALIZE CODE FOR binary TYPE: " + name;
           } else {
             out << "string (protocol, " << name;
           }
@@ -1439,6 +2304,93 @@ void t_c_generator::generate_serialize_field(ofstream &out,
   }
 }
 
+void t_c_generator::generate_serialize_field_to_buffer(ofstream &out,
+                                                  t_field *tfield,
+                                                  string prefix,
+                                                  string suffix,
+                                                  int error_ret) {
+  t_type *type = get_true_type (tfield->get_type());
+  string name = prefix + tfield->get_name() + suffix;
+  ostringstream key_os;
+  key_os << tfield->get_key();
+  string key(key_os.str());
+  string tenum(type_to_enum(tfield->get_type()));
+
+  if (type->is_void()) {
+    throw "CANNOT GENERATE SERIALIZE CODE FOR void TYPE: " + name;
+  }
+
+  if (type->is_struct() || type->is_xception()) {
+    generate_serialize_struct_to_buffer (out, (t_struct *) type, name, error_ret);
+  } else if (type->is_container()) {
+    generate_serialize_container_to_buffer (out, type, name, error_ret);
+  } else if (type->is_base_type() || type->is_enum()) {
+    if (type->is_base_type()) {
+      t_base_type::t_base tbase = ((t_base_type *) type)->get_base();
+      switch (tbase) {
+        case t_base_type::TYPE_VOID:
+          throw "compiler error: cannot serialize void field in a struct: "
+                + name;
+          break;
+        case t_base_type::TYPE_BOOL:
+          generate_serialize_bool_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_BYTE:
+          generate_serialize_byte_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_I16:
+          generate_serialize_i16_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_I32:
+          generate_serialize_i32_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_I64:
+          generate_serialize_i64_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_U16:
+          generate_serialize_u16_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_U32:
+          generate_serialize_u32_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_U64:
+          generate_serialize_u64_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_DOUBLE:
+          generate_serialize_double_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_IPV4:
+          generate_serialize_i32_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_IPADDR:
+          generate_serialize_ipaddr_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_STRING:
+          if (((t_base_type *) type)->is_binary()) {
+            throw "CANNOT GENERATE SERIALIZE CODE FOR binary TYPE: " + name;
+          } else {
+            generate_serialize_string_to_buffer (out, name, error_ret);
+          }
+          break;
+        case t_base_type::TYPE_XML:
+          generate_serialize_xml_to_buffer (out, name, error_ret);
+          break;
+        case t_base_type::TYPE_UUID:
+          generate_serialize_uuid_t_to_buffer (out, name, error_ret);
+          break;
+        default:
+          throw "compiler error: no C writer for base type "
+                + t_base_type::t_base_name (tbase) + name;
+      }
+    } else if (type->is_enum()) {
+      generate_serialize_i32_to_buffer (out, name, error_ret);
+    }
+  } else {
+    printf ("DO NOT KNOW HOW TO SERIALIZE FIELD '%s' TYPE '%s'\n",
+            name.c_str(), type_name (type).c_str());
+  }
+}
+
 void t_c_generator::generate_serialize_struct(ofstream &out,
                                                    t_struct *tstruct,
                                                    string prefix,
@@ -1448,6 +2400,20 @@ void t_c_generator::generate_serialize_struct(ofstream &out,
     indent() << "  return " << error_ret << ";" << endl <<
     endl;
 }
+
+void t_c_generator::generate_serialize_struct_to_buffer(ofstream &out,
+                                                   t_struct *tstruct,
+                                                   string prefix,
+                                                   int error_ret) {
+  out <<
+    indent() << "if ((Xret = " << tstruct->get_name() <<
+      "_write_binary_to_buffer (" << prefix <<
+      ", Xbuf + Xoffset, Xbuflen - Xoffset, Xerror)) < 0)" << endl;
+  out <<
+    indent() << "  return " << error_ret << ";" << endl <<
+    indent() << "Xoffset += Xret;" << endl;
+}
+
 
 void t_c_generator::generate_serialize_container(ofstream &out,
                                                       t_type *ttype,
@@ -1481,25 +2447,64 @@ void t_c_generator::generate_serialize_container(ofstream &out,
   scope_down(out);
 }
 
-void t_c_generator::generate_serialize_map_element(ofstream &out,
-                                                        t_map *tmap,
-                                                        string key,
-                                                        string value,
-                                                        int error_ret) {
-  t_field kfield (tmap->get_key_type(), key);
-  generate_serialize_field (out, &kfield, "", "", error_ret);
+void t_c_generator::generate_serialize_container_to_buffer(ofstream &out,
+                                                      t_type *ttype,
+                                                      string prefix,
+                                                      int error_ret) {
+  scope_up(out);
 
-  t_field vfield (tmap->get_val_type(), value);
-  generate_serialize_field (out, &vfield, "", "", error_ret);
+  if (ttype->is_map()) {
+    throw "compiler error: serialize of map not supported in C";
+  } else if (ttype->is_set()) {
+    throw "compiler error: serialize of set not supported in C";
+  } else if (ttype->is_list()) {
+    string length = prefix + "_size";
+    generate_list_begin_writer_to_buffer (out,
+      type_to_enum (((t_list *) ttype)->get_elem_type()), length,
+      error_ret);
+    out <<
+      indent() << "for (Xi = 0; Xi < " << length << "; Xi++)" << endl;
+    scope_up(out);
+    generate_serialize_list_element_to_buffer (out, (t_list *) ttype, prefix, "Xi", error_ret);
+    scope_down(out);
+    generate_list_end_writer_to_buffer (out);
+    out << endl;
+  }
+  scope_down(out);
 }
 
-void t_c_generator::generate_serialize_set_element(ofstream &out,
-                                                        t_set *tset,
-                                                        string element,
-                                                        int error_ret) {
-  t_field efield (tset->get_elem_type(), element);
-  generate_serialize_field (out, &efield, "", "", error_ret);
+void t_c_generator::generate_list_begin_writer_to_buffer(ofstream &out,
+                                                         string element_type,
+                                                         string length,
+                                                         int error_ret) {
+  string element_type8(tmp("Xelement_type8"));
+  out <<
+    indent() << "/* thrift_protocol_write_list_begin */" << endl;
+  generate_buffer_bounds_chk (out, "1", error_ret);
+  scope_up(out);
+  out <<
+    indent() << "int8_t " <<  element_type8 << " = (int8_t) " <<
+    element_type << ";" << endl;
+  generate_write_buffer_memcpy_incr_offset (out, element_type8, "1",
+                                            true);
+  scope_down(out);
+  string nelement_size(tmp("Xnelement_size"));
+  generate_buffer_bounds_chk (out, "4", error_ret);
+  scope_up(out);
+  out <<
+    indent() << "uint32_t " << nelement_size << " = htonl (" <<
+    length << ");" << endl;
+  generate_write_buffer_memcpy_incr_offset (out, nelement_size, "4",
+                                            true);
+  scope_down(out);
+  out << endl;
 }
+
+void t_c_generator::generate_list_end_writer_to_buffer(ofstream &out) {
+  out <<
+    indent() << "/* thrift_protocol_write_list_end */" << endl;
+}
+
 
 void t_c_generator::generate_serialize_list_element(ofstream &out,
                                                          t_list *tlist,
@@ -1511,6 +2516,18 @@ void t_c_generator::generate_serialize_list_element(ofstream &out,
   t_field efield (ttype, name);
   generate_serialize_field (out, &efield, "", "", error_ret);
   out << indent() << "xfer += ret;" << endl;
+}
+
+void t_c_generator::generate_serialize_list_element_to_buffer(ofstream &out,
+                                                         t_list *tlist,
+                                                         string list,
+                                                         string index,
+                                                         int error_ret) {
+  t_type *ttype = tlist->get_elem_type();
+  string name = list + "[" + index + "]";
+  t_field efield (ttype, name);
+  generate_serialize_field_to_buffer (out, &efield, "", "", error_ret);
+  out << endl;
 }
 
 /* deserializes a field of any type. */
@@ -1618,6 +2635,99 @@ void t_c_generator::generate_deserialize_field(ofstream &out,
   }
 }
 
+/* deserializes a field of any type. */
+void t_c_generator::generate_deserialize_field_from_buffer(ofstream &out,
+                                               t_field *tfield,
+                                               string prefix,
+                                               string suffix,
+                                               int error_ret) {
+  t_type *type = get_true_type (tfield->get_type());
+
+  if (type->is_void()) {
+    throw "CANNOT GENERATE DESERIALIZE CODE FOR void TYPE: " +
+      prefix + tfield->get_name();
+  }
+
+  string name = prefix + tfield->get_name() + suffix;
+
+  if (type->is_struct() || type->is_xception()) {
+    generate_deserialize_struct_from_buffer (out, (t_struct *) type, name, error_ret);
+  } else if (type->is_container()) {
+    generate_deserialize_container_from_buffer (out, type, name, error_ret);
+  } else if (type->is_base_type()) {
+    t_base_type::t_base tbase = ((t_base_type *) type)->get_base();
+
+    switch (tbase) {
+      case t_base_type::TYPE_VOID:
+        throw "compiler error: cannot serialize void field in a struct: " + name;
+        break;
+      case t_base_type::TYPE_STRING:
+        if (((t_base_type *) type)->is_binary()) {
+          throw "CANNOT GENERATE DESERIALIZE CODE FOR binary TYPE: " + name;
+        } else {
+          generate_deserialize_string_from_buffer (out, name, error_ret);
+        }
+        break;
+      case t_base_type::TYPE_XML:
+        generate_deserialize_xml_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_BOOL:
+        generate_deserialize_bool_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_BYTE:
+        generate_deserialize_byte_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_I16:
+        generate_deserialize_i16_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_I32:
+        generate_deserialize_i32_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_I64:
+        generate_deserialize_i64_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_U16:
+        generate_deserialize_u16_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_U32:
+        generate_deserialize_u32_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_U64:
+        generate_deserialize_u64_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_DOUBLE:
+        generate_deserialize_double_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_IPV4:
+        generate_deserialize_i32_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_IPADDR:
+        generate_deserialize_ipaddr_from_buffer (out, name, error_ret);
+        break;
+      case t_base_type::TYPE_UUID:
+        generate_deserialize_uuid_t_from_buffer (out, name, error_ret);
+        break;
+      default:
+        throw "compiler error: no C reader for base type "
+          + t_base_type::t_base_name (tbase) + name;
+    }
+  } else if (type->is_enum()) {
+    generate_deserialize_i32_from_buffer (out, name, error_ret);
+  } else {
+    printf ("DO NOT KNOW HOW TO DESERIALIZE FIELD '%s' TYPE '%s'\n",
+            tfield->get_name().c_str(), type_name (type).c_str());
+  }
+
+  // if the type is not required and this is a thrift struct (no prefix),
+  // set the isset variable.  if the type is required, then set the
+  // local variable indicating the value was set, so that we can do    // validation later.
+  if (tfield->get_req() != t_field::T_REQUIRED && prefix != "") {
+    indent(out) << prefix << "__isset_" << tfield->get_name() << suffix << " = 1;" << endl;
+  } else if (tfield->get_req() == t_field::T_REQUIRED && prefix != "") {
+    indent(out) << "isset_" << tfield->get_name() << " = 1;" << endl;
+  }
+}
+
 void t_c_generator::generate_deserialize_struct(ofstream &out,
                                                 t_struct *tstruct,
                                                 string prefix,
@@ -1627,6 +2737,18 @@ void t_c_generator::generate_deserialize_struct(ofstream &out,
     indent() << "if ((ret = " << tstruct->get_name() << "_read (" << prefix << ", protocol, error)) < 0)" << endl <<
     indent() << "  return " << error_ret << ";" << endl <<
     indent() << "xfer += ret;" << endl;
+}
+
+void t_c_generator::generate_deserialize_struct_from_buffer(ofstream &out,
+                                                t_struct *tstruct,
+                                                string prefix,
+                                                int error_ret) {
+  out <<
+    indent() << prefix << " = (" << tstruct->get_name() << "* ) os_zalloc (sizeof(*" << prefix << "));" << endl <<
+    indent() << "if ((Xret = " << tstruct->get_name() << "_read_binary_from_buffer (" << prefix <<
+      ", Xbuf + Xoffset, Xbuflen - Xoffset, Xerror)) < 0)" << endl <<
+    indent() << "  return " << error_ret << ";" << endl <<
+    indent() << "Xoffset += Xret;" << endl;
 }
 
 void t_c_generator::generate_deserialize_container (ofstream &out, t_type *ttype,
@@ -1667,18 +2789,52 @@ void t_c_generator::generate_deserialize_container (ofstream &out, t_type *ttype
   scope_down(out);
 }
 
-void t_c_generator::generate_deserialize_map_element(ofstream &out,
-                                                          t_map *tmap,
-                                                          string prefix,
-                                                          int error_ret) {
-  // NOT IMPLEMENTED
+void t_c_generator::generate_list_begin_reader_from_buffer(ofstream &out,
+                                                         string element_size,
+                                                         int error_ret) {
+  string element_type8(tmp("Xelement_type8"));
+  out <<
+    indent() << "/* thrift_protocol_read_list_begin */" << endl;
+  scope_up(out);
+  out <<
+    indent() << "int8_t " <<  element_type8 << ";" << endl;
+  generate_deserialize_byte_from_buffer (out, element_type8, error_ret);
+  scope_down(out);
+  generate_deserialize_i32_from_buffer (out, element_size, error_ret);
 }
 
-void t_c_generator::generate_deserialize_set_element(ofstream &out,
-                                                          t_set *tset,
-                                                          string prefix,
-                                                          int error_ret) {
-  // NOT IMPLEMENTED
+void t_c_generator::generate_list_end_reader_from_buffer(ofstream &out) {
+  out <<
+    indent() << "/* thrift_protocol_read_list_end */" << endl;
+}
+
+void t_c_generator::generate_deserialize_container_from_buffer (ofstream &out, t_type *ttype,
+                                               string prefix, int error_ret) {
+  scope_up(out);
+
+  if (ttype->is_map()) {
+    throw "compiler error: deserialize of map not supported in C";
+  } else if (ttype->is_set()) {
+    throw "compiler error: deserialize of set not supported in C";
+  } else if (ttype->is_list()) {
+    string element_size(prefix + "_size");
+    generate_list_begin_reader_from_buffer (out, element_size, error_ret);
+    out <<
+      indent() << prefix << " = (" << type_name(ttype, false, false) <<
+        ") os_zalloc (sizeof(*" << prefix << ") * " << element_size << ");" << endl;
+    out <<
+      indent() << "/* iterate through list elements */" << endl <<
+      indent() << "for (Xi = 0; Xi < " << element_size << "; Xi++)" << endl;
+
+    scope_up(out);
+    generate_deserialize_list_element_from_buffer (out, (t_list *) ttype, prefix, "Xi",
+                                       error_ret);
+    scope_down(out);
+
+    generate_list_end_reader_from_buffer (out);
+  }
+
+  scope_down(out);
 }
 
 void t_c_generator::generate_deserialize_list_element(ofstream &out,
@@ -1689,6 +2845,16 @@ void t_c_generator::generate_deserialize_list_element(ofstream &out,
   string elem = prefix + "[" + index + "]";
   t_field felem (tlist->get_elem_type(), elem);
   generate_deserialize_field (out, &felem, "", "", error_ret);
+}
+
+void t_c_generator::generate_deserialize_list_element_from_buffer(ofstream &out,
+                                                           t_list *tlist,
+                                                           string prefix,
+                                                           string index,
+                                                           int error_ret) {
+  string elem = prefix + "[" + index + "]";
+  t_field felem (tlist->get_elem_type(), elem);
+  generate_deserialize_field_from_buffer (out, &felem, "", "", error_ret);
 }
 
 /***************************************
