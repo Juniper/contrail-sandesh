@@ -47,22 +47,26 @@ SandeshUVETypeMaps::SyncAllMaps(const map<string,uint32_t> & inpMap, bool period
     for (uve_global_map::iterator it = map_->begin();
             it != map_->end(); it++) {
         map<string,uint32_t>::const_iterator iit = inpMap.find(it->first);
+        uint32_t cycle = 0;
         if (periodic) {
             uint64_t target_count =
                     (it->second.first * 1000) / SandeshClientSM::kTickInterval;
             if (target_count == 0) continue;
             if ((periodic_count % target_count) != 0) continue;
+            cycle = (uint32_t) (periodic_count / target_count);
             assert(inpMap.size() == 0);
         }
         SandeshUVE::SendType stype = (periodic ? SandeshUVE::ST_PERIODIC : SandeshUVE::ST_SYNC); 
         if (iit == inpMap.end()) {
-            uint count = it->second.second->SyncUVE("", stype, 0, "");
+            uint count = it->second.second->SyncUVE("", stype, 0, cycle, "");
             SANDESH_LOG(INFO, __func__ << " for " << it->first << ":" << stype <<
-                " period " << it->second.first << " without seqno , total = " << count);
+                " period " << it->second.first << " cycle " << cycle <<
+                " without seqno , total = " << count);
         } else {
-            uint count = it->second.second->SyncUVE("", stype, iit->second, "");
+            uint count = it->second.second->SyncUVE("", stype, iit->second, cycle, "");
             SANDESH_LOG(INFO, __func__ << " for " << it->first << ":" << stype <<
-                " period " << it->second.first << " with seqno " << iit->second <<
+                " period " << it->second.first << " cycle " << cycle <<
+                " with seqno " << iit->second <<
                 ", total = " << count);
         }
     }
@@ -122,7 +126,7 @@ SandeshUVECacheReq::HandleRequest() const {
         if (__isset.key) {
             returned = um.second->SendUVE("", get_key(), context());
         } else {
-            returned += um.second->SyncUVE("", SandeshUVE::ST_INTROSPECT, 0, context());
+            returned += um.second->SyncUVE("", SandeshUVE::ST_INTROSPECT, 0, 0, context());
         }
     }
 

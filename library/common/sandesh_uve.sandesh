@@ -242,6 +242,18 @@ struct SandeshSessionStats {
     9: u64                        num_write_ready_cb_error
 }
 
+typedef u64 mcs_uint
+struct mcs_uint_P_ {
+    1: optional mcs_uint staging
+    2: optional mcs_uint value
+}
+
+typedef SandeshMessageStats SnhMsgStats
+struct SnhMsgStats_P_ {
+    1: optional SnhMsgStats staging
+    2: optional SnhMsgStats value
+}
+
 struct ModuleClientState {
     1: string                              name (key="ObjectGeneratorInfo")
     2: optional bool                       deleted
@@ -252,14 +264,19 @@ struct ModuleClientState {
     8: optional io.SocketIOStats           session_rx_socket_stats
     9: optional io.SocketIOStats           session_tx_socket_stats
 
-    10: optional map<string, SandeshMessageStats> msg_type_agg (hidden="yes")
-    11: optional map<string, SandeshMessageStats> msg_type_diff (mstats="msg_type_agg:DSDiff:", tags=".__key")
+    10: optional map<string, SandeshMessageStats> msg_type_agg  (metric="agg", hidden="yes")
+    11: optional map<string, SandeshMessageStats> msg_type_diff (mstats="0-msg_type_agg:DSNon0:", tags=".__key")
+    12: optional map<string, SnhMsgStats_P_> msg_type_1h (mstats="60-msg_type_agg:DSSum:", hidden="yes")
+    13: optional map<string, mcs_uint_P_>    msg_type_tx_10m (mstats="10-msg_type_agg.messages_sent:DSSum:")
 
-    12: optional derived_stats_results.CategoryResult tx_msg_agg
     /** @display_name:Sandesh Client Message Stats*/
-    13: optional derived_stats_results.CategoryResult tx_msg_agg_diff (stats="tx_msg_agg:DSCategoryCount:", tags="")
+    20: optional map<string, u64>          tx_msg_agg  (metric="agg", hidden="yes")
+    21: optional map<string, u64>          tx_msg_diff (mstats="0-tx_msg_agg:DSNon0:",tags=".__key")
+    22: optional map<string, mcs_uint_P_>  tx_msg_1h   (mstats="60-tx_msg_agg:DSSum:", hidden="yes")
+    23: optional map<string, mcs_uint_P_>  tx_msg_10m  (mstats="10-tx_msg_agg:DSSum:")
+
     14: optional u64                       max_sm_queue_count
-}
+} (period="60")
 
 uve sandesh SandeshModuleClientTrace {
     1: ModuleClientState                   data
