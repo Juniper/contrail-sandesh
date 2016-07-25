@@ -68,7 +68,9 @@ log4cplus::Logger Sandesh::logger_ =
     log4cplus::Logger::getInstance(LOG4CPLUS_TEXT("SANDESH"));
 
 Sandesh::ModuleContextMap Sandesh::module_context_;
-tbb::atomic<uint32_t> Sandesh::sandesh_send_ratelimit_;
+tbb::atomic<uint32_t> Sandesh::sandesh_send_ratelimit_ =
+    (tbb::atomic<unsigned int> &) g_sandesh_constants.
+    DEFAULT_SANDESH_SEND_RATELIMIT;
 
 const char * Sandesh::SandeshRoleToString(SandeshRole::type role) {
     switch (role) {
