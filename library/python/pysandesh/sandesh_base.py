@@ -732,7 +732,8 @@ class SandeshSystem(SandeshAsync):
 
     @classmethod
     def set_sandesh_send_rate_limit(cls, sandesh_send_rate_limit_val):
-        cls._DEFAULT_SEND_RATELIMIT = sandesh_send_rate_limit_val
+        if (sandesh_send_rate_limit_val > 0):
+            cls._DEFAULT_SEND_RATELIMIT = sandesh_send_rate_limit_val
     # end set_sandesh_send_rate_limit
 
     @classmethod
