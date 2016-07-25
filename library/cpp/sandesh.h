@@ -303,8 +303,11 @@ public:
     static const char* LevelToString(SandeshLevel::type level);
     static SandeshLevel::type StringToLevel(std::string level);
     static log4cplus::Logger& logger() { return logger_; }
-    static void set_send_rate_limit(uint32_t rate_limit) {
-        sandesh_send_ratelimit_ = rate_limit;
+    static void set_send_rate_limit(int rate_limit) {
+        // if negative assign previous default value
+        if (rate_limit > 0) {
+            sandesh_send_ratelimit_ = rate_limit;
+        }
     }
     static uint32_t get_send_rate_limit() { return sandesh_send_ratelimit_; }
 
