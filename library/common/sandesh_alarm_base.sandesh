@@ -56,13 +56,17 @@ struct AlarmCondition {
     1: string operation
     2: string operand1
     3: string operand2
+    /* "vars" is being deprecated */
     4: optional list<string> vars
+    5: optional list<string> variables
 }
 
 struct AlarmMatch {
     1: string json_operand1_value
     2: optional string json_operand2_value
+    /* "json_vars" is being deprecated */
     3: optional map<string, string> json_vars
+    4: optional map<string, string> json_variables
 }
 
 struct AlarmConditionMatch {
