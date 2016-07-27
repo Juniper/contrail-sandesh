@@ -744,7 +744,7 @@ protected:
                 EXPECT_STREQ(mm["null_tsm"].c_str(),
 "<null_tsm type=\"map\" identifier=\"9\" mstats=\"tsm:DSNull:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">3</samples><value type=\"i32\" identifier=\"5\">22</value></NullResult><element>i3</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">31</value></NullResult></map></null_tsm>");
                 EXPECT_STREQ(mm["null_gz"].c_str(),
-"<null_gz type=\"i32\" identifier=\"16\" stats=\"gz.count:DSNon0:\">20</null_gz>");
+"<null_gz type=\"i32\" identifier=\"16\" stats=\"gz.count:DSNon0\">20</null_gz>");
                 EXPECT_STREQ(mm["null_fz"].c_str(),
 "<null_fz type=\"i32\" identifier=\"11\" stats=\"fz.count:DSChange:\">0</null_fz>");
                 break;
