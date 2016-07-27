@@ -86,7 +86,7 @@ struct SandeshUVEData {
     9: optional map<string,derived_stats_results.NullResult> null_tsm (mstats="tsm:DSNull:")
    10: optional derived_stats_results.AnomalyResult ewm_y (stats="y:DSAnomaly:EWM:0.2")
    11: optional i32 null_fz (stats="fz.count:DSChange:")
-   16: optional i32 null_gz (stats="gz.count:DSNon0:")
+   16: optional i32 null_gz (stats="gz.count:DSNon0")
    17: optional i32 null_hz (stats="gz.inner.value:DSNone:")
    12: optional map<string,derived_stats_results.NullResult> nullm_zc (mstats="z.count:DSNull:")
    13: optional derived_stats_results.AnomalyResult ewmd_y (stats="y:DSAnomaly:EWM:0.2")
