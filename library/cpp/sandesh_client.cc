@@ -322,9 +322,7 @@ void SandeshClient::SendUVE(int count,
              magg_stats.get_messages_sent_dropped_validation_failed()));
     csev.insert(make_pair("dropped_rate_limited",
              magg_stats.get_messages_sent_dropped_rate_limited()));
-    CategoryResult cr;
-    cr.set_counters(csev); 
-    mcs.set_tx_msg_agg(cr);
+    mcs.set_tx_msg_agg(csev);
 
     map <string,SandeshMessageStats> csevm;
     for (vector<SandeshMessageTypeStats>::const_iterator smit = mtype_stats.begin();
