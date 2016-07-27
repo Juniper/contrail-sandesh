@@ -69,7 +69,6 @@ log4cplus::Logger Sandesh::logger_ =
 
 Sandesh::ModuleContextMap Sandesh::module_context_;
 tbb::atomic<uint32_t> Sandesh::sandesh_send_ratelimit_;
-
 const char * Sandesh::SandeshRoleToString(SandeshRole::type role) {
     switch (role) {
     case SandeshRole::Generator:

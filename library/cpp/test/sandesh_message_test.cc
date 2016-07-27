@@ -379,6 +379,13 @@ TEST_F(SandeshSendRatelimitTest, Buffer) {
     it = type_stats.find("SystemLogTest");
     TASK_UTIL_EXPECT_TRUE(msg_num_ == 20 -
         it->second->stats.messages_sent_dropped_rate_limited);
+
+    // If negativa values are assigned the old value should be retained
+    Sandesh::set_send_rate_limit(10);
+    Sandesh::set_send_rate_limit(-10);
+    EXPECT_TRUE(Sandesh::get_send_rate_limit() == 10);
+    Sandesh::set_send_rate_limit(0);
+    EXPECT_TRUE(Sandesh::get_send_rate_limit() == 10);
 }
 
 class SandeshUVEAlarmTest : public ::testing::Test {
