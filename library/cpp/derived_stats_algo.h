@@ -80,6 +80,7 @@ template <typename ElemT>
 class DSAnomalyIf {
   public:
     virtual bool FillResult(AnomalyResult& res) const = 0;
+    virtual ~DSAnomalyIf() { }
     virtual void Update(const ElemT& raw) = 0;
 };
 
