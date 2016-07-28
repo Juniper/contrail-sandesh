@@ -4714,8 +4714,9 @@ void t_cpp_generator::generate_sandesh_trace(ofstream& out,
             generate_sandesh_no_static_const_string_function(tsandesh, false, false, false, false, true) <<
             ";" << endl;
     out << indent() << creator_name << "->set_category(trace_buf->Name());" << endl;
-    out << indent() << "uint32_t seqnum = trace_buf->TraceWrite(" << creator_name << ");" << endl;
+    out << indent() << "uint32_t seqnum(trace_buf->GetNextSeqNum());" << endl;
     out << indent() << creator_name << "->set_seqnum(seqnum);" << endl;
+    out << indent() << "trace_buf->TraceWrite(" << creator_name << ");" << endl;
     out << indent() << "if ((IsLocalLoggingEnabled() && IsTracePrintEnabled()) || IsUnitTest()) " << creator_name << "->Log();" << endl;
     indent_down();
     out << indent() << "}" <<endl;
