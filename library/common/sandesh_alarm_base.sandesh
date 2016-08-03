@@ -7,75 +7,28 @@
  *
  */
 
-struct Operand1 {
-    1: list<string> keys
-    2: optional map<byte, string> vars
-    3: optional byte json
-}
 
-union Operand2 {
-    1: list<string> keys 
-    2: string json_value
-}
-
-/**
- * An AlarmTemplate consists of a comparison operator,
- * and two operands to be compared
- * 
- * operand1 contains a list of keys used to examine the UVE's JSON tree
- * As we process these keys against the UVE's JSON tree:
- *     - If we are at the last key, use the value of the current subtree.
- *       Processing is finished.
- *     - Otherwise
- *       - If the current subtree is a JSON object, go deeper into the subtree 
- *         according to this key. Process the next key in the list
- *       - If the current subtree is a JSON array, process each element of the 
- *         array with the current key
- *       - Any other situation is unexpected; this UVE tree cannot be processed
- *         with this operand specification
- * Also, we will use the "vars" attributes to print parts of the UVE other than
- * the operand1 and operand2 value inthe Alarm description
- *     
- * operand2 is what we want to compare the first operand to
- * It can be either:
- *     - a list of keys to find which part of the UVE
- *       to compare operand1 to. There is no "vars" element.
- *       "vars" can be specified with operand1 only.
- *     - JSON string representing a fixed value
- *       (The special value "null" is used to check for whether operand1 exists,
- *        using the operators "!=" and "=="
- *
- */
-struct AlarmTemplate {
-    1: string oper
-    2: Operand1 operand1
-    3: Operand2 operand2
+union AlarmOperand2 {
+    1: optional string uve_attribute
+    2: optional string json_value
 }
 
 struct AlarmCondition {
     1: string operation
     2: string operand1
-    3: string operand2
-    /* "vars" is being deprecated */
-    4: optional list<string> vars
-    5: optional list<string> variables
+    3: AlarmOperand2 operand2
+    4: optional list<string> variables
 }
 
 struct AlarmMatch {
     1: string json_operand1_value
     2: optional string json_operand2_value
-    /* "json_vars" is being deprecated */
-    3: optional map<string, string> json_vars
-    4: optional map<string, string> json_variables
+    3: optional map<string, string> json_variables
 }
 
 struct AlarmConditionMatch {
     1: AlarmCondition condition
     2: list<AlarmMatch> match
-}
-
-struct AlarmRuleMatch {
-    1: list<AlarmConditionMatch> rule
 }
 
 struct AlarmAndList {
@@ -84,30 +37,6 @@ struct AlarmAndList {
 
 struct AlarmRules {
     1: list<AlarmAndList> or_list
-}
-
-/**
- * AlarmElement is used to explain why an Alarm was raised.
- * It contains:
- *     - The AlarmTemplate that was violated
- *     - When we examined the UVE, we also noted some parts of the UVE
- *       whose values need to be reported along with the alarm. (from
- *       the "var" attribute of operand1 of the AlarmTemplate)
- *       This is reported as a map, with the the key being the
- *       fully-qualified name of the var
- *     - json string of value seen for operand1. 
- *     - json string of value seen for operand2,
- *       if operand2 was not a fixed value
- */
-struct AlarmElement {
-    1: AlarmTemplate rule
-    2: optional map<string,string> json_vars
-    3: string json_operand1_value
-    4: optional string json_operand2_value
-}
-
-struct AllOf {
-    1: list <AlarmElement> all_of
 }
 
 /**
@@ -124,10 +53,7 @@ struct AllOf {
  */
 struct UVEAlarmInfo {
     1: string type
-    /** "any_of" is deprecated */
-    8: optional list<AllOf> any_of
-    9: list<AlarmRuleMatch> rules
-   10: AlarmRules alarm_rules
+    2: AlarmRules alarm_rules
     3: bool ack
     4: u64 timestamp
     5: byte severity
