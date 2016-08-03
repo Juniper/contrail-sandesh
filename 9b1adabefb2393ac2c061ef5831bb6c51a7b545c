@@ -1,0 +1,9 @@
+Verified+2: opencontrail-admin <ci-admin@opencontrail.org>
+Verified+2: Zuul <zuul@lists.opencontrail.org>
+Code-Review+2: Megh Bhatt <meghb@juniper.net>
+Approved+1: Karl Klashinsky <klash@juniper.net>
+Submitted-by: Zuul <zuul@lists.opencontrail.org>
+Submitted-at: Wed, 03 Aug 2016 12:57:58 -0700
+Reviewed-on: https://review.opencontrail.org/22786
+Project: Juniper/contrail-sandesh
+Branch: refs/heads/R3.1
