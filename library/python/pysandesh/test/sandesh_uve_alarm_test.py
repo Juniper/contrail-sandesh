@@ -233,7 +233,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
         uve_alarm_info.type = 'ProcessStatus'
         condition = AlarmCondition(operation='==',
             operand1='NodeStatus.process_info.process_state',
-            operand2=json.dumps('null'))
+            operand2=AlarmOperand2(json_value=json.dumps('null')))
         match1 = AlarmMatch(json_operand1_value=json.dumps('null'))
         condition_match = AlarmConditionMatch(condition, [match1])
         and_list = AlarmAndList(and_list=[condition_match])
