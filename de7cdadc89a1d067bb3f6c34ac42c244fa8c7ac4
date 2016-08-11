@@ -1,0 +1,9 @@
+Verified+2: opencontrail-admin <ci-admin@opencontrail.org>
+Verified+2: Zuul <zuul@lists.opencontrail.org>
+Approved+1: Sundaresan Rajangam <srajanga@juniper.net>
+Code-Review+2: Sundaresan Rajangam <srajanga@juniper.net>
+Submitted-by: Zuul <zuul@lists.opencontrail.org>
+Submitted-at: Wed, 10 Aug 2016 20:12:40 -0700
+Reviewed-on: https://review.opencontrail.org/22595
+Project: Juniper/contrail-sandesh
+Branch: refs/heads/master
