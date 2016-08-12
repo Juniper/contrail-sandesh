@@ -103,10 +103,14 @@ class SandeshMsgTest(unittest.TestCase):
         self.assertEqual(5,sandesh_global.msg_stats(). \
              message_type_stats()['SystemLogTest']. \
              messages_sent_dropped_rate_limited)
+        # try to set negative values to the rate limit
+        SandeshSystem.set_sandesh_send_rate_limit(-10)
+        self.assertEqual(SandeshSystem.get_sandesh_send_rate_limit(), 10)
     # end test_systemlog_msg_buffer_threshold
 
     def test_sandesh_queue_level_drop(self):
         levels = list(range(SandeshLevel.SYS_EMERG,SandeshLevel.SYS_DEBUG))
+        SandeshSystem.set_sandesh_send_rate_limit(100)
         queue_level_drop = 0
         for send_level in levels:
             sandesh_global.set_send_level(None, send_level)
