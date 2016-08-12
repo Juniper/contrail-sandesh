@@ -2263,8 +2263,15 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
 
       string residual = tstr.substr(pos+1, string::npos);
       size_t rpos = residual.find(':');
-      string algo = residual.substr(0,rpos);
-      string anno = residual.substr(rpos+1, string::npos);
+      string algo, anno;
+      if (rpos == string::npos) {
+        // No Derived Stats arguments are present
+        algo = residual;
+        anno = string();
+      } else {
+        algo = residual.substr(0,rpos);
+        anno = residual.substr(rpos+1, string::npos);
+      }
 
       string rawfullattr;
       string rawperiodattr = tstr.substr(0,pos);

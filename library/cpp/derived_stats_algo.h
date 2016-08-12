@@ -343,19 +343,22 @@ class DSSum {
     }
     uint64_t samples_;
     SumResT value_;
+    SumResT prev_;
     vector<ElemT> history_buf_;
     uint64_t history_count_;
 
     virtual bool FillResult(SumResT &res) const {
         if (!samples_) return false;
         res = value_;
-        return true;
+        if (history_count_ && (value_ == prev_)) return false;
+        else return true;
     }
 
     virtual void Update(const ElemT& raw) {
         if (!samples_) {
             value_ = raw;
         } else {
+            prev_ = value_;
             value_ = value_ + raw;
         }
         if (history_count_) {
