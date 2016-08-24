@@ -705,7 +705,7 @@ void t_doc_generator::generate_stat_schema_struct_members(string prefix, t_field
                 generate_stat_schema_struct(prefix, (*m_iter), cstruct, tstruct, false);
             }
         } else if (mtype->is_list()) {
-            t_type* etype= ((t_list*)((*m_iter)->get_type()))->get_elem_type();
+            t_type* etype= ((t_list*)mtype)->get_elem_type();
             generate_stat_schema_list(prefix, etype, (*m_iter), tstruct, false);
         } else if (mtype->is_map()) {
             t_type* valtype= ((t_map*)((*m_iter)->get_type()))->get_val_type();
@@ -854,6 +854,37 @@ void t_doc_generator::generate_stat_schema_list(string name, t_type* ttype, t_fi
         t_struct *cstruct = find_struct_with_name(sname);
         if (cstruct) {
             generate_stat_schema_struct(name, tfield, cstruct, tstruct, is_top_level);
+        }
+    } else if (ttype->is_base_type()) {
+        map<string, vector<string> > suffixes;
+        vector<string> top_level_tags;
+        vector<string> member_tags;
+        bool is_empty_tag = false;
+        map<string, string>::iterator jt;
+        string tname = tfield->get_name();
+        jt = tfield->annotations_.find("tags");
+        if (jt == tfield->annotations_.end())
+            is_empty_tag = true;
+        if (!is_top_level && !is_empty_tag) {
+	    return;
+        }
+        if(!name.empty()) {
+            tname = name + "." + tname;
+        }
+        if (is_empty_tag == false) {
+            extract_tags(tfield, suffixes, top_level_tags, member_tags);
+        }
+        string datatype = get_datatype_from_tfield(ttype);
+        string index = "false";
+        bool is_suffixed_field = false;
+        is_indexed_or_suffixed_field(tname, member_tags, suffixes, index, is_suffixed_field);
+        if (!is_suffixed_field) {
+            if (first_member) {
+                first_member = false;
+                f_stats_tables_ << "\t{\"name\":\"" << tname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
+            } else {
+                f_stats_tables_ << ",\n\t{\"name\":\"" << tname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
+            }
         }
     }
 }
