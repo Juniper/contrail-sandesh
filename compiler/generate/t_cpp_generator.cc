@@ -2009,7 +2009,7 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
         assert((*f_iter)->get_name() == "data");
     
         indent(out) << "static void Send(const " << type_name((*f_iter)->get_type()) <<
-            "& data, std::string table = \"\");" << endl;
+            "& data, std::string table = \"\", uint64_t mono_usec=0);" << endl;
 
         indent(out) << "static void Send(const " << type_name((*f_iter)->get_type()) <<
             "& cdata, SandeshUVE::SendType stype, uint32_t seqno," <<
@@ -2069,7 +2069,7 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
             " & _data, const map<string,string> & _dsconf);" << endl;
         out << indent() << "static bool UpdateUVE(" <<  dtype <<
             " & _data, " << dtype <<
-            " & tdata);" << endl;
+            " & tdata, uint64_t mono_usec);" << endl;
         out << indent() << "bool LoadUVE(SendType stype, uint32_t cycle);" << endl;
     }
 
@@ -3809,7 +3809,7 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
   indent(out) << "bool " << tsandesh->get_name() << 
     "::UpdateUVE(" <<  dtype <<
       " & _data, " << dtype <<
-      " & tdata) {" << endl;
+      " & tdata, uint64_t mono_usec) {" << endl;
 
   indent_up();
   
@@ -3863,11 +3863,11 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
           if (c_iter->second.compattr_.empty()) {
             if (!c_iter->second.is_map_) {
               indent(out) << "tdata.__dsobj_" << *d_iter <<
-                "->Update(_data.get_" << snm << "());" << endl;
+                "->Update(_data.get_" << snm << "(), mono_usec);" << endl;
             } else {
               indent(out) << "tdata.__dsobj_" << *d_iter <<
                 "->Update(_data.get_" << snm << "(), _delmap_" << 
-                snm << ");" << endl;
+                snm << ", mono_usec);" << endl;
             }
           } else {
             string getexpr = string("get_") + c_iter->second.compattr_ +
@@ -3878,7 +3878,7 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
             }
             if (!c_iter->second.is_map_) {
               indent(out) << "tdata.__dsobj_" << *d_iter << "->Update(_data.get_" <<
-                snm << "()." << getexpr << ");" << endl;
+                snm << "()." << getexpr << ", mono_usec);" << endl;
             } else {
               indent(out) << "std::map<string," << c_iter->second.rawtype_ << "> temp_" << 
                 *d_iter << ";" << endl;
@@ -3891,7 +3891,7 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
               indent_down();
               indent(out) <<  "}" << endl;
               indent(out) << "tdata.__dsobj_" << *d_iter << "->Update(temp_" <<
-                *d_iter << ", _delmap_" << snm << ");" << endl; 
+                *d_iter << ", _delmap_" << snm << ", mono_usec);" << endl; 
               indent(out) << "temp_" << *d_iter << ".clear();" << endl;
             }
           }
@@ -4217,7 +4217,7 @@ void t_cpp_generator::generate_sandesh_uve_creator(
     
     indent(out) << "void " << sname <<
         "::Send(const " << type_name((*f_iter)->get_type()) <<
-        "& data, std::string table) {" << endl;
+        "& data, std::string table, uint64_t mono_usec) {" << endl;
     indent_up();
 
     indent(out) << type_name((*f_iter)->get_type()) <<
@@ -4227,7 +4227,7 @@ void t_cpp_generator::generate_sandesh_uve_creator(
     indent(out) << "if (!table.empty()) cdata.table_ = table;" << endl;
 
     indent(out) << "if (uvemap" << sname <<
-      ".UpdateUVE(cdata, msg_seqno)) {" << endl;
+      ".UpdateUVE(cdata, msg_seqno, mono_usec)) {" << endl;
     indent_up();
     indent(out) << sname << " *snh = new " << sname << "(msg_seqno, cdata);" << endl;
     indent(out) << "snh->Dispatch();" << endl;

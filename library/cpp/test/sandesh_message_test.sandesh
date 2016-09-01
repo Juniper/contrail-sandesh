@@ -110,7 +110,7 @@ struct SandeshPeriodicData {
     8: optional i32 jx 
 
     // This DS is hidden-periodic
-    9: optional int_P_ avh_jx (stats="jx:DSAvg:3", hidden="yes")
+    9: optional int_P_ avh_jx (stats="jx:DSAvg", hidden="yes")
 
     // Periodic DS, with period of 2.
    10: optional int_P_ avg_jx (stats="2-jx:DSNone:3")

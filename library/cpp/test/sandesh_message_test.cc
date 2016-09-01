@@ -796,7 +796,7 @@ protected:
                 EXPECT_STREQ(mm["sum_tsm"].c_str(),
 "<sum_tsm type=\"map\" identifier=\"6\" mstats=\"tsm:DSSum:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><int_P_><value type=\"i32\" identifier=\"2\">17</value></int_P_><element>j3</element><int_P_><value type=\"i32\" identifier=\"2\">27</value></int_P_></map></sum_tsm>");
                 EXPECT_STREQ(mm["avg_x"].c_str(),
-"<avg_x type=\"struct\" identifier=\"7\" stats=\"x:DSAvg:3\"><int_P_><value type=\"i32\" identifier=\"2\">98</value></int_P_></avg_x>");
+"");
                 EXPECT_STREQ(mm["avh_jx"].c_str(),
 "");
                 EXPECT_STREQ(mm["avg_jx"].c_str(),
@@ -836,7 +836,7 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
                 EXPECT_STREQ(mm["avg_x"].c_str(),
-"<avg_x type=\"struct\" identifier=\"7\" stats=\"x:DSAvg:3\"><int_P_><staging type=\"i32\" identifier=\"1\">94</staging><value type=\"i32\" identifier=\"2\">98</value></int_P_></avg_x>");
+"<avg_x type=\"struct\" identifier=\"7\" stats=\"x:DSAvg:3\"><int_P_><staging type=\"i32\" identifier=\"1\">94</staging></int_P_></avg_x>");
                 EXPECT_STREQ(mm["x"].c_str(),
 "<x type=\"i32\" identifier=\"3\" hidden=\"yes\">97</x>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
@@ -844,7 +844,7 @@ protected:
                 EXPECT_STREQ(mm["sum_tsm"].c_str(),
 "<sum_tsm type=\"map\" identifier=\"6\" mstats=\"tsm:DSSum:\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><int_P_><value type=\"i32\" identifier=\"2\">17</value></int_P_><element>j3</element><int_P_><value type=\"i32\" identifier=\"2\">27</value></int_P_></map></sum_tsm>");
                 EXPECT_STREQ(mm["avh_jx"].c_str(),
-"<avh_jx type=\"struct\" identifier=\"9\" hidden=\"yes\" stats=\"jx:DSAvg:3\"><int_P_><value type=\"i32\" identifier=\"2\">75</value></int_P_></avh_jx>");
+"<avh_jx type=\"struct\" identifier=\"9\" hidden=\"yes\" stats=\"jx:DSAvg\"><int_P_><value type=\"i32\" identifier=\"2\">75</value></int_P_></avh_jx>");
                 EXPECT_STREQ(mm["avi_jx"].c_str(),
 "<avi_jx type=\"i32\" identifier=\"11\" stats=\"0-jx:DSNone:3\">75</avi_jx>");
                 EXPECT_STREQ(mm["avg_jx"].c_str(),
@@ -1009,7 +1009,7 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     
         uve_data2.set_jx(75);
 
-        SandeshPeriodicTest::Send(uve_data2);
+        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 2000000);
 
     }    
     {
@@ -1017,7 +1017,7 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
         uve_data10.set_name("uve1");
         uve_data10.set_x(98);
 
-        SandeshPeriodicTest::Send(uve_data10);
+        SandeshPeriodicTest::Send(uve_data10, "ObjectGeneratorInfo", 3000000);
     }
 
     // verify SyncAllMaps() sends all UVEs/Alarms from the cache
@@ -1111,28 +1111,28 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(11);
-        SandeshPeriodicTest::Send(uve_data2);
+        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 4000000);
 
     }    
     {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(95);
-        SandeshPeriodicTest::Send(uve_data2);
+        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 5000000);
 
     }    
     {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(90);
-        SandeshPeriodicTest::Send(uve_data2);
+        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 6000000);
 
     }    
     {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(97);
-        SandeshPeriodicTest::Send(uve_data2);
+        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 7000000);
 
     }    
 
