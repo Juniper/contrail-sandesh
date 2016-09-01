@@ -57,7 +57,8 @@ std::map<std::string, ElemT> DerivedStatsAgg(const std::map<std::string, ElemT> 
 template<template<class,class> class DSTT, typename ElemT, typename ResultT>
 void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
         std::map<std::string, boost::shared_ptr<DSTT<ElemT,ResultT> > > & dsm,
-        std::string annotation, const std::map<std::string, bool> &del) {
+        std::string annotation, const std::map<std::string, bool> &del,
+        uint64_t mono_usec) {
 
     std::map<std::string, bool> srcmap;
     typename std::map<std::string, ElemT>::const_iterator rit;
@@ -92,7 +93,7 @@ void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
                 dt++;
                 dsm.erase(et);
             } else {
-                dt->second->Update(rit->second);
+                dt->second->Update(rit->second, mono_usec);
                 ++dt;
             }
         } else {
@@ -109,7 +110,7 @@ void DerivedStatsMerge(const std::map<std::string, ElemT> & raw,
         if ((mt->second == false) && (!dlt->second)) {
             assert(dsm.find(mt->first) == dsm.end());
             dsm[mt->first] = boost::make_shared<DSTT<ElemT,ResultT> >(annotation);
-            dsm[mt->first]->Update((raw.find(mt->first))->second);
+            dsm[mt->first]->Update((raw.find(mt->first))->second, mono_usec);
         }
     }
 }
@@ -169,7 +170,7 @@ class DerivedStatsIf {
 
     // This is the interface to feed in all updates to the raw stat
     // on which the derived stat will be based.
-    void Update(ElemT raw) {
+    void Update(ElemT raw, uint64_t mono_usec) {
         if (!ds_) {
             ds_ = boost::make_shared<DSTT<ElemT,ResultT> >(annotation_);
             if (is_agg_) {
@@ -182,19 +183,20 @@ class DerivedStatsIf {
                 agg_ = agg_ + diff_;
             }
         }
-        if (is_agg_) ds_->Update(diff_);
-        else ds_->Update(raw);
+        if (is_agg_) ds_->Update(diff_, mono_usec);
+        else ds_->Update(raw, mono_usec);
     }
     
-    void Update(const std::map<std::string, ElemT> & raw, const std::map<std::string, bool> &del) {
+    void Update(const std::map<std::string, ElemT> & raw,
+            const std::map<std::string, bool> &del, uint64_t mono_usec) {
         if (!dsm_) {
             dsm_ = boost::make_shared<result_map>();
         }
         if (is_agg_) {
             diffm_ = DerivedStatsAgg<ElemT>(raw, aggm_, del);
-            DerivedStatsMerge<DSTT,ElemT,ResultT>(diffm_, *dsm_, annotation_, del);
+            DerivedStatsMerge<DSTT,ElemT,ResultT>(diffm_, *dsm_, annotation_, del, mono_usec);
         } else {
-            DerivedStatsMerge<DSTT,ElemT,ResultT>(raw, *dsm_, annotation_, del);
+            DerivedStatsMerge<DSTT,ElemT,ResultT>(raw, *dsm_, annotation_, del, mono_usec);
         }
     }
 };
@@ -231,7 +233,7 @@ class DerivedStatsPeriodicIf {
 
     // This is the interface to feed in all updates to the raw stat
     // on which the derived stat will be based.
-    void Update(ElemT raw) {
+    void Update(ElemT raw, uint64_t mono_usec) {
         if (!ds_) {
             ds_ = boost::make_shared<DSTT<ElemT,SubResultT> >(annotation_);
         }
@@ -243,19 +245,22 @@ class DerivedStatsPeriodicIf {
                 diff_ = raw - agg_;
                 agg_ = agg_ + diff_;
             }
-            ds_->Update(diff_);
-        } else ds_->Update(raw);
+            ds_->Update(diff_, mono_usec);
+        } else ds_->Update(raw, mono_usec);
         init_ = true;
     }
 
-    void Update(const std::map<std::string, ElemT> & raw, const std::map<std::string, bool> &del) {
+    void Update(const std::map<std::string, ElemT> & raw,
+            const std::map<std::string, bool> &del, uint64_t mono_usec) {
         if (!dsm_) {
             dsm_ = boost::make_shared<result_map>();
         }
         if (is_agg_) {
             diffm_ = DerivedStatsAgg<ElemT>(raw, aggm_, del);
-            DerivedStatsMerge<DSTT,ElemT,SubResultT>(diffm_, *dsm_, annotation_, del);
-        } else DerivedStatsMerge<DSTT,ElemT,SubResultT>(raw, *dsm_, annotation_, del);
+            DerivedStatsMerge<DSTT,ElemT,SubResultT>(
+                    diffm_, *dsm_, annotation_, del, mono_usec);
+        } else DerivedStatsMerge<DSTT,ElemT,SubResultT>(
+                    raw, *dsm_, annotation_, del, mono_usec);
         init_ = true;
     }
 

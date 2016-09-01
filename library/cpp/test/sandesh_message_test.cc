@@ -1009,7 +1009,7 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     
         uve_data2.set_jx(75);
 
-        SandeshPeriodicTest::Send(uve_data2);
+        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 2000000);
 
     }    
     {
@@ -1017,7 +1017,7 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
         uve_data10.set_name("uve1");
         uve_data10.set_x(98);
 
-        SandeshPeriodicTest::Send(uve_data10);
+        SandeshPeriodicTest::Send(uve_data10, "ObjectGeneratorInfo", 3000000);
     }
 
     // verify SyncAllMaps() sends all UVEs/Alarms from the cache
@@ -1111,28 +1111,28 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(11);
-        SandeshPeriodicTest::Send(uve_data2);
+        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 4000000);
 
     }    
     {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(95);
-        SandeshPeriodicTest::Send(uve_data2);
+        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 5000000);
 
     }    
     {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(90);
-        SandeshPeriodicTest::Send(uve_data2);
+        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 6000000);
 
     }    
     {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(97);
-        SandeshPeriodicTest::Send(uve_data2);
+        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 7000000);
 
     }    
 

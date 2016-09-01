@@ -21,58 +21,12 @@
 
 using std::vector;
 using std::map;
+using std::pair;
 using std::make_pair;
 using std::string;
 
 namespace contrail {
 namespace sandesh {
-
-template<class CatElemT, class CatResT>
-class DSCategoryCount {
-};
-
-template<>
-class DSCategoryCount<CategoryResult,CategoryResult> {
-  public: 
-    DSCategoryCount(const std::string &annotation) {}
-
-    typedef map<std::string, uint64_t> CatResT;
-    CatResT agg_counts_;
-    CatResT diff_counts_;
-
-    bool FillResult(CategoryResult &res) const {
-        res.set_counters(diff_counts_);
-        return !diff_counts_.empty();
-    }
-
-    void Update(const CategoryResult& raw) {
-        diff_counts_.clear();
-        for (CatResT::const_iterator it = raw.get_counters().begin();
-                it != raw.get_counters().end(); it++) {
-
-            // Is there anything to count?
-            if (!it->second) continue;
-          
-            CatResT::iterator mit =
-                    agg_counts_.find(it->first);
- 
-            if (mit==agg_counts_.end()) {
-                // This is a new category
-                diff_counts_.insert(make_pair(it->first, it->second));
-                agg_counts_.insert(make_pair(it->first, it->second));
-            } else {
-                assert(it->second >= mit->second);
-                uint64_t diff = it->second - mit->second;
-                if (diff) {
-                    // If the count for this category has changed,
-                    // report the diff and update the aggregate
-                    diff_counts_.insert(make_pair(it->first, diff));
-                    mit->second = it->second;
-                }
-            }
-        }
-    }
-};
 
 // Interface for all Anomaly Detection algorithms
 // That can be plugged into the DSAnomaly DerivedStat
@@ -163,16 +117,16 @@ class DSAnomaly {
             // with the DSAnomaly config
             assert(error_.empty());
         }
-        if (ret) {
-            res.set_samples(samples_);
-            res.set_algo(algo_);
-            res.set_config(config_);
-            if (!error_.empty()) res.set_error(error_);
-        }
+        
+	res.set_samples(samples_);
+	res.set_algo(algo_);
+	res.set_config(config_);
+	if (!error_.empty()) res.set_error(error_);
+
         return ret;
     }
 
-    void Update(const ElemT& raw) {
+    void Update(const ElemT& raw, uint64_t mono_usec) {
         samples_++;
         if (impl_) impl_->Update(raw);
     }
@@ -219,7 +173,7 @@ class DSEWM {
         res.set_sigma(sigma_);
         return true;
     }
-    void Update(const ElemT& raw) {
+    void Update(const ElemT& raw, uint64_t mono_usec) {
         samples_++;
         if (!error_.empty()) return;
         variance_ = (1-alpha_)*(variance_ + (alpha_*pow(raw-mean_,2)));
@@ -246,7 +200,7 @@ class DSChange {
 	else return true;
     }
 
-    void Update(const ElemT& raw) {
+    void Update(const ElemT& raw, uint64_t mono_usec) {
         if (init_) prev_ = value_;
         value_ = raw;
         init_ = true;
@@ -265,7 +219,7 @@ class DSNon0 {
 	return true;
     }
 
-    void Update(const ElemT& raw) {
+    void Update(const ElemT& raw, uint64_t mono_usec) {
         value_ = raw;
     }
 };
@@ -280,7 +234,7 @@ class DSNone {
         res = value_;
         return true;
     }
-    void Update(const ElemT& raw) {
+    void Update(const ElemT& raw, uint64_t mono_usec) {
         value_ = raw;
     }
 };
@@ -297,37 +251,9 @@ class DSNull {
         res.set_value(value_);
         return true;
     }
-    void Update(const ElemT& raw) {
+    void Update(const ElemT& raw, uint64_t mono_usec) {
         samples_++;
         value_ = raw;
-    }
-};
-
-/* Deprecated: use metric="agg" on raw stat instead */
-template <typename ElemT, class DiffResT>
-class DSDiff {
-  public:
-    DSDiff(const std::string &annotation) : init_(false) {}
-    bool init_;
-    ElemT agg_;
-    ElemT diff_;
-
-    bool FillResult(DiffResT &res) const {
-        ElemT empty;
-        if (!init_) return false;
-        if (diff_ == empty) return false;
-        res = diff_;
-        return true;
-    }
-    void Update(const ElemT& raw) {
-        if (!init_) {
-            diff_ = raw;
-            agg_ = raw;
-        } else {
-            diff_ = raw - agg_;
-            agg_ = agg_ + diff_;
-        }
-        init_ = true;
     }
 };
 
@@ -335,42 +261,67 @@ template <typename ElemT, class SumResT>
 class DSSum {
   public:
     DSSum(const std::string &annotation): samples_(0) {
+        shifter_ = 0;
         if (annotation.empty()) {
-            history_count_ = 0;
+            range_usecs_ = 0;
         } else {
-            history_count_ = (uint64_t) strtoul(annotation.c_str(), NULL, 10);
+            range_usecs_ = ((uint64_t) strtoul(annotation.c_str(), NULL, 10)) * 1000000;
+            // We want each time bucket to represent between
+            // 1/128th and 1/256th of the entire range
+            // This ensures that there will never be more than 256 buckets
+            while ((1 << (shifter_ + 8)) < range_usecs_) shifter_++;   
         }
     }
     uint64_t samples_;
     SumResT value_;
     SumResT prev_;
-    vector<ElemT> history_buf_;
-    uint64_t history_count_;
+    map<uint64_t, pair<uint64_t,ElemT> > history_buf_;
+    uint64_t range_usecs_;
+    uint8_t shifter_;
 
     virtual bool FillResult(SumResT &res) const {
         if (!samples_) return false;
         res = value_;
-        if (history_count_ && (value_ == prev_)) return false;
+        if (range_usecs_ && (value_ == prev_)) return false;
         else return true;
     }
 
-    virtual void Update(const ElemT& raw) {
+    virtual void Purge(uint64_t mono_usec) {
+        for (typename map<uint64_t, pair<uint64_t,ElemT> >::iterator it = 
+                history_buf_.begin(); it!= history_buf_.end(); ) {
+            if (it->first < (mono_usec - range_usecs_)) {
+                value_ = value_ - it->second.second;
+                samples_ = samples_ - it->second.first;
+                history_buf_.erase(it++);
+            } else {
+                ++it;
+            }
+        } 
+    }
+
+    virtual void Update(const ElemT& raw, uint64_t mono_usec) {
         if (!samples_) {
             value_ = raw;
         } else {
             prev_ = value_;
             value_ = value_ + raw;
         }
-        if (history_count_) {
-            // if 'history_count_' is non-0, we need to aggregate only
-            // the last 'history_count_' elements
-            if (samples_ >= history_count_) {
-                // We must substract the oldest entry, if it exists
-                value_ = value_ - history_buf_[samples_ % history_count_];
-                // Now record the latest update, so we can subtract when needed
-                history_buf_[samples_ % history_count_] = raw;
+        if (range_usecs_) {
+            // if 'range_usecs_' is non-0, we need to aggregate only
+            // the last 'range_usecs_' worth of elements
+
+            // Subtract old entries, if there are any
+            Purge(mono_usec);
+
+            // Record the new update, so we can subtract when needed
+            uint64_t tbin = (mono_usec >> shifter_) << shifter_;
+            typename map<uint64_t, pair<uint64_t,ElemT> >::iterator ut =
+                    history_buf_.find(tbin);
+            if (ut == history_buf_.end()) {
+                history_buf_[tbin] = make_pair(1,raw);
             } else {
-                history_buf_.push_back(raw);
+                ut->second.second = ut->second.second + raw;
+                ut->second.first++;
             }
         }
         samples_++;
@@ -384,14 +335,7 @@ class DSAvg : public DSSum<ElemT,AvgResT> {
 
     virtual bool FillResult(AvgResT &res) const {
         if (!DSSum<ElemT,AvgResT>::samples_) return false;
-        if (DSSum<ElemT,AvgResT>::history_count_) {
-	    uint64_t div =
-                    ((DSSum<ElemT,AvgResT>::samples_ >=DSSum<ElemT,AvgResT>::history_count_) ?
-		     DSSum<ElemT,AvgResT>::history_count_ : DSSum<ElemT,AvgResT>::samples_);
-	    res = DSSum<ElemT,AvgResT>::value_ / div;
-        } else {
-            res = DSSum<ElemT,AvgResT>::value_ / DSSum<ElemT,AvgResT>::samples_;
-        }
+        res = DSSum<ElemT,AvgResT>::value_ / DSSum<ElemT,AvgResT>::samples_;
         return true;
     }
 };

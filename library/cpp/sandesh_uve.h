@@ -133,13 +133,14 @@ public:
     // This function is called whenever a SandeshUVE is sent from
     // the generator to the collector.
     // It updates the cache.
-    bool UpdateUVE(U& data, uint32_t seqnum) {
+    bool UpdateUVE(U& data, uint32_t seqnum, uint64_t mono_usec) {
         bool send = false;
         tbb::mutex::scoped_lock lock;
         const std::string &table = data.table_;
         assert(!table.empty());
         const std::string &s = data.get_name();
-       
+        if (!mono_usec) mono_usec = ClockMonotonicUsec();
+ 
         // pickup DS Config
         lock.acquire(uve_mutex_);
         std::map<string,string> dsconf = dsconf_;
@@ -165,10 +166,10 @@ public:
         if (imapentry == a->second.end()) {
             std::auto_ptr<UVEMapEntry> ume(new UVEMapEntry(data.table_, seqnum));
             T::_InitDerivedStats(ume->data, dsconf);
-            send = T::UpdateUVE(data, ume->data);
+            send = T::UpdateUVE(data, ume->data, mono_usec);
             imapentry = a->second.insert(table, ume).first;
         } else {
-            send = T::UpdateUVE(data, imapentry->second->data);
+            send = T::UpdateUVE(data, imapentry->second->data, mono_usec);
             imapentry->second->seqno = seqnum;
         }
         if (data.get_deleted()) {
