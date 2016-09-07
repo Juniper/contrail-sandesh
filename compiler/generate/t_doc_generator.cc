@@ -60,12 +60,38 @@ class t_doc_generator : public t_generator {
   struct doc_ftype {
     enum type {
       LOGS,
+      LOGS_LEVEL_INVALID,
+      LOGS_LEVEL_DEBUG,
+      LOGS_LEVEL_INFO,
+      LOGS_LEVEL_NOTICE,
+      LOGS_LEVEL_WARN,
+      LOGS_LEVEL_ERR,
+      LOGS_LEVEL_CRIT,
+      LOGS_LEVEL_ALERT,
+      LOGS_LEVEL_EMERG,
       UVES,
       TRACES,
       INTROSPECT,
     };
   };
 
+  // Sync with SandeshLevel from tools/sandesh/library/common/sandesh.sandesh
+  struct sandesh_level {
+    enum type {
+      INVALID,
+      DBG,
+      INFO,
+      NOTICE,
+      WARN,
+      ERR,
+      CRIT,
+      ALERT,
+      EMERG,
+    };
+  };
+
+  sandesh_level::type string_to_sandesh_level(const string &level);
+  sandesh_level::type get_sandesh_level(t_sandesh *tsandesh);
   bool is_sandesh_type(t_sandesh *tsandesh, doc_ftype::type dtype);
   string get_doc_file_suffix(doc_ftype::type dtype);
   string get_doc_file_description(doc_ftype::type dtype);
@@ -139,13 +165,19 @@ class t_doc_generator : public t_generator {
   void print_doc_string (string doc, ofstream &f_out);
 
   ofstream f_index_out_;
-  ofstream f_log_out_;
+  ofstream f_messages_out_;
   bool f_log_initialized_;
-  ofstream f_uve_out_;
+  bool f_log_invalid_initialized_;
+  bool f_log_debug_initialized_;
+  bool f_log_info_initialized_;
+  bool f_log_notice_initialized_;
+  bool f_log_warn_initialized_;
+  bool f_log_error_initialized_;
+  bool f_log_crit_initialized_;
+  bool f_log_alert_initialized_;
+  bool f_log_emerg_initialized_;
   bool f_uve_initialized_;
-  ofstream f_trace_out_;
   bool f_trace_initialized_;
-  ofstream f_introspect_out_;
   bool f_introspect_initialized_;
   ofstream f_out_;
   ofstream f_stats_tables_;
@@ -168,6 +200,60 @@ bool t_doc_generator::is_sandesh_type(t_sandesh *tsandesh,
   switch (dtype) {
     case doc_ftype::LOGS:
       if (tbtype->is_sandesh_system() || tbtype->is_sandesh_object()) {
+        return true;
+      }
+      return false;
+    case doc_ftype::LOGS_LEVEL_INVALID:
+      if ((tbtype->is_sandesh_system() || tbtype->is_sandesh_object()) &&
+          get_sandesh_level(tsandesh) == sandesh_level::INVALID) {
+        return true;
+      }
+      return false;
+    case doc_ftype::LOGS_LEVEL_DEBUG:
+      if ((tbtype->is_sandesh_system() || tbtype->is_sandesh_object()) &&
+          get_sandesh_level(tsandesh) == sandesh_level::DBG) {
+        return true;
+      }
+      return false;
+    case doc_ftype::LOGS_LEVEL_INFO:
+      if ((tbtype->is_sandesh_system() || tbtype->is_sandesh_object()) &&
+          get_sandesh_level(tsandesh) == sandesh_level::INFO) {
+        return true;
+      }
+      return false;
+    case doc_ftype::LOGS_LEVEL_NOTICE:
+      if ((tbtype->is_sandesh_system() || tbtype->is_sandesh_object()) &&
+          get_sandesh_level(tsandesh) == sandesh_level::NOTICE) {
+        return true;
+      }
+      return false;
+    case doc_ftype::LOGS_LEVEL_WARN:
+      if ((tbtype->is_sandesh_system() || tbtype->is_sandesh_object()) &&
+          get_sandesh_level(tsandesh) == sandesh_level::WARN) {
+        return true;
+      }
+      return false;
+    case doc_ftype::LOGS_LEVEL_ERR:
+      if ((tbtype->is_sandesh_system() || tbtype->is_sandesh_object()) &&
+          get_sandesh_level(tsandesh) == sandesh_level::ERR) {
+        return true;
+      }
+      return false;
+    case doc_ftype::LOGS_LEVEL_CRIT:
+      if ((tbtype->is_sandesh_system() || tbtype->is_sandesh_object()) &&
+          get_sandesh_level(tsandesh) == sandesh_level::CRIT) {
+        return true;
+      }
+      return false;
+    case doc_ftype::LOGS_LEVEL_ALERT:
+      if ((tbtype->is_sandesh_system() || tbtype->is_sandesh_object()) &&
+          get_sandesh_level(tsandesh) == sandesh_level::ALERT) {
+        return true;
+      }
+      return false;
+    case doc_ftype::LOGS_LEVEL_EMERG:
+      if ((tbtype->is_sandesh_system() || tbtype->is_sandesh_object()) &&
+          get_sandesh_level(tsandesh) == sandesh_level::EMERG) {
         return true;
       }
       return false;
@@ -196,6 +282,24 @@ string t_doc_generator::get_doc_file_suffix(doc_ftype::type dtype) {
   switch (dtype) {
     case doc_ftype::LOGS:
       return "_logs";
+    case doc_ftype::LOGS_LEVEL_INVALID:
+      return "_logs.invalid";
+    case doc_ftype::LOGS_LEVEL_DEBUG:
+      return "_logs.debug";
+    case doc_ftype::LOGS_LEVEL_INFO:
+      return "_logs.info";
+    case doc_ftype::LOGS_LEVEL_NOTICE:
+      return "_logs.notice";
+    case doc_ftype::LOGS_LEVEL_WARN:
+      return "_logs.warn";
+    case doc_ftype::LOGS_LEVEL_ERR:
+      return "_logs.error";
+    case doc_ftype::LOGS_LEVEL_CRIT:
+      return "_logs.crit";
+    case doc_ftype::LOGS_LEVEL_ALERT:
+      return "_logs.alert";
+    case doc_ftype::LOGS_LEVEL_EMERG:
+      return "_logs.emerg";
     case doc_ftype::UVES:
       return "_uves";
     case doc_ftype::TRACES:
@@ -210,7 +314,25 @@ string t_doc_generator::get_doc_file_suffix(doc_ftype::type dtype) {
 string t_doc_generator::get_doc_file_description(doc_ftype::type dtype) {
   switch (dtype) {
     case doc_ftype::LOGS:
-      return "systemlog and objectlog";
+      return "all systemlog and objectlog";
+    case doc_ftype::LOGS_LEVEL_INVALID:
+      return "systemlog and objectlog with unknown severity";
+    case doc_ftype::LOGS_LEVEL_DEBUG:
+      return "debug systemlog and objectlog";
+    case doc_ftype::LOGS_LEVEL_INFO:
+      return "informational systemlog and objectlog";
+    case doc_ftype::LOGS_LEVEL_NOTICE:
+      return "notice systemlog and objectlog";
+    case doc_ftype::LOGS_LEVEL_WARN:
+      return "warning systemlog and objectlog";
+    case doc_ftype::LOGS_LEVEL_ERR:
+      return "error systemlog and objectlog";
+    case doc_ftype::LOGS_LEVEL_CRIT:
+      return "critical systemlog and objectlog";
+    case doc_ftype::LOGS_LEVEL_ALERT:
+      return "alert systemlog and objectlog";
+    case doc_ftype::LOGS_LEVEL_EMERG:
+      return "emergency systemlog and objectlog";
     case doc_ftype::UVES:
       return "UVE";
     case doc_ftype::TRACES:
@@ -410,7 +532,44 @@ void t_doc_generator::generate_index() {
    << endl;
   f_index_out_ << "<table><tr><th>Message Types</th></tr>" << endl;
   if (f_log_initialized_) {
-    f_index_out_ << "<tr><td><a href=" << program_->get_name() << "_logs.html>Logs</a></td></tr>" << endl;
+    f_index_out_ << "<tr><td><a href=" << program_->get_name() <<
+      get_doc_file_suffix(doc_ftype::LOGS) << ".html>All Logs</a></td></tr>" << endl;
+  }
+  if (f_log_emerg_initialized_) {
+    f_index_out_ << "<tr><td><a href=" << program_->get_name() <<
+      get_doc_file_suffix(doc_ftype::LOGS_LEVEL_EMERG) << ".html>Emergency Logs</a></td></tr>" << endl;
+  }
+  if (f_log_alert_initialized_) {
+    f_index_out_ << "<tr><td><a href=" << program_->get_name() <<
+      get_doc_file_suffix(doc_ftype::LOGS_LEVEL_ALERT) << ".html>Alert Logs</a></td></tr>" << endl;
+  }
+  if (f_log_crit_initialized_) {
+    f_index_out_ << "<tr><td><a href=" << program_->get_name() <<
+      get_doc_file_suffix(doc_ftype::LOGS_LEVEL_CRIT) << ".html>Critical Logs</a></td></tr>" << endl;
+  }
+  if (f_log_error_initialized_) {
+    f_index_out_ << "<tr><td><a href=" << program_->get_name() <<
+      get_doc_file_suffix(doc_ftype::LOGS_LEVEL_ERR) << ".html>Error Logs</a></td></tr>" << endl;
+  }
+  if (f_log_warn_initialized_) {
+    f_index_out_ << "<tr><td><a href=" << program_->get_name() <<
+      get_doc_file_suffix(doc_ftype::LOGS_LEVEL_WARN) << ".html>Warning Logs</a></td></tr>" << endl;
+  }
+  if (f_log_notice_initialized_) {
+    f_index_out_ << "<tr><td><a href=" << program_->get_name() <<
+      get_doc_file_suffix(doc_ftype::LOGS_LEVEL_NOTICE) << ".html>Notice Logs</a></td></tr>" << endl;
+  }
+  if (f_log_info_initialized_) {
+    f_index_out_ << "<tr><td><a href=" << program_->get_name() <<
+      get_doc_file_suffix(doc_ftype::LOGS_LEVEL_INFO) << ".html>Informational Logs</a></td></tr>" << endl;
+  }
+  if (f_log_debug_initialized_) {
+    f_index_out_ << "<tr><td><a href=" << program_->get_name() <<
+      get_doc_file_suffix(doc_ftype::LOGS_LEVEL_DEBUG) << ".html>Debugging Logs</a></td></tr>" << endl;
+  }
+  if (f_log_invalid_initialized_) {
+    f_index_out_ << "<tr><td><a href=" << program_->get_name() <<
+      get_doc_file_suffix(doc_ftype::LOGS_LEVEL_INVALID) << ".html>Unknown severity logs</a></td></tr>" << endl;
   }
   if (f_uve_initialized_) {
     f_index_out_ << "<tr><td><a href=" << program_->get_name() << "_uves.html>UVEs</a></td></tr>" << endl;
@@ -434,10 +593,19 @@ void t_doc_generator::generate_program() {
   // Make output directory
   MKDIR(get_out_dir().c_str());
   generate_stats_schema_program();
-  f_log_initialized_ = generate_sandesh_program(f_log_out_, doc_ftype::LOGS);
-  f_uve_initialized_ = generate_sandesh_program(f_uve_out_, doc_ftype::UVES);
-  f_trace_initialized_ = generate_sandesh_program(f_trace_out_, doc_ftype::TRACES);
-  f_introspect_initialized_ = generate_sandesh_program(f_introspect_out_, doc_ftype::INTROSPECT);
+  f_log_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS);
+  f_log_invalid_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_INVALID);
+  f_log_debug_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_DEBUG);
+  f_log_info_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_INFO);
+  f_log_notice_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_NOTICE);
+  f_log_warn_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_WARN);
+  f_log_error_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_ERR);
+  f_log_crit_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_CRIT);
+  f_log_alert_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_ALERT);
+  f_log_emerg_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_EMERG);
+  f_uve_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::UVES);
+  f_trace_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::TRACES);
+  f_introspect_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::INTROSPECT);
   generate_index();
   generate_const_enum_typedef_object_program();
 }
@@ -508,12 +676,81 @@ void t_doc_generator::print_sandesh_message_table(t_sandesh* tsandesh, ofstream 
   f_out << "</table><br/>" << endl;
 }
 
+t_doc_generator::sandesh_level::type t_doc_generator::string_to_sandesh_level(
+    const string &ilevel) {
+  string level(ilevel);
+  // Trim and convert to lower case
+  boost::algorithm::trim(level);
+  if (level.empty()) {
+    return t_doc_generator::sandesh_level::INVALID;
+  }
+  boost::algorithm::to_lower(level);
+  if (level == "debug") {
+    return t_doc_generator::sandesh_level::DBG;
+  }
+  if (level == "info") {
+    return t_doc_generator::sandesh_level::INFO;
+  }
+  if (level == "notice") {
+    return t_doc_generator::sandesh_level::NOTICE;
+  }
+  if (level == "warn") {
+    return t_doc_generator::sandesh_level::WARN;
+  }
+  if (level == "error") {
+    return t_doc_generator::sandesh_level::ERR;
+  }
+  if (level == "critical") {
+    return t_doc_generator::sandesh_level::CRIT;
+  }
+  if (level == "alert") {
+    return t_doc_generator::sandesh_level::ALERT;
+  }
+  if (level == "emerg") {
+    return t_doc_generator::sandesh_level::EMERG;
+  }
+  return t_doc_generator::sandesh_level::INVALID;
+}
+
+typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+t_doc_generator::sandesh_level::type t_doc_generator::get_sandesh_level(
+    t_sandesh* tsandesh) {
+  if (tsandesh->has_doc()) {
+    string doc = tsandesh->get_doc();
+    size_t index;
+    if ((index = doc.find_first_of("@")) != string::npos) {
+      // Skip leading documentation
+      string fdoc(doc.substr(index + 1));
+      // Extract tokens beginning with @
+      boost::char_separator<char> fsep("@");
+      tokenizer ftokens(fdoc, fsep);
+      BOOST_FOREACH(const string &f, ftokens) {
+        // Has 2 parts, the first ending with ':' or ' ' or '\t' is
+        // the type and the next is the content
+        size_t lindex;
+        if ((lindex = f.find_first_of(": \t")) != string::npos) {
+          string type(f.substr(0, lindex));
+          if (lindex + 1 < f.size() && f.at(lindex) != f.at(lindex + 1) &&
+              (f.at(lindex + 1) == ':' || f.at(lindex + 1) == '\t' ||
+               f.at(lindex + 1) == ' ')) {
+            lindex++;
+          }
+          string content(f.substr(lindex + 1));
+          if (type == "severity") {
+            return string_to_sandesh_level(content);
+          }
+        }
+      }
+    }
+  }
+  return sandesh_level::INVALID;
+}
+
 /**
  * If the provided documentable sandesh has documentation attached, this
  * will emit it to the output stream in HTML format and print the @variables
  * in a table format.
  */
-typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
 void t_doc_generator::print_sandesh(t_sandesh* tsandesh, ofstream &f_out) {
   if (tsandesh->has_doc()) {
     bool table = false;
