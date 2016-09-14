@@ -4738,21 +4738,22 @@ void t_cpp_generator::generate_sandesh_trace(ofstream& out,
  */
 void t_cpp_generator::generate_isRatelimitPass(ofstream& out,
                                            t_sandesh* tsandesh) {
-    out << indent() << "if (Sandesh::get_send_rate_limit() == 0) {" << endl;
+    out << indent() << "uint32_t send_rate_limit = Sandesh::get_send_rate_limit();" << endl;
+    out << indent() << "if (send_rate_limit == 0) {" << endl;
     indent_up();
-    out << indent() << "return false;";
+    out << indent() << "return false;" << endl;
     indent_down();
     out << indent() << "}" << endl;
     out << indent() << "tbb::mutex::scoped_lock lock(rate_limit_mutex_);" << endl;
     out << indent() << "if (rate_limit_buffer_.capacity() !="
-        " Sandesh::get_send_rate_limit()) {" << endl;
+        " send_rate_limit) {" << endl;
     indent_up();
     out << indent() << "//Resize the buffer to the "
         "buffer_threshold_" << endl;
-    out << indent() << "rate_limit_buffer_.rresize(Sandesh::get_send_rate_limit());"
+    out << indent() << "rate_limit_buffer_.rresize(send_rate_limit);"
         << endl;
     out << indent() << "rate_limit_buffer_.set_capacity("
-        "Sandesh::get_send_rate_limit());" << endl;
+        "send_rate_limit);" << endl;
     indent_down();
     out << indent() << "}" << endl;
     out << indent() << "time_t current_time = time(0);" << endl;
