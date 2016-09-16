@@ -688,25 +688,25 @@ t_doc_generator::sandesh_level::type t_doc_generator::string_to_sandesh_level(
   if (level == "debug") {
     return t_doc_generator::sandesh_level::DBG;
   }
-  if (level == "info") {
+  if (level == "informational" || level == "info") {
     return t_doc_generator::sandesh_level::INFO;
   }
   if (level == "notice") {
     return t_doc_generator::sandesh_level::NOTICE;
   }
-  if (level == "warn") {
+  if (level == "warning" || level == "warn") {
     return t_doc_generator::sandesh_level::WARN;
   }
-  if (level == "error") {
+  if (level == "error" || level == "err") {
     return t_doc_generator::sandesh_level::ERR;
   }
-  if (level == "critical") {
+  if (level == "critical" || level == "crit") {
     return t_doc_generator::sandesh_level::CRIT;
   }
   if (level == "alert") {
     return t_doc_generator::sandesh_level::ALERT;
   }
-  if (level == "emerg") {
+  if (level == "emergency" || level == "emerg") {
     return t_doc_generator::sandesh_level::EMERG;
   }
   return t_doc_generator::sandesh_level::INVALID;

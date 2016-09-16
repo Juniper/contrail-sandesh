@@ -2,9 +2,8 @@
  * Copyright (c) 2016 Juniper Networks, Inc. All rights reserved.
  */
 
-/*
- *  derived_stats_results.sandesh
- *
+/**
+ *  Derived Statistics Implementation
  */
 
 
