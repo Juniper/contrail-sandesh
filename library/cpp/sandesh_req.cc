@@ -54,6 +54,7 @@ void Sandesh::SendLoggingResponse(std::string context) {
     slogger->set_trace_print(IsTracePrintEnabled());
     slogger->set_enable_flow_log(IsFlowLoggingEnabled());
     slogger->set_context(context);
+    slogger->set_sandesh_throttling_rate(Sandesh::get_send_rate_limit());
     slogger->Response();
 }
 
@@ -77,6 +78,9 @@ void SandeshLoggingParamsSet::HandleRequest() const {
     }
     if (__isset.enable_flow_log) {
         Sandesh::SetFlowLogging(get_enable_flow_log());
+    }
+    if (__isset.sandesh_throttling_rate) {
+        Sandesh::set_send_rate_limit(sandesh_throttling_rate);
     }
     // Send response
     Sandesh::SendLoggingResponse(context());
