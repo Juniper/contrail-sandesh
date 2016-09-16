@@ -31,6 +31,7 @@ from pysandesh.gen_py.sandesh_trace.ttypes import SandeshTraceBufInfo, \
     SandeshTraceBufferEnableDisableReq, SandeshTraceBufferEnableDisableRes, \
     SandeshTraceBufStatusInfo
 from pysandesh.gen_py.sandesh_uve.ttypes import SandeshQueueStats
+from pysandesh.sandesh_base import *
 
 class SandeshReqImpl(object):
 
@@ -97,12 +98,15 @@ class SandeshReqImpl(object):
             self._sandesh.set_logging_category(sandesh_req.category)
         if sandesh_req.log_level is not None:
             self._sandesh.set_logging_level(sandesh_req.log_level)
+        if sandesh_req.sandesh_throttling_rate is not None:
+            SandeshSystem.set_sandesh_send_rate_limit(sandesh_req.sandesh_throttling_rate)
         # Return the logging params
         sandesh_logging_resp = SandeshLoggingParams(
             enable=self._sandesh.is_local_logging_enabled(),
             category=self._sandesh.logging_category(
             ),
-            log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()])
+            log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()],
+            sandesh_throttling_rate=SandeshSystem.get_sandesh_send_rate_limit())
         sandesh_logging_resp.response(sandesh_req.context(),
                                       sandesh=self._sandesh)
     # end sandesh_logging_params_set_handle_request
@@ -113,7 +117,8 @@ class SandeshReqImpl(object):
             enable=self._sandesh.is_local_logging_enabled(),
             category=self._sandesh.logging_category(
             ),
-            log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()])
+            log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()],
+            sandesh_throttling_rate=SandeshSystem.get_sandesh_send_rate_limit())
         sandesh_logging_resp.response(sandesh_req.context(),
                                       sandesh=self._sandesh)
     # end sandesh_logging_params_status_handle_request

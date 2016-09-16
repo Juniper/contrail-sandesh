@@ -110,6 +110,7 @@ request sandesh SandeshLoggingParamsSet {
     3: optional string log_level;
     4: optional bool trace_print;
     5: optional bool enable_flow_log;
+    6: optional u32 sandesh_throttling_rate;
 }
 
 request sandesh SandeshLoggingParamsStatus {
@@ -143,6 +144,7 @@ response sandesh SandeshLoggingParams {
     3: string log_level;
     4: bool trace_print;
     5: bool enable_flow_log;
+    6: u32 sandesh_throttling_rate;
 }
 
 request sandesh SandeshSendQueueSet {
