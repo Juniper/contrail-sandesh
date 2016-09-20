@@ -16,6 +16,7 @@
 #include <cmath>
 #include <sstream>
 #include <sandesh/derived_stats_results_types.h>
+#include <sandesh/derived_stats.h>
 #include <boost/assign/list_of.hpp>
 #include <boost/scoped_ptr.hpp>
 
@@ -27,59 +28,12 @@ using std::string;
 namespace contrail {
 namespace sandesh {
 
-template<class CatElemT, class CatResT>
-class DSCategoryCount {
-};
-
-template<>
-class DSCategoryCount<CategoryResult,CategoryResult> {
-  public: 
-    DSCategoryCount(const std::string &annotation) {}
-
-    typedef map<std::string, uint64_t> CatResT;
-    CatResT agg_counts_;
-    CatResT diff_counts_;
-
-    bool FillResult(CategoryResult &res) const {
-        res.set_counters(diff_counts_);
-        return !diff_counts_.empty();
-    }
-
-    void Update(const CategoryResult& raw) {
-        diff_counts_.clear();
-        for (CatResT::const_iterator it = raw.get_counters().begin();
-                it != raw.get_counters().end(); it++) {
-
-            // Is there anything to count?
-            if (!it->second) continue;
-          
-            CatResT::iterator mit =
-                    agg_counts_.find(it->first);
- 
-            if (mit==agg_counts_.end()) {
-                // This is a new category
-                diff_counts_.insert(make_pair(it->first, it->second));
-                agg_counts_.insert(make_pair(it->first, it->second));
-            } else {
-                assert(it->second >= mit->second);
-                uint64_t diff = it->second - mit->second;
-                if (diff) {
-                    // If the count for this category has changed,
-                    // report the diff and update the aggregate
-                    diff_counts_.insert(make_pair(it->first, diff));
-                    mit->second = it->second;
-                }
-            }
-        }
-    }
-};
-
 // Interface for all Anomaly Detection algorithms
 // That can be plugged into the DSAnomaly DerivedStat
 template <typename ElemT>
 class DSAnomalyIf {
   public:
-    virtual bool FillResult(AnomalyResult& res) const = 0;
+    virtual DSReturnType FillResult(AnomalyResult& res) const = 0;
     virtual ~DSAnomalyIf() { }
     virtual void Update(const ElemT& raw) = 0;
 };
@@ -90,7 +44,7 @@ template <typename ElemT>
 class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
   public:
     DSAnomalyEWM (const std::string &annotation, 
-            std::string &errstr) :
+            std::string &errstr) : samples_(0),
                 mean_(0), variance_(0), sigma_(0), stddev_(0), psigma_(0) {
         alpha_ = (double) strtod(annotation.c_str(), NULL);
         if ((alpha_ <= 0) || (alpha_ > 1)) {
@@ -98,6 +52,7 @@ class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
             alpha_ = 0;
         }
     }
+    uint64_t samples_;
     double alpha_;
     double mean_;
     double variance_;
@@ -105,28 +60,34 @@ class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
     double stddev_;
     double psigma_;
     
-    virtual bool FillResult(AnomalyResult& res) const {
+    virtual DSReturnType FillResult(AnomalyResult& res) const {
         assert(alpha_ != 0);
         std::ostringstream meanstr, stddevstr;
         meanstr << mean_;
         stddevstr << stddev_;
 
+        res.set_samples(samples_);
         res.set_sigma(sigma_);
         res.set_state(boost::assign::map_list_of(
             std::string("mean"), meanstr.str())(
             std::string("stddev"), stddevstr.str()));
-       
+
+        // We don't have enough samples to report an anomaly
+        if (samples_ < (uint64_t(1.0/alpha_))) return DSR_INVALID;
+        if (samples_ == (uint64_t(1.0/alpha_))) return DSR_OK;
+
         // If sigma was low, and is still low, 
         // we don't need to send anything 
         if ((psigma_ < 0.5) && (psigma_ > -0.5) && 
             (sigma_ < 0.5) && (sigma_ > -0.5))
-            return false;
+            return DSR_SKIP;
         else
-	    return true;
+	    return DSR_OK;
     }
 
     virtual void Update(const ElemT& raw) {
         assert(alpha_ != 0);
+        samples_++;
         variance_ = (1-alpha_)*(variance_ + (alpha_*pow(raw-mean_,2)));
         mean_ = ((1-alpha_)*mean_) + (alpha_*raw);
         stddev_ = sqrt(variance_);
@@ -139,8 +100,7 @@ class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
 template <typename ElemT, class AnomalyResT>
 class DSAnomaly {
   public:
-    DSAnomaly(const std::string &annotation):
-            samples_(0) {
+    DSAnomaly(const std::string &annotation) {
         size_t rpos = annotation.find(':');
         algo_ = annotation.substr(0,rpos);
         config_ = annotation.substr(rpos+1, string::npos);
@@ -155,29 +115,24 @@ class DSAnomaly {
         impl_.reset(NULL);
     }
 
-    bool FillResult(AnomalyResT &res) const {
-        bool ret = true;
+    DSReturnType FillResult(AnomalyResT &res) const {
+        DSReturnType ret = DSR_OK;
         if (impl_) {
             ret = impl_->FillResult(res);
             // We should have cleared impl_ if there was a parsing error
             // with the DSAnomaly config
             assert(error_.empty());
         }
-        if (ret) {
-            res.set_samples(samples_);
-            res.set_algo(algo_);
-            res.set_config(config_);
-            if (!error_.empty()) res.set_error(error_);
-        }
+        res.set_algo(algo_);
+        res.set_config(config_);
+        if (!error_.empty()) res.set_error(error_);
         return ret;
     }
 
     void Update(const ElemT& raw) {
-        samples_++;
         if (impl_) impl_->Update(raw);
     }
 
-    uint64_t samples_;
     std::string algo_;
     std::string config_;
     std::string error_;
@@ -208,16 +163,16 @@ class DSEWM {
     uint64_t samples_;
     std::string error_;
 
-    bool FillResult(EWMResT &res) const {
+    DSReturnType FillResult(EWMResT &res) const {
 	res.set_samples(samples_);
         if (!error_.empty()) {
             res.set_error(error_);
-            return true;
+            return DSR_OK;
         }
         res.set_mean(mean_);
         res.set_stddev(stddev_);
         res.set_sigma(sigma_);
-        return true;
+        return DSR_OK;
     }
     void Update(const ElemT& raw) {
         samples_++;
@@ -239,11 +194,11 @@ class DSChange {
     ElemT value_;
     ElemT prev_;
 
-    bool FillResult(NullResT &res) const {
-        assert(init_);
+    DSReturnType FillResult(NullResT &res) const {
+        if (!init_) return DSR_INVALID;
         res = value_;
-	if (prev_ == value_) return false;
-	else return true;
+        if (prev_ == value_) return DSR_SKIP;
+	return DSR_OK;
     }
 
     void Update(const ElemT& raw) {
@@ -259,10 +214,10 @@ class DSNon0 {
     DSNon0(const std::string &annotation) {}
     ElemT value_;
 
-    bool FillResult(NullResT &res) const {
-	res = value_;
-	if (value_ == 0) return false;
-	return true;
+    DSReturnType FillResult(NullResT &res) const {
+        res = value_;
+        if (value_ == 0) return DSR_SKIP;
+        return DSR_OK;
     }
 
     void Update(const ElemT& raw) {
@@ -276,9 +231,9 @@ class DSNone {
     DSNone(const std::string &annotation) {}
     ElemT value_;
 
-    bool FillResult(NullResT &res) const {
+    DSReturnType FillResult(NullResT &res) const {
         res = value_;
-        return true;
+        return DSR_OK;
     }
     void Update(const ElemT& raw) {
         value_ = raw;
@@ -292,10 +247,10 @@ class DSNull {
     ElemT value_;
     uint64_t samples_;
 
-    bool FillResult(NullResT &res) const {
+    DSReturnType FillResult(NullResT &res) const {
         res.set_samples(samples_);
         res.set_value(value_);
-        return true;
+        return DSR_OK;
     }
     void Update(const ElemT& raw) {
         samples_++;
@@ -303,33 +258,6 @@ class DSNull {
     }
 };
 
-/* Deprecated: use metric="agg" on raw stat instead */
-template <typename ElemT, class DiffResT>
-class DSDiff {
-  public:
-    DSDiff(const std::string &annotation) : init_(false) {}
-    bool init_;
-    ElemT agg_;
-    ElemT diff_;
-
-    bool FillResult(DiffResT &res) const {
-        ElemT empty;
-        if (!init_) return false;
-        if (diff_ == empty) return false;
-        res = diff_;
-        return true;
-    }
-    void Update(const ElemT& raw) {
-        if (!init_) {
-            diff_ = raw;
-            agg_ = raw;
-        } else {
-            diff_ = raw - agg_;
-            agg_ = agg_ + diff_;
-        }
-        init_ = true;
-    }
-};
 
 template <typename ElemT, class SumResT> 
 class DSSum {
@@ -347,11 +275,11 @@ class DSSum {
     vector<ElemT> history_buf_;
     uint64_t history_count_;
 
-    virtual bool FillResult(SumResT &res) const {
-        if (!samples_) return false;
+    virtual DSReturnType FillResult(SumResT &res) const {
+        if (!samples_) return DSR_INVALID;
         res = value_;
-        if (history_count_ && (value_ == prev_)) return false;
-        else return true;
+        if (history_count_ && (value_ == prev_)) return DSR_SKIP;
+        else return DSR_OK;
     }
 
     virtual void Update(const ElemT& raw) {
@@ -382,8 +310,8 @@ class DSAvg : public DSSum<ElemT,AvgResT> {
   public:
     DSAvg(const std::string &annotation): DSSum<ElemT,AvgResT>(annotation) {}
 
-    virtual bool FillResult(AvgResT &res) const {
-        if (!DSSum<ElemT,AvgResT>::samples_) return false;
+    virtual DSReturnType FillResult(AvgResT &res) const {
+        if (!DSSum<ElemT,AvgResT>::samples_) return DSR_INVALID;
         if (DSSum<ElemT,AvgResT>::history_count_) {
 	    uint64_t div =
                     ((DSSum<ElemT,AvgResT>::samples_ >=DSSum<ElemT,AvgResT>::history_count_) ?
@@ -392,7 +320,7 @@ class DSAvg : public DSSum<ElemT,AvgResT> {
         } else {
             res = DSSum<ElemT,AvgResT>::value_ / DSSum<ElemT,AvgResT>::samples_;
         }
-        return true;
+        return DSR_OK;
     }
 };
 

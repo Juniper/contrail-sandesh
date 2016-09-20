@@ -25,6 +25,12 @@ class SandeshStructDeleteTrait;
 namespace contrail {
 namespace sandesh {
 
+enum DSReturnType {
+    DSR_INVALID=0,
+    DSR_SKIP,
+    DSR_OK
+};
+
 template<typename ElemT>
 std::map<std::string, ElemT> DerivedStatsAgg(const std::map<std::string, ElemT> & raw,
         std::map<std::string, ElemT> & agg,
@@ -146,7 +152,8 @@ class DerivedStatsIf {
     void FillResult(ResultT &res, bool& isset, bool force=false) const {
         isset = false;
         if (ds_) {
-            if (ds_->FillResult(res) || force) {
+            DSReturnType rt = ds_->FillResult(res);
+            if ((force && rt) || (!force && rt == DSR_OK)) {
                 isset = true;
             }
         }
@@ -158,7 +165,8 @@ class DerivedStatsIf {
             for (typename result_map::const_iterator dit = dsm_->begin();
                     dit != dsm_->end(); dit++) {
                 ResultT res;
-                if (dit->second->FillResult(res) || force) {
+                DSReturnType rt = dit->second->FillResult(res);
+                if ((force && rt) || (!force && rt == DSR_OK)) {
                     mres.insert(std::make_pair(dit->first, res));
                 }
             }
@@ -290,7 +298,8 @@ class DerivedStatsPeriodicIf {
         }
         if (ds_) {
             // Fill in current information
-            if (ds_->FillResult(res.staging) || force) {
+            DSReturnType rt = ds_->FillResult(res.staging);
+            if ((force && rt) || (!force && rt == DSR_OK)) {
                 res.__isset.staging = true;
                 isset = true;
             }
@@ -343,12 +352,16 @@ class DerivedStatsPeriodicIf {
                 typename std::map<std::string, ResultT>::iterator wit =
                         mres.find(dit->first);
                 if (wit != mres.end()) {
-                    if (dit->second->FillResult(wit->second.staging) || force) {
+                    DSReturnType rt =
+                        dit->second->FillResult(wit->second.staging);
+                    if ((force && rt) || (!force && rt == DSR_OK)) {
                         wit->second.__isset.staging = true;
                     }
                 } else {
                     ResultT res;
-                    if (dit->second->FillResult(res.staging) || force) {
+                    DSReturnType rt =
+                        dit->second->FillResult(res.staging);
+                    if ((force && rt) || (!force && rt == DSR_OK)) {
                         res.__isset.staging = true;
                         mres.insert(std::make_pair(dit->first, res));
                     }
