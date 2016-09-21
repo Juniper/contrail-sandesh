@@ -494,13 +494,13 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectCollectorInfo\">uve2</name>");
                 EXPECT_STREQ(mm["ewm_y"].c_str(),
-"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.2</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>0.2</element><element>stddev</element><element>0.4</element></map></state><sigma type=\"double\" identifier=\"6\">2</sigma></AnomalyResult></ewm_y>");
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSAnomaly:EWM:0.8\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>0.8</element><element>stddev</element><element>0.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma></AnomalyResult></ewm_y>");
                 EXPECT_STREQ(mm["ewmd_y"].c_str(),
-"<ewmd_y type=\"struct\" identifier=\"13\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.1</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>0.1</element><element>stddev</element><element>0.3</element></map></state><sigma type=\"double\" identifier=\"6\">3</sigma></AnomalyResult></ewmd_y>");
+"<ewmd_y type=\"struct\" identifier=\"13\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>0.8</element><element>stddev</element><element>0.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma></AnomalyResult></ewmd_y>");
                 EXPECT_STREQ(mm["ewmn_y"].c_str(),
-"<ewmn_y type=\"struct\" identifier=\"14\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">Null</algo><config type=\"string\" identifier=\"3\">Null</config></AnomalyResult></ewmn_y>");
+"<ewmn_y type=\"struct\" identifier=\"14\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">0</samples><algo type=\"string\" identifier=\"2\">Null</algo><config type=\"string\" identifier=\"3\">Null</config></AnomalyResult></ewmn_y>");
                 EXPECT_STREQ(mm["ewmi_y"].c_str(),
-"<ewmi_y type=\"struct\" identifier=\"15\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0</config><error type=\"string\" identifier=\"4\">Invalid alpha 0</error></AnomalyResult></ewmi_y>");
+"<ewmi_y type=\"struct\" identifier=\"15\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">0</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0</config><error type=\"string\" identifier=\"4\">Invalid alpha 0</error></AnomalyResult></ewmi_y>");
                 break;
             }
             case 3:
@@ -513,7 +513,7 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name>");
                 EXPECT_STREQ(mm["ewm_y"].c_str(),
-"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.2</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>2.2</element><element>stddev</element><element>4.4</element></map></state><sigma type=\"double\" identifier=\"6\">2</sigma></AnomalyResult></ewm_y>");
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSAnomaly:EWM:0.8\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>8.8</element><element>stddev</element><element>4.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma></AnomalyResult></ewm_y>");
                 break;
             }
             case 4:
@@ -703,11 +703,11 @@ protected:
                 EXPECT_STREQ(mm["y"].c_str(),
 "<y type=\"i32\" identifier=\"7\">11</y>");
                 EXPECT_STREQ(mm["ewmd_y"].c_str(),
-"<ewmd_y type=\"struct\" identifier=\"13\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.1</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>1.1</element><element>stddev</element><element>3.3</element></map></state><sigma type=\"double\" identifier=\"6\">3</sigma></AnomalyResult></ewmd_y>");
+"<ewmd_y type=\"struct\" identifier=\"13\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>8.8</element><element>stddev</element><element>4.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma></AnomalyResult></ewmd_y>");
                 EXPECT_STREQ(mm["ewmn_y"].c_str(),
-"<ewmn_y type=\"struct\" identifier=\"14\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">Null</algo><config type=\"string\" identifier=\"3\">Null</config></AnomalyResult></ewmn_y>");
+"<ewmn_y type=\"struct\" identifier=\"14\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">0</samples><algo type=\"string\" identifier=\"2\">Null</algo><config type=\"string\" identifier=\"3\">Null</config></AnomalyResult></ewmn_y>");
                 EXPECT_STREQ(mm["ewmi_y"].c_str(),
-"<ewmi_y type=\"struct\" identifier=\"15\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0</config><error type=\"string\" identifier=\"4\">Invalid alpha 0</error></AnomalyResult></ewmi_y>");
+"<ewmi_y type=\"struct\" identifier=\"15\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">0</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0</config><error type=\"string\" identifier=\"4\">Invalid alpha 0</error></AnomalyResult></ewmi_y>");
                 break;
             }
             case 20:
@@ -886,7 +886,7 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     ASSERT_LT(0, port);
 
     map<string,string> dselem;
-    dselem.insert(make_pair(string("ewmd_y"), string("EWM:0.1")));
+    dselem.insert(make_pair(string("ewmd_y"), string("EWM:0.8")));
     dselem.insert(make_pair(string("ewmn_y"), string("Null")));
     dselem.insert(make_pair(string("ewmi_y"), string("EWM:0")));
     map<string, map<string,string> > dsmap;
