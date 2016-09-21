@@ -34,7 +34,7 @@ namespace sandesh {
 template <typename ElemT>
 class DSAnomalyIf {
   public:
-    virtual bool FillResult(AnomalyResult& res) const = 0;
+    virtual DSReturnType FillResult(AnomalyResult& res) const = 0;
     virtual ~DSAnomalyIf() { }
     virtual void Update(const ElemT& raw) = 0;
 };
@@ -45,7 +45,7 @@ template <typename ElemT>
 class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
   public:
     DSAnomalyEWM (const std::string &annotation, 
-            std::string &errstr) :
+            std::string &errstr) : samples_(0),
                 mean_(0), variance_(0), sigma_(0), stddev_(0), psigma_(0) {
         alpha_ = (double) strtod(annotation.c_str(), NULL);
         if ((alpha_ <= 0) || (alpha_ > 1)) {
@@ -53,6 +53,7 @@ class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
             alpha_ = 0;
         }
     }
+    uint64_t samples_;
     double alpha_;
     double mean_;
     double variance_;
@@ -60,28 +61,34 @@ class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
     double stddev_;
     double psigma_;
     
-    virtual bool FillResult(AnomalyResult& res) const {
+    virtual DSReturnType FillResult(AnomalyResult& res) const {
         assert(alpha_ != 0);
         std::ostringstream meanstr, stddevstr;
         meanstr << mean_;
         stddevstr << stddev_;
 
+        res.set_samples(samples_);
         res.set_sigma(sigma_);
         res.set_state(boost::assign::map_list_of(
             std::string("mean"), meanstr.str())(
             std::string("stddev"), stddevstr.str()));
+
+        // We don't have enough samples to report an anomaly
+        if (samples_ < (uint64_t(1.0/alpha_))) return DSR_INVALID;
+        if (samples_ == (uint64_t(1.0/alpha_))) return DSR_OK;
        
         // If sigma was low, and is still low, 
         // we don't need to send anything 
         if ((psigma_ < 0.5) && (psigma_ > -0.5) && 
             (sigma_ < 0.5) && (sigma_ > -0.5))
-            return false;
+            return DSR_SKIP;
         else
-	    return true;
+	    return DSR_OK;
     }
 
     virtual void Update(const ElemT& raw) {
         assert(alpha_ != 0);
+        samples_++;
         variance_ = (1-alpha_)*(variance_ + (alpha_*pow(raw-mean_,2)));
         mean_ = ((1-alpha_)*mean_) + (alpha_*raw);
         stddev_ = sqrt(variance_);
@@ -94,8 +101,7 @@ class DSAnomalyEWM : public DSAnomalyIf<ElemT> {
 template <typename ElemT, class AnomalyResT>
 class DSAnomaly {
   public:
-    DSAnomaly(const std::string &annotation):
-            samples_(0) {
+    DSAnomaly(const std::string &annotation) {
         size_t rpos = annotation.find(':');
         algo_ = annotation.substr(0,rpos);
         config_ = annotation.substr(rpos+1, string::npos);
@@ -119,7 +125,6 @@ class DSAnomaly {
             assert(error_.empty());
         }
         
-	res.set_samples(samples_);
 	res.set_algo(algo_);
 	res.set_config(config_);
 	if (!error_.empty()) res.set_error(error_);
@@ -127,11 +132,9 @@ class DSAnomaly {
     }
 
     void Update(const ElemT& raw, uint64_t mono_usec) {
-        samples_++;
         if (impl_) impl_->Update(raw);
     }
 
-    uint64_t samples_;
     std::string algo_;
     std::string config_;
     std::string error_;
