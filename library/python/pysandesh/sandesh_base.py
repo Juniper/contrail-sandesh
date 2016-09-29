@@ -13,9 +13,13 @@ import pkgutil
 import gevent
 import json
 import base64
-import collections
 import time
 import copy
+try:
+    from collections import OrderedDict
+except ImportError:
+    # python 2.6 or earlier, use backport
+    from ordereddict import OrderedDict
 
 import sandesh_logger as sand_logger
 import trace
@@ -885,11 +889,15 @@ class SandeshDynamicUVE(SandeshUVE):
             cache_data.deleted = self.data.deleted
         if self.data.elements is not None:
             if cache_data.elements is None:
-                cache_data.elements = self.data.elements
+                cache_data.elements = OrderedDict(sorted(
+                    self.data.elements.items()))
+                self.data.elements = copy.deepcopy(cache_data.elements)
             elif self.data.elements == {}:
                 cache_data.elements = {}
             else:
                 cache_data.elements.update(self.data.elements)
+                cache_data.elements = OrderedDict(sorted(
+                    cache_data.elements.items()))
                 # type(elements) is map. We shouldn't send partial map,
                 # therefore, overwrite the self.data.elements with
                 # cache_data.elements
