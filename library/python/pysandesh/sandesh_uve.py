@@ -138,6 +138,7 @@ class SandeshUVEPerTypeMap(object):
     # end uve_type_seqnum
 
     def update_uve(self, uve_sandesh):
+        from pysandesh.sandesh_base import SandeshDynamicUVE
         uve_name = uve_sandesh.data.name
         uve_table = uve_sandesh.data._table
         if uve_table is None or uve_table is '':
@@ -152,9 +153,11 @@ class SandeshUVEPerTypeMap(object):
             self._logger.debug('Add uve <%s, %s> in the [%s:%s] map' %
                 (uve_name, uve_sandesh.seqnum(), uve_table,
                  self._uve_type.__name__))
-            self._uve_map[uve_table][uve_name] = \
-                SandeshUVEPerTypeMap.UVEMapEntry(
-                    copy.deepcopy(uve_sandesh.data), uve_sandesh.seqnum())
+            uve_entry = SandeshUVEPerTypeMap.UVEMapEntry(
+                copy.deepcopy(uve_sandesh.data), uve_sandesh.seqnum())
+            if isinstance(uve_sandesh, SandeshDynamicUVE):
+                uve_sandesh.update_uve(uve_entry.data)
+            self._uve_map[uve_table][uve_name] = uve_entry
         else:
             if uve_entry.data.deleted is True:
                 if uve_sandesh.data.deleted is not True:
@@ -165,9 +168,11 @@ class SandeshUVEPerTypeMap(object):
                     self._logger.debug('Re-add uve <%s,%s> in [%s:%s] map' \
                         % (uve_name, uve_sandesh.seqnum(), uve_table,
                            self._uve_type.__name__))
-                    self._uve_map[uve_table][uve_name] = \
-                        SandeshUVEPerTypeMap.UVEMapEntry(uve_sandesh.data,
-                            uve_sandesh.seqnum())
+                    uve_entry = SandeshUVEPerTypeMap.UVEMapEntry(
+                        copy.deepcopy(uve_sandesh.data), uve_sandesh.seqnum())
+                    if isinstance(uve_sandesh, SandeshDynamicUVE):
+                        uve_sandesh.update_uve(uve_entry.data)
+                    self._uve_map[uve_table][uve_name] = uve_entry
                 else:
                     # Duplicate uve delete. Do we need to update the seqnum here?
                     self._logger.error('Duplicate uve delete <%s>' % (uve_name))
