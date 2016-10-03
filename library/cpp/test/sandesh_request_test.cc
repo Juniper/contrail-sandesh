@@ -70,22 +70,25 @@ class SandeshRequestTest : public ::testing::Test {
 
     static SandeshLoggingParamsSet* PrepareLoggingParamsSetReq(bool enable,
         std::string category, std::string log_level, bool enable_trace_print,
-        bool enable_flow_log, int called_from_line) {
+        bool enable_flow_log, uint32_t sandesh_send_throttling_rate, int called_from_line) {
         SandeshLoggingParamsSet *req(new SandeshLoggingParamsSet);
         req->set_enable(enable);
         req->set_category(category);
         req->set_log_level(log_level);
         req->set_trace_print(enable_trace_print);
         req->set_enable_flow_log(enable_flow_log);
+        req->set_sandesh_throttling_rate(sandesh_send_throttling_rate);
         Sandesh::set_response_callback(
             boost::bind(ValidateLoggingParamsResponse, _1, enable, category,
-            log_level, enable_trace_print, enable_flow_log, called_from_line));
+            log_level, enable_trace_print, enable_flow_log, sandesh_send_throttling_rate,
+            called_from_line));
         return req;
     }
 
     static void ValidateLoggingParamsResponse(Sandesh *response,
         bool enable_local_log, std::string category, std::string level,
-        bool enable_trace_print, bool enable_flow_log, int called_from_line) {
+        bool enable_trace_print, bool enable_flow_log, uint32_t sandesh_send_throttling_rate,
+        int called_from_line) {
         cout << "From line number: " << called_from_line << endl;
         cout << "*****************************************************" << endl;
         SandeshLoggingParams *lresponse(
@@ -96,6 +99,8 @@ class SandeshRequestTest : public ::testing::Test {
         EXPECT_EQ(level, lresponse->get_log_level());
         EXPECT_EQ(enable_trace_print, lresponse->get_trace_print());
         EXPECT_EQ(enable_flow_log, lresponse->get_enable_flow_log());
+        EXPECT_EQ(sandesh_send_throttling_rate,
+                  lresponse->get_sandesh_throttling_rate());
         validate_done_ = true;
         cout << "*****************************************************" << endl;
     }
@@ -193,14 +198,16 @@ TEST_F(SandeshRequestTest, LoggingParams) {
     std::string o_log_level(Sandesh::LevelToString(Sandesh::LoggingLevel()));
     bool o_enable_trace_print(Sandesh::IsTracePrintEnabled());
     bool o_enable_flow_log(Sandesh::IsFlowLoggingEnabled());
+    uint32_t o_sandesh_send_rate_limit(Sandesh::get_send_rate_limit());
     // Set
     bool enable(false);
     std::string category("SandeshRequest");
     std::string log_level("SYS_NOTICE");
     bool enable_trace_print(true);
     bool enable_flow_log(true);
+    uint32_t sandesh_send_rate_limit(25);
     SandeshLoggingParamsSet *req(PrepareLoggingParamsSetReq(enable, category,
-        log_level, enable_trace_print, enable_flow_log, __LINE__));
+        log_level, enable_trace_print, enable_flow_log, sandesh_send_rate_limit,  __LINE__));
     validate_done_ = false;
     req->HandleRequest();
     req->Release();
@@ -210,7 +217,7 @@ TEST_F(SandeshRequestTest, LoggingParams) {
     SandeshLoggingParamsStatus *req1(new SandeshLoggingParamsStatus);
     Sandesh::set_response_callback(boost::bind(ValidateLoggingParamsResponse,
         _1, enable, category, log_level, enable_trace_print, enable_flow_log,
-        __LINE__));
+        sandesh_send_rate_limit, __LINE__));
     validate_done_ = false;
     req1->HandleRequest();
     req1->Release();
@@ -219,7 +226,7 @@ TEST_F(SandeshRequestTest, LoggingParams) {
     // Set to original
     SandeshLoggingParamsSet *req2(PrepareLoggingParamsSetReq(o_enable,
         o_category, o_log_level, o_enable_trace_print, o_enable_flow_log,
-        __LINE__));
+        o_sandesh_send_rate_limit, __LINE__));
     validate_done_ = false;
     req2->HandleRequest();
     req2->Release();
