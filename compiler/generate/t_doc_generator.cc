@@ -89,12 +89,13 @@ class t_doc_generator : public t_generator {
   };
 
   sandesh_level::type string_to_sandesh_level(const string &level);
+  string sandesh_level_to_string(const sandesh_level::type &slevel);
   sandesh_level::type get_sandesh_level(t_sandesh *tsandesh);
   bool is_sandesh_type(t_sandesh *tsandesh, doc_ftype::type dtype);
   string get_doc_file_suffix(doc_ftype::type dtype);
   string get_doc_file_description(doc_ftype::type dtype);
   void generate_index();
-  bool generate_sandesh_program(ofstream &f_out, doc_ftype::type dtype);
+  bool generate_sandesh_program(doc_ftype::type dtype);
   void generate_const_enum_typedef_object_program();
   void generate_doc_type(ofstream &f_out);
   void generate_program();
@@ -102,8 +103,12 @@ class t_doc_generator : public t_generator {
          doc_ftype::type dtype);
   void generate_program_toc_row(t_program* tprog, ofstream &f_out,
          string fsuffix, doc_ftype::type dtype);
-  void generate_program_list(t_program* tprog, ofstream &f_out, string fsuffix,
-         doc_ftype::type dtype);
+  void generate_sandesh_program_list(t_program* tprog, ofstream &f_out,
+    string fsuffix, doc_ftype::type dtype);
+  bool generate_sandesh_program_doc(t_program* tprog, ofstream &f_out,
+    string fsuffix, doc_ftype::type dtype);
+  void generate_sandesh_program_doc_schema(t_program* tprog, ofstream &f_out,
+    string fsuffix, doc_ftype::type dtype);
 
   /**
    * Program-level generation functions
@@ -125,7 +130,6 @@ class t_doc_generator : public t_generator {
   void print_doc_string (string doc, ofstream &f_out);
 
   ofstream f_index_out_;
-  ofstream f_messages_out_;
   bool f_log_initialized_;
   bool f_log_invalid_initialized_;
   bool f_log_debug_initialized_;
@@ -301,8 +305,8 @@ string t_doc_generator::get_doc_file_description(doc_ftype::type dtype) {
   }
 }
 
-void t_doc_generator::generate_program_list(t_program* tprog, ofstream &f_out,
-    string fsuffix, doc_ftype::type dtype) {
+void t_doc_generator::generate_sandesh_program_list(t_program* tprog,
+  ofstream &f_out, string fsuffix, doc_ftype::type dtype) {
   string fname = tprog->get_name() + fsuffix + ".html";
   if (!tprog->get_sandeshs().empty()) {
     vector<t_sandesh*> sandeshs = tprog->get_sandeshs();
@@ -359,28 +363,56 @@ void t_doc_generator::generate_doc_type(ofstream &f_out) {
    << endl;
 }
 
-bool t_doc_generator::generate_sandesh_program(ofstream &f_out,
-    doc_ftype::type dtype) {
-  string fsuffix = get_doc_file_suffix(dtype);
-  string fname = get_out_dir() + program_->get_name() + fsuffix + ".html";
-  f_out.open(fname.c_str());
+void t_doc_generator::generate_sandesh_program_doc_schema(t_program* tprog,
+  ofstream &f_out, string fsuffix, doc_ftype::type dtype) {
+  bool init = false;
+  f_out << "{\"messages\":{" << endl;
+  if (!tprog->get_sandeshs().empty()) {
+    vector<t_sandesh*> sandeshs = tprog->get_sandeshs();
+    vector<t_sandesh*>::iterator snh_iter;
+    for (snh_iter = sandeshs.begin(); snh_iter != sandeshs.end(); ++snh_iter) {
+      if (!is_sandesh_type(*snh_iter, dtype)) {
+        continue;
+      }
+      if (!init) {
+        init  = true;
+      } else {
+        f_out << "," << endl;
+      }
+      string sandesh_name(get_sandesh_name(*snh_iter));
+      string fname(tprog->get_name() + fsuffix + ".html");
+      f_out << "\"" << sandesh_name << "\":{\"fingerprint\":\"" <<
+        (*snh_iter)->get_ascii_fingerprint() << "\", \"href\":\"" <<
+        fname << "#Snh_" << sandesh_name << "\"";
+      if (dtype == doc_ftype::LOGS) {
+        f_out << ", \"severity\":\"" <<
+          sandesh_level_to_string(get_sandesh_level(*snh_iter)) << "\"";
+      }
+      f_out << "}";
+    }
+  }
+  f_out << "}" << endl << "}" << endl;
+}
+
+bool t_doc_generator::generate_sandesh_program_doc(t_program* tprog,
+  ofstream &f_out, string fsuffix, doc_ftype::type dtype) {
 
   generate_doc_type(f_out);
 
   string mdesc(get_doc_file_description(dtype));
   f_out << "<title>Documentation for " << mdesc << " messages in " <<
-    "module: " << program_->get_name() << "</title></head><body>" << endl <<
+    "module: " << tprog->get_name() << "</title></head><body>" << endl <<
     "<h1>Documentation for " << mdesc << " messages in module: "
-    << program_->get_name() << "</h1>" << endl;
+    << tprog->get_name() << "</h1>" << endl;
 
-  print_doc(program_, f_out);
+  print_doc(tprog, f_out);
 
   generate_program_toc(f_out, fsuffix, dtype);
 
   bool init = false;
-  if (!program_->get_sandeshs().empty()) {
+  if (!tprog->get_sandeshs().empty()) {
     f_out << "<hr/><h2 id=\"Messages\">Messages</h2>" << endl;
-    vector<t_sandesh*> sandeshs = program_->get_sandeshs();
+    vector<t_sandesh*> sandeshs = tprog->get_sandeshs();
     vector<t_sandesh*>::iterator snh_iter;
     for (snh_iter = sandeshs.begin(); snh_iter != sandeshs.end(); ++snh_iter) {
       if (!is_sandesh_type(*snh_iter, dtype)) {
@@ -394,13 +426,29 @@ bool t_doc_generator::generate_sandesh_program(ofstream &f_out,
     }
   }
   f_out << "</body></html>" << endl;
+  return init;
+}
+
+bool t_doc_generator::generate_sandesh_program(doc_ftype::type dtype) {
+  string fsuffix = get_doc_file_suffix(dtype);
+
+  string fname = get_out_dir() + program_->get_name() + fsuffix + ".html";
+  ofstream f_out;
+  f_out.open(fname.c_str());
+  bool init(generate_sandesh_program_doc(program_, f_out, fsuffix, dtype));
   f_out.close();
 
   string fname_list = get_out_dir() + program_->get_name() + fsuffix + ".list.html";
   ofstream f_out_list;
   f_out_list.open(fname_list.c_str());
-  generate_program_list(program_, f_out_list, fsuffix, dtype);
+  generate_sandesh_program_list(program_, f_out_list, fsuffix, dtype);
   f_out_list.close();
+
+  string fname_schema = get_out_dir() + program_->get_name() + fsuffix + ".doc.schema.json";
+  ofstream f_out_schema;
+  f_out_schema.open(fname_schema.c_str());
+  generate_sandesh_program_doc_schema(program_, f_out_schema, fsuffix, dtype);
+  f_out_schema.close();
   return init;
 }
 
@@ -532,19 +580,19 @@ void t_doc_generator::generate_index() {
 void t_doc_generator::generate_program() {
   // Make output directory
   MKDIR(get_out_dir().c_str());
-  f_log_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS);
-  f_log_invalid_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_INVALID);
-  f_log_debug_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_DEBUG);
-  f_log_info_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_INFO);
-  f_log_notice_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_NOTICE);
-  f_log_warn_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_WARN);
-  f_log_error_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_ERR);
-  f_log_crit_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_CRIT);
-  f_log_alert_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_ALERT);
-  f_log_emerg_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::LOGS_LEVEL_EMERG);
-  f_uve_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::UVES);
-  f_trace_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::TRACES);
-  f_introspect_initialized_ = generate_sandesh_program(f_messages_out_, doc_ftype::INTROSPECT);
+  f_log_initialized_ = generate_sandesh_program(doc_ftype::LOGS);
+  f_log_invalid_initialized_ = generate_sandesh_program(doc_ftype::LOGS_LEVEL_INVALID);
+  f_log_debug_initialized_ = generate_sandesh_program(doc_ftype::LOGS_LEVEL_DEBUG);
+  f_log_info_initialized_ = generate_sandesh_program(doc_ftype::LOGS_LEVEL_INFO);
+  f_log_notice_initialized_ = generate_sandesh_program(doc_ftype::LOGS_LEVEL_NOTICE);
+  f_log_warn_initialized_ = generate_sandesh_program(doc_ftype::LOGS_LEVEL_WARN);
+  f_log_error_initialized_ = generate_sandesh_program(doc_ftype::LOGS_LEVEL_ERR);
+  f_log_crit_initialized_ = generate_sandesh_program(doc_ftype::LOGS_LEVEL_CRIT);
+  f_log_alert_initialized_ = generate_sandesh_program(doc_ftype::LOGS_LEVEL_ALERT);
+  f_log_emerg_initialized_ = generate_sandesh_program(doc_ftype::LOGS_LEVEL_EMERG);
+  f_uve_initialized_ = generate_sandesh_program(doc_ftype::UVES);
+  f_trace_initialized_ = generate_sandesh_program(doc_ftype::TRACES);
+  f_introspect_initialized_ = generate_sandesh_program(doc_ftype::INTROSPECT);
   generate_index();
   generate_const_enum_typedef_object_program();
 }
@@ -649,6 +697,31 @@ t_doc_generator::sandesh_level::type t_doc_generator::string_to_sandesh_level(
     return t_doc_generator::sandesh_level::EMERG;
   }
   return t_doc_generator::sandesh_level::INVALID;
+}
+
+string t_doc_generator::sandesh_level_to_string(
+    const t_doc_generator::sandesh_level::type &slevel) {
+  switch (slevel) {
+  case t_doc_generator::sandesh_level::EMERG:
+    return "emergency";
+  case t_doc_generator::sandesh_level::CRIT:
+    return "criticial";
+  case t_doc_generator::sandesh_level::ALERT:
+    return "alert";
+  case t_doc_generator::sandesh_level::ERR:
+    return "error";
+  case t_doc_generator::sandesh_level::WARN:
+    return "warning";
+  case t_doc_generator::sandesh_level::NOTICE:
+    return "notice";
+  case t_doc_generator::sandesh_level::INFO:
+    return "informational";
+  case t_doc_generator::sandesh_level::DBG:
+    return "debug";
+  case t_doc_generator::sandesh_level::INVALID:
+  default:
+    return "unknown";
+  }
 }
 
 typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
