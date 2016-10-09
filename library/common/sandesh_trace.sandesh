@@ -44,7 +44,7 @@ request sandesh SandeshTraceBufStatusReq {
 }
 
 struct SandeshTraceBufStatusInfo {
-    1: string trace_buf_name  (link="SandeshTraceBufferEnableDisableReq");
+    1: string trace_buf_name  (link="SandeshTraceRequest");
     2: string enable_disable; 
 }
 
