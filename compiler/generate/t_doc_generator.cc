@@ -106,8 +106,6 @@ class t_doc_generator : public t_generator {
          doc_ftype::type dtype);
   void generate_program_toc_row(t_program* tprog, ofstream &f_out,
          string fsuffix, doc_ftype::type dtype);
-  void generate_sandesh_program_list(t_program* tprog, ofstream &f_out,
-    string fsuffix, doc_ftype::type dtype);
   bool generate_sandesh_program_doc(t_program* tprog, ofstream &f_out,
     string fsuffix, doc_ftype::type dtype);
   void generate_sandesh_program_doc_schema(t_program* tprog, ofstream &f_out,
@@ -348,22 +346,6 @@ string t_doc_generator::get_doc_file_description(doc_ftype::type dtype) {
   }
 }
 
-void t_doc_generator::generate_sandesh_program_list(t_program* tprog,
-  ofstream &f_out, string fsuffix, doc_ftype::type dtype) {
-  string fname = tprog->get_name() + fsuffix + ".html";
-  if (!tprog->get_sandeshs().empty()) {
-    vector<t_sandesh*> sandeshs = tprog->get_sandeshs();
-    vector<t_sandesh*>::iterator snh_iter;
-    for (snh_iter = sandeshs.begin(); snh_iter != sandeshs.end(); ++snh_iter) {
-      string name = get_sandesh_name(*snh_iter);
-      if (is_sandesh_type(*snh_iter, dtype)) {
-        f_out << "<tr><td><a href=\"" << fname << "#Snh_" << name << "\">" << name
-          << "</a></td></tr>" << endl;
-      }
-    }
-  }
-}
-
 /**
  * Emits the Table of Contents links at the top of the module's page
  */
@@ -497,12 +479,6 @@ bool t_doc_generator::generate_sandesh_program(doc_ftype::type dtype) {
   f_out.open(fname.c_str());
   bool init(generate_sandesh_program_doc(program_, f_out, fsuffix, dtype));
   f_out.close();
-
-  string fname_list = get_out_dir() + program_->get_name() + fsuffix + ".list.html";
-  ofstream f_out_list;
-  f_out_list.open(fname_list.c_str());
-  generate_sandesh_program_list(program_, f_out_list, fsuffix, dtype);
-  f_out_list.close();
 
   string fname_schema = get_out_dir() + program_->get_name() + fsuffix + ".doc.schema.json";
   ofstream f_out_schema;
