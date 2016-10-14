@@ -99,6 +99,7 @@ class t_doc_generator : public t_generator {
   void generate_index();
   void generate_stats_schema_program();
   bool generate_sandesh_program(doc_ftype::type dtype);
+  bool generate_introspect_cli_program();
   void generate_const_enum_typedef_object_program();
   void generate_doc_type(ofstream &f_out);
   void generate_program();
@@ -158,6 +159,7 @@ class t_doc_generator : public t_generator {
   void generate_struct  (t_struct*   tstruct) {}
   void generate_service (t_service*  tservice) {}
   void generate_sandesh (t_sandesh*  tsandesh) {}
+  bool generate_introspect_cli (t_sandesh* , ofstream &f_out, bool &first_file);
 
   void print_doc        (t_doc* tdoc, ofstream &f_out);
   int  print_type       (t_type* ttype, ofstream &f_out);
@@ -405,6 +407,26 @@ void t_doc_generator::generate_stats_schema_program() {
   f_stats_tables_ << "]" << endl << "}" << endl;
 }
 
+bool t_doc_generator::generate_introspect_cli_program() {
+  string fname = get_out_dir() + program_->get_name() + "_introspect_cli.json";
+  ofstream f_out;
+  f_out.open(fname.c_str());
+  if (!program_->get_sandeshs().empty()) {
+    vector<t_sandesh*> sandeshs = program_->get_sandeshs();
+    vector<t_sandesh*>::iterator snh_iter;
+    f_out << "{\n";
+    bool first_file = true;
+    for (snh_iter = sandeshs.begin(); snh_iter != sandeshs.end(); ++snh_iter) {
+      sandesh_name_ = get_sandesh_name(*snh_iter);
+      if (!is_sandesh_type(*snh_iter, doc_ftype::INTROSPECT)) {
+        continue;
+      }
+      generate_introspect_cli(*snh_iter, f_out, first_file);
+    }
+    f_out << "\n}\n";
+  }
+}
+
 void t_doc_generator::generate_sandesh_program_doc_schema(t_program* tprog,
   ofstream &f_out, string fsuffix, doc_ftype::type dtype) {
   bool init = false;
@@ -630,6 +652,7 @@ void t_doc_generator::generate_program() {
   f_uve_initialized_ = generate_sandesh_program(doc_ftype::UVES);
   f_trace_initialized_ = generate_sandesh_program(doc_ftype::TRACES);
   f_introspect_initialized_ = generate_sandesh_program(doc_ftype::INTROSPECT);
+  generate_introspect_cli_program();
   generate_index();
   generate_const_enum_typedef_object_program();
 }
@@ -1532,6 +1555,71 @@ void t_doc_generator::generate_struct(t_struct* tstruct, ofstream &f_out) {
   f_out << "</table><br/>";
   print_doc(tstruct, f_out);
   f_out << "</div>";
+}
+
+bool t_doc_generator::generate_introspect_cli(t_sandesh* tsandesh, ofstream &f_out, bool &first_file) {
+  if (tsandesh->has_doc()) {
+    string doc = tsandesh->get_doc();
+    size_t index;
+    string cli_name = "", cli_help = "";
+    if ((index = doc.find_first_of("@")) != string::npos) {
+      string fdoc(doc.substr(index + 1));
+      // Extract tokens beginning with @
+      boost::char_separator<char> fsep("@");
+      tokenizer ftokens(fdoc, fsep);
+      BOOST_FOREACH(const string &f, ftokens) {
+        // Has 2 parts, the first ending with ':' or ' ' or '\t' is
+        // the type and the next is the content
+        size_t lindex;
+        if ((lindex = f.find_first_of(": \t")) != string::npos) {
+          string type(f.substr(0, lindex));
+          if (lindex + 1 < f.size() && f.at(lindex) != f.at(lindex + 1) &&
+              (f.at(lindex + 1) == ':' || f.at(lindex + 1) == '\t' ||
+               f.at(lindex + 1) == ' ')) {
+            lindex++;
+          }
+          string content(f.substr(lindex + 1));
+	  content.erase(content.length()-1);
+          if (boost::starts_with(type, "cli_name")) {
+	    cli_name = content;
+	  } else if (boost::starts_with(type, "description")) {
+	    cli_help = content;
+	  }
+        }
+      }
+    }
+    if (cli_name == "")
+	return false;
+    if (!first_file) {
+	f_out << ",\n";
+    } else {
+	first_file = false;
+    }
+
+    f_out << "\t\"" << tsandesh->get_name() << "\" : {\n";
+    f_out << "\t\"" << cli_name << "\" : " << "{ \"" << cli_help << "\" :\n";
+    vector<t_field*> members = tsandesh->get_members();
+    int size = members.size();
+    int count = 0;
+    f_out << "\t[ \n";
+    BOOST_FOREACH(t_field *tfield, members) {
+      f_out << "\t\t[\"" << tfield->get_name();
+      string field_doc = "\"\"";
+      if (!tfield->get_doc().empty()) {
+	field_doc = tfield->get_doc();
+	field_doc.erase(field_doc.length()-1);
+	field_doc = "\""+field_doc+"\"";
+      }
+      f_out << "\", " << field_doc << "]";
+      count++;
+      if (count < size)
+        f_out << ",";
+      f_out << "\n";
+    }
+    f_out << "\t]}}";
+    return true;
+  }
+  return false;
 }
 
 /**
