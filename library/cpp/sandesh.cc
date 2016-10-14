@@ -46,6 +46,9 @@ int Sandesh::http_port_ = 0;
 bool Sandesh::enable_trace_print_ = false;
 bool Sandesh::send_queue_enabled_ = true;
 bool Sandesh::connect_to_collector_ = false;
+uint32_t Sandesh::disk_usage_low_watermark_ = 0;
+uint32_t Sandesh::disk_usage_high_watermark_ = 0;
+uint32_t Sandesh::disk_usage_ = 0;
 bool Sandesh::disable_flow_collection_ = false;
 SandeshLevel::type Sandesh::sending_level_ = SandeshLevel::INVALID;
 SandeshClient *Sandesh::client_ = NULL;
@@ -467,6 +470,24 @@ void Sandesh::SetFlowLogging(bool enable_flow_log) {
     }
 }
 
+void Sandesh::SetDiskUsageLowWatermark(uint32_t disk_usage_low_watermark) {
+    SANDESH_LOG(INFO, "SANDESH: Set disk usage low watermark: " <<
+                Sandesh::disk_usage_low_watermark_ << " -> " << disk_usage_low_watermark);
+    Sandesh::disk_usage_low_watermark_ = disk_usage_low_watermark;
+}
+
+void Sandesh::SetDiskUsageHighWatermark(uint32_t disk_usage_high_watermark) {
+    SANDESH_LOG(INFO, "SANDESH: Set disk usage high watermark: " <<
+                Sandesh::disk_usage_high_watermark_ << " -> " << disk_usage_high_watermark);
+    Sandesh::disk_usage_high_watermark_ = disk_usage_high_watermark;
+}
+
+void Sandesh::SetDiskUsage(uint32_t disk_usage) {
+    SANDESH_LOG(INFO, "SANDESH: Set disk usage: " <<
+                Sandesh::disk_usage_ << " -> " << disk_usage);
+    Sandesh::disk_usage_ = disk_usage;
+}
+
 void Sandesh::DisableFlowCollection(bool disable) {
     if (disable_flow_collection_ != disable) {
         SANDESH_LOG(INFO, "SANDESH: Disable Flow Collection: " <<
@@ -809,11 +830,14 @@ bool DoDropSandeshMessage(const SandeshHeader &header,
         if (slevel >= drop_level) {
             return true;
         }
+        // Drop message if needed
+        if ((Sandesh::GetDiskUsage() >= Sandesh::GetDiskUsageHighWatermark()) ||
+            (Sandesh::GetDiskUsage() >= Sandesh::GetDiskUsageLowWatermark() && stype == SandeshType::FLOW) ||
+            (Sandesh::IsFlowCollectionDisabled() && stype == SandeshType::FLOW)) {
+            return true;
+        }
     }
-    // Drop flow message if flow collection is disabled
-    if (Sandesh::IsFlowCollectionDisabled() && stype == SandeshType::FLOW) {
-        return true;
-    }
+
     return false;
 }
 
