@@ -188,13 +188,6 @@ public:
             int collector_port, bool periodicuve = false);
     static void Uninit();
 
-    // Disk Usage
-    static void SetDiskUsageLowWatermark(uint32_t disk_usage_low_watermark);
-    static uint32_t GetDiskUsageLowWatermark() { return disk_usage_low_watermark_; }
-    static void SetDiskUsageHighWatermark(uint32_t disk_usage_high_watermark);
-    static uint32_t GetDiskUsageHighWatermark() { return disk_usage_high_watermark_; }
-    static void SetDiskUsage(uint32_t disk_usage);
-    static uint32_t GetDiskUsage() { return disk_usage_; }
     // Disable flow collection
     static void DisableFlowCollection(bool disable);
     static bool IsFlowCollectionDisabled() { return disable_flow_collection_; }
@@ -404,9 +397,6 @@ private:
     static SandeshMessageStatistics msg_stats_;
     static tbb::mutex stats_mutex_;
     static log4cplus::Logger logger_;
-    static uint32_t disk_usage_low_watermark_;
-    static uint32_t disk_usage_high_watermark_;
-    static uint32_t disk_usage_;
     static bool disable_flow_collection_; // disable flow collection
 
     const uint32_t seqnum_;
