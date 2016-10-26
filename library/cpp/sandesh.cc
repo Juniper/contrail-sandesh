@@ -46,9 +46,12 @@ int Sandesh::http_port_ = 0;
 bool Sandesh::enable_trace_print_ = false;
 bool Sandesh::send_queue_enabled_ = true;
 bool Sandesh::connect_to_collector_ = false;
-uint32_t Sandesh::disk_usage_low_watermark_ = 0;
-uint32_t Sandesh::disk_usage_high_watermark_ = 0;
-uint32_t Sandesh::disk_usage_ = 0;
+uint32_t Sandesh::db_usage_ = 0;
+uint32_t Sandesh::db_usage_level_ = SandeshLevel::SYS_DEBUG;
+uint32_t Sandesh::pending_tasks_ = 0;
+uint32_t Sandesh::pending_tasks_level_ = SandeshLevel::SYS_DEBUG;
+WaterMarksData Sandesh::DbUsageWaterMarkData;
+WaterMarksData Sandesh::PendingCompactionTasksWaterMarkData;
 bool Sandesh::disable_flow_collection_ = false;
 SandeshLevel::type Sandesh::sending_level_ = SandeshLevel::INVALID;
 SandeshClient *Sandesh::client_ = NULL;
@@ -470,22 +473,76 @@ void Sandesh::SetFlowLogging(bool enable_flow_log) {
     }
 }
 
-void Sandesh::SetDiskUsageLowWatermark(uint32_t disk_usage_low_watermark) {
-    SANDESH_LOG(INFO, "SANDESH: Set disk usage low watermark: " <<
-                Sandesh::disk_usage_low_watermark_ << " -> " << disk_usage_low_watermark);
-    Sandesh::disk_usage_low_watermark_ = disk_usage_low_watermark;
+void Sandesh::SetDbUsageLevel(size_t level) {
+    SANDESH_LOG(INFO, "SANDESH: Set db_usage_level_ : " <<
+                db_usage_level_ << " -> " << level);
+    db_usage_level_ = level;
 }
 
-void Sandesh::SetDiskUsageHighWatermark(uint32_t disk_usage_high_watermark) {
-    SANDESH_LOG(INFO, "SANDESH: Set disk usage high watermark: " <<
-                Sandesh::disk_usage_high_watermark_ << " -> " << disk_usage_high_watermark);
-    Sandesh::disk_usage_high_watermark_ = disk_usage_high_watermark;
+void Sandesh::SetDbUsage(size_t db_usage) {
+    SANDESH_LOG(INFO, "SANDESH: Set db_usage_ : " <<
+                db_usage_ << " -> " << db_usage);
+    db_usage_ = db_usage;
 }
 
-void Sandesh::SetDiskUsage(uint32_t disk_usage) {
-    SANDESH_LOG(INFO, "SANDESH: Set disk usage: " <<
-                Sandesh::disk_usage_ << " -> " << disk_usage);
-    Sandesh::disk_usage_ = disk_usage;
+void Sandesh::SetDbUsageHighWaterMark(uint32_t db_usage, uint32_t level) {
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " db_usage:" << db_usage);
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " level:" << level);
+    WaterMark wm = WaterMark(db_usage, level, SetDbUsageLevel);
+    DbUsageWaterMarkData.SetHighWaterMark(wm);
+}
+
+void Sandesh::SetDbUsageLowWaterMark(uint32_t db_usage, uint32_t level) {
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " db_usage:" << db_usage);
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " level:" << level);
+    WaterMark wm = WaterMark(db_usage, level, SetDbUsageLevel);
+    DbUsageWaterMarkData.SetLowWaterMark(wm);
+}
+
+void Sandesh::ProcessDbUsageHighWaterMark(uint32_t db_usage) {
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " db_usage:" << db_usage);
+    DbUsageWaterMarkData.ProcessHighWaterMarks(db_usage);
+}
+
+void Sandesh::ProcessDbUsageLowWaterMark(uint32_t db_usage) {
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " db_usage:" << db_usage);
+    DbUsageWaterMarkData.ProcessLowWaterMarks(db_usage);
+}
+
+void Sandesh::SetPendingCompactionTasksLevel(size_t level) {
+    SANDESH_LOG(INFO, "SANDESH: Set pending_tasks_level_ : " <<
+                pending_tasks_level_ << " -> " << level);
+    pending_tasks_level_ = level;
+}
+
+void Sandesh::SetPendingCompactionTasks(size_t pending_tasks) {
+    SANDESH_LOG(INFO, "SANDESH: Set pending_tasks_ : " <<
+                pending_tasks_ << " -> " << pending_tasks);
+    pending_tasks_ = pending_tasks;
+}
+
+void Sandesh::SetPendingCompactionTasksHighWaterMark(uint32_t pending_tasks, uint32_t level) {
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " pending_tasks:" << pending_tasks);
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " level:" << level);
+    WaterMark wm = WaterMark(pending_tasks, level, SetPendingCompactionTasksLevel);
+    PendingCompactionTasksWaterMarkData.SetHighWaterMark(wm);
+}
+
+void Sandesh::SetPendingCompactionTasksLowWaterMark(uint32_t pending_tasks, uint32_t level) {
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " pending_tasks:" << pending_tasks);
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " level:" << level);
+    WaterMark wm = WaterMark(pending_tasks, level, SetPendingCompactionTasksLevel);
+    PendingCompactionTasksWaterMarkData.SetLowWaterMark(wm);
+}
+
+void Sandesh::ProcessPendingCompactionTasksHighWaterMark(uint32_t pending_tasks) {
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " pending_tasks:" << pending_tasks);
+    PendingCompactionTasksWaterMarkData.ProcessHighWaterMarks(pending_tasks);
+}
+
+void Sandesh::ProcessPendingCompactionTasksLowWaterMark(uint32_t pending_tasks) {
+    SANDESH_LOG(INFO, "SANDESH: " << __func__ << " pending_tasks:" << pending_tasks);
+    PendingCompactionTasksWaterMarkData.ProcessLowWaterMarks(pending_tasks);
 }
 
 void Sandesh::DisableFlowCollection(bool disable) {
@@ -830,11 +887,11 @@ bool DoDropSandeshMessage(const SandeshHeader &header,
         if (slevel >= drop_level) {
             return true;
         }
-        // Drop message if needed
-        // Temporary change for CI - comparing with ">" rather than ">=".
-        // Will revert to ">=" after controller code to initialize the value is merged.
-        if ((Sandesh::GetDiskUsage() > Sandesh::GetDiskUsageHighWatermark()) ||
-            (Sandesh::GetDiskUsage() > Sandesh::GetDiskUsageLowWatermark() && stype == SandeshType::FLOW) ||
+        // Drop message if 
+        // - severity level is lower than db_usage or pending_tasks level
+        // - if FlowCollection is disabled and this is FLOW message
+        if ((slevel > Sandesh::GetDbUsageLevel()) ||
+            (slevel > Sandesh::GetPendingCompactionTasksLevel()) ||
             (Sandesh::IsFlowCollectionDisabled() && stype == SandeshType::FLOW)) {
             return true;
         }

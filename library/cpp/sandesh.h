@@ -94,6 +94,7 @@
 #include <sandesh/protocol/TProtocol.h>
 #include <sandesh/transport/TBufferTransports.h>
 #include <discovery/client/discovery_client.h>
+#include <base/watermark.h>
 
 // Forward declaration
 class EventManager;
@@ -188,13 +189,26 @@ public:
             int collector_port, bool periodicuve = false);
     static void Uninit();
 
-    // Disk Usage
-    static void SetDiskUsageLowWatermark(uint32_t disk_usage_low_watermark);
-    static uint32_t GetDiskUsageLowWatermark() { return disk_usage_low_watermark_; }
-    static void SetDiskUsageHighWatermark(uint32_t disk_usage_high_watermark);
-    static uint32_t GetDiskUsageHighWatermark() { return disk_usage_high_watermark_; }
-    static void SetDiskUsage(uint32_t disk_usage);
-    static uint32_t GetDiskUsage() { return disk_usage_; }
+    // Db Usage
+    static void SetDbUsageLevel(size_t level);
+    static uint32_t GetDbUsageLevel() { return db_usage_level_; }
+    static void SetDbUsage(size_t db_usage);
+    static uint32_t GetDbUsage() { return db_usage_; }
+    static void SetDbUsageHighWaterMark(uint32_t db_usage, uint32_t level);
+    static void SetDbUsageLowWaterMark(uint32_t db_usage, uint32_t level);
+    static void ProcessDbUsageHighWaterMark(uint32_t db_usage);
+    static void ProcessDbUsageLowWaterMark(uint32_t db_usage);
+
+    // Pending Compaction Tasks
+    static void SetPendingCompactionTasksLevel(size_t level);
+    static uint32_t GetPendingCompactionTasksLevel() { return pending_tasks_level_; }
+    static void SetPendingCompactionTasks(size_t pending_tasks);
+    static uint32_t GetPendingCompactionTasks(){ return pending_tasks_; }
+    static void SetPendingCompactionTasksHighWaterMark(uint32_t pending_tasks, uint32_t level);
+    static void SetPendingCompactionTasksLowWaterMark(uint32_t pending_tasks, uint32_t level);
+    static void ProcessPendingCompactionTasksHighWaterMark(uint32_t pending_tasks);
+    static void ProcessPendingCompactionTasksLowWaterMark(uint32_t pending_tasks);
+
     // Disable flow collection
     static void DisableFlowCollection(bool disable);
     static bool IsFlowCollectionDisabled() { return disable_flow_collection_; }
@@ -404,10 +418,13 @@ private:
     static SandeshMessageStatistics msg_stats_;
     static tbb::mutex stats_mutex_;
     static log4cplus::Logger logger_;
-    static uint32_t disk_usage_low_watermark_;
-    static uint32_t disk_usage_high_watermark_;
-    static uint32_t disk_usage_;
     static bool disable_flow_collection_; // disable flow collection
+    static uint32_t db_usage_; // in percentage
+    static uint32_t db_usage_level_; // message severity level to be allowed as per db_usage
+    static uint32_t pending_tasks_; // count
+    static uint32_t pending_tasks_level_; // message severity level to be allowed as per pending compaction tasks
+    static WaterMarksData DbUsageWaterMarkData;
+    static WaterMarksData PendingCompactionTasksWaterMarkData;
 
     const uint32_t seqnum_;
     std::string context_;
