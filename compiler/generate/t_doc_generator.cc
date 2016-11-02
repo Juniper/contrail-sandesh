@@ -1236,6 +1236,7 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
             }
         }
         f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
+        first_member_ = false;
     }
 
     string empty_prefix;
@@ -1469,7 +1470,8 @@ string t_doc_generator::get_display_name_from_comments(t_field* tfield){
                 string attr_name = f.substr(0, lindex);
                 boost::trim(attr_name);
                 if(attr_name == "display_name") {
-                    display_name = f.substr(lindex+1);
+                    string dn = f.substr(lindex+1);
+                    display_name = dn.substr(0, dn.find_first_of('\n'));
                     boost::trim(display_name);
                     return display_name;
                 }
