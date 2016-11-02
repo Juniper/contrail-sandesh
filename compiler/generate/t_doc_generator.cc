@@ -1236,6 +1236,7 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
             }
         }
         f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
+        first_member_ = false;
     }
 
     string empty_prefix;
