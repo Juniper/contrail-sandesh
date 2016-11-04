@@ -199,6 +199,13 @@ bool Sandesh::ConnectToCollector(const std::string &collector_ip,
     return true;
 }
 
+void Sandesh::ReConfigCollectors(std::vector<std::string> list) {
+    if (client_) {
+        client_->ReConfigCollectors(list);
+    }
+}
+
+
 static bool make_endpoint(TcpServer::Endpoint& ep,const std::string& epstr) {
 
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;

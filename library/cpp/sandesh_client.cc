@@ -100,6 +100,36 @@ void SandeshClient::CollectorHandler(std::vector<DSResponse> resp) {
     }
 }
 
+void SandeshClient::ReConfigCollectors(std::vector<std::string> collector_list) {
+
+    Endpoint primary = Endpoint();
+    Endpoint secondary = Endpoint();
+    
+    std::vector<std::string> ep;
+    uint32_t port;
+    if (collector_list.size()>=1) {
+        boost::split(ep, collector_list[0], boost::is_any_of(":"));
+
+        primary.address(boost::asio::ip::address::from_string(ep[0]));
+        port = strtoul(ep[1].c_str(), NULL, 0);
+        primary.port(port);
+
+        SANDESH_LOG(INFO, "ReConfig for primary " << primary);
+    }
+    if (collector_list.size()>=2) {
+        boost::split(ep, collector_list[1], boost::is_any_of(":"));
+
+        secondary.address(boost::asio::ip::address::from_string(ep[0]));
+        port = strtoul(ep[1].c_str(), NULL, 0);
+        secondary.port(port);
+
+        SANDESH_LOG(INFO, "ReConfig for secondary " << secondary);
+    }
+    if (primary!=Endpoint()) {
+        sm_->SetCandidates(primary, secondary);
+    }
+}
+
 void SandeshClient::Initiate() {
     sm_->SetAdminState(false);
     if (primary_ != Endpoint())
