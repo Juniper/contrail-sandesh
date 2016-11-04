@@ -1224,7 +1224,11 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
     bool is_suffixed_field = false;
     is_indexed_or_suffixed_field(string("__key"), member_tags, suffixes, index, is_suffixed_field);
     if (!is_suffixed_field) {
-        f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "},\n";
+	if (first_member_) {
+            f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "},\n";
+	} else {
+            f_stats_tables_ << ",\n\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "},\n";
+	}
     }
     if(valtype->is_base_type()) {
         name = tname + string(".__value");
