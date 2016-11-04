@@ -199,6 +199,13 @@ bool Sandesh::ConnectToCollector(const std::string &collector_ip,
     return true;
 }
 
+void Sandesh::ReConfigCollectors(std::vector<std::string> list) {
+    if (client_) {
+        client_->ReConfigCollectors(list);
+    }
+}
+
+
 static bool make_endpoint(TcpServer::Endpoint& ep,const std::string& epstr) {
 
     typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
@@ -233,18 +240,19 @@ bool Sandesh::InitClient(EventManager *evm,
     Endpoint secondary = Endpoint();
 
     if (collectors.size()!=0) {
+        SANDESH_LOG(INFO, "SANDESH: CONNECT TO COLLECTOR PRIMARY: " << 
+                    collectors[0]);
         if (!make_endpoint(primary, collectors[0])) {
             return false;
         }
         if (collectors.size()>1) {
+            SANDESH_LOG(INFO, "SANDESH: CONNECT TO COLLECTOR SECONDARY: " << collectors[1]);
             if (!make_endpoint(secondary, collectors[1])) {
                 return false;
             } 
         }
-    }
-    if (collectors.size()>2) {
-        SANDESH_LOG(ERROR, __func__ << " Too many collectors");
-        return false;
+        SANDESH_LOG(INFO, "SANDESH: CONNECT TO COLLECTOR SECONDARY: " << 
+                    collectors[1]);
     }
 
     client_ = new SandeshClient(evm,
