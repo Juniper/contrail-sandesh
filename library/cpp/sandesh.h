@@ -186,6 +186,7 @@ public:
             SandeshContext *client_context = NULL);
     static bool ConnectToCollector(const std::string &collector_ip,
             int collector_port, bool periodicuve = false);
+    static void ReConfigCollectors(std::vector<std::string> list);
     static void Uninit();
 
     // Disable flow collection

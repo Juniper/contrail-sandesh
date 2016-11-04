@@ -31,14 +31,13 @@
 #include "sandesh_client.h"
 #include "sandesh_uve.h"
 
+using boost::asio::ip::address;
 using namespace boost::asio;
 using boost::system::error_code;
 using std::string;
 using std::map;
 using std::make_pair;
 using std::vector;
-
-using boost::system::error_code;
 
 const std::string SandeshClient::kSMTask = "sandesh::SandeshClientSM";
 const std::string SandeshClient::kSessionWriterTask = "sandesh::SandeshClientSession";
@@ -94,6 +93,48 @@ void SandeshClient::CollectorHandler(std::vector<DSResponse> resp) {
     if (resp.size()>=2) {
         secondary = resp[1].ep;
         SANDESH_LOG(INFO, "DiscUpdate for secondary " << secondary);
+    }
+    if (primary!=Endpoint()) {
+        sm_->SetCandidates(primary, secondary);
+    }
+}
+
+void SandeshClient::ReConfigCollectors(std::vector<std::string> collector_list) {
+
+    Endpoint primary = Endpoint();
+    Endpoint secondary = Endpoint();
+
+    std::vector<std::string> ep;
+    uint32_t port;
+    address addr;
+    boost::system::error_code ec;
+    if (collector_list.size()>=1) {
+        boost::split(ep, collector_list[0], boost::is_any_of(":"));
+
+        addr = address::from_string(ep[0], ec);
+        if (ec) {
+            SANDESH_LOG(ERROR, "ReConfig for primary failed Error: " << ec);
+            return;
+        }
+        primary.address(addr);
+        port = strtoul(ep[1].c_str(), NULL, 0);
+        primary.port(port);
+
+        SANDESH_LOG(INFO, "ReConfig for primary " << primary);
+    }
+    if (collector_list.size()>=2) {
+        boost::split(ep, collector_list[1], boost::is_any_of(":"));
+
+        addr = address::from_string(ep[0], ec);
+        if (ec) {
+            SANDESH_LOG(ERROR, "ReConfig for secondary failed Error: " << ec);
+            return;
+        }
+        secondary.address(addr);
+        port = strtoul(ep[1].c_str(), NULL, 0);
+        secondary.port(port);
+
+        SANDESH_LOG(INFO, "ReConfig for secondary " << secondary);
     }
     if (primary!=Endpoint()) {
         sm_->SetCandidates(primary, secondary);
