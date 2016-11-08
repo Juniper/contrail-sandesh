@@ -1187,7 +1187,7 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
     if (jt == tfield->annotations_.end())
         is_empty_tag = true;
     if (!is_top_level && !is_empty_tag) {
-	return;
+        return;
     }
     if(!prefix.empty()) {
         tname = prefix + "." + tname;
@@ -1201,7 +1201,11 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
     bool is_suffixed_field = false;
     is_indexed_or_suffixed_field(string("__key"), member_tags, suffixes, index, is_suffixed_field);
     if (!is_suffixed_field) {
-        f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "},\n";
+        if (first_member_) {
+            f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "},\n";
+        } else {
+            f_stats_tables_ << ",\n\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "},\n";
+        }
     }
     if(valtype->is_base_type()) {
         name = tname + string(".__value");
@@ -1221,9 +1225,9 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
         string sname = valtype->get_name();
         t_struct *cstruct = find_struct_with_name(sname);
         if (cstruct) {
-	    if(!is_empty_tag) {
+            if(!is_empty_tag) {
                 generate_stat_schema_struct_members(empty_prefix, tfield, cstruct, member_tags, suffixes);
-	    }
+            }
             generate_stat_schema_toplevel_tags(tstruct, top_level_tags);
             generate_stat_schema_suffixes(empty_prefix, tfield, cstruct, tstruct, suffixes);
         }
@@ -1320,7 +1324,7 @@ void t_doc_generator::generate_stat_schema_list(string name, t_type* ttype, t_fi
         if (jt == tfield->annotations_.end())
             is_empty_tag = true;
         if (!is_top_level && !is_empty_tag) {
-	    return;
+            return;
         }
         if(!name.empty()) {
             tname = name + "." + tname;
