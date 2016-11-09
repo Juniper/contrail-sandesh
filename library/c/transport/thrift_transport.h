@@ -39,16 +39,10 @@ struct _ThriftTransport
 {
   ThriftTransportType ttype;
   /* vtable */
-  u_int8_t (*is_open) (struct _ThriftTransport *transport);
-  u_int8_t (*open) (struct _ThriftTransport *transport, int *error);
-  u_int8_t (*close) (struct _ThriftTransport *transport, int *error);
   int32_t (*read) (struct _ThriftTransport *transport, void *buf,
                    u_int32_t len, int *error);
-  u_int8_t (*read_end) (struct _ThriftTransport *transport, int *error);
   u_int8_t (*write) (struct _ThriftTransport *transport, const void *buf,
                      const u_int32_t len, int *error);
-  u_int8_t (*write_end) (struct _ThriftTransport *transport, int *error);
-  u_int8_t (*flush) (struct _ThriftTransport *transport, int *error);
 };
 typedef struct _ThriftTransport ThriftTransport;
 
@@ -56,36 +50,6 @@ typedef struct _ThriftTransport ThriftTransport;
 ThriftTransportType thrift_transport_get_type (void);
 
 /* virtual public methods */
-
-/*!
- * Checks if this transport is opened.
- * \public \memberof ThriftTransportInterface
- */
-static inline u_int8_t
-thrift_transport_is_open (ThriftTransport *transport)
-{
-  return transport->is_open (transport);
-}
-
-/*!
- * Open the transport for reading and writing.
- * \public \memberof ThriftTransportInterface
- */
-static inline u_int8_t
-thrift_transport_open (ThriftTransport *transport, int *error)
-{
-  return transport->open (transport, error);
-}
-
-/*!
- * Close the transport.
- * \public \memberof ThriftTransportInterface
- */
-static inline u_int8_t
-thrift_transport_close (ThriftTransport *transport, int *error)
-{
-  return transport->close (transport, error);
-}
 
 /*!
  * Read some data into the buffer buf.
@@ -99,16 +63,6 @@ thrift_transport_read (ThriftTransport *transport, void *buf,
 }
 
 /*!
- * Called when read is completed.
- * \public \memberof ThriftTransportInterface
- */
-static inline u_int8_t
-thrift_transport_read_end (ThriftTransport *transport, int *error)
-{
-  return transport->read_end (transport, error);
-}
-
-/*!
  * Writes data from a buffer to the transport.
  * \public \memberof ThriftTransportInterface
  */
@@ -118,28 +72,6 @@ thrift_transport_write (ThriftTransport *transport, const void *buf,
 {
   return transport->write (transport, buf, len, error);
 }
-
-/*!
- * Called when write is completed.
- * \public \memberof ThriftTransportInterface
- */
-static inline u_int8_t
-thrift_transport_write_end (ThriftTransport *transport, int *error)
-{
-  return transport->write_end (transport, error);
-}
-
-/*!
- * Flushes any pending data to be written.  Typically used with buffered
- * transport mechanisms.
- * \public \memberof ThriftTransportInterface
- */
-static inline u_int8_t
-thrift_transport_flush (ThriftTransport *transport, int *error)
-{
- return transport->flush (transport, error);
-}
-
 
 /* define error/exception types */
 typedef enum
