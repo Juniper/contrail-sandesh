@@ -36,440 +36,6 @@ thrift_protocol_init (ThriftProtocol *protocol,
   }
 }
 
-ThriftProtocolType
-thrift_protocol_get_type (ThriftProtocol *protocol)
-{
-  return protocol->ptype;
-}
-
-int32_t
-thrift_protocol_write_message_begin (ThriftProtocol *protocol, 
-                                     const char *name,
-                                     const ThriftMessageType message_type,
-                                     const int32_t seqid, int *error)
-{
-  return protocol->write_message_begin (protocol, name, message_type, seqid,
-                                        error);
-}
-
-int32_t
-thrift_protocol_write_message_end (ThriftProtocol *protocol, int *error)
-{
-  return protocol->write_message_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_write_sandesh_begin (ThriftProtocol *protocol,
-                                     const char *name,
-                                     int *error)
-{
-  return protocol->write_sandesh_begin (protocol, name, error);
-}
-
-int32_t
-thrift_protocol_write_sandesh_end (ThriftProtocol *protocol, int *error)
-{
-  return protocol->write_sandesh_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_write_struct_begin (ThriftProtocol *protocol, const char *name,
-                                    int *error)
-{
-  return protocol->write_struct_begin (protocol, name, error);
-}
-
-int32_t
-thrift_protocol_write_struct_end (ThriftProtocol *protocol, int *error)
-{
-  return protocol->write_struct_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_write_field_begin (ThriftProtocol *protocol,
-                                   const char *name,
-                                   const ThriftType field_type,
-                                   const int16_t field_id,
-                                   int *error)
-{
-  return protocol->write_field_begin (protocol, name, field_type,
-                                      field_id, error);
-}
-
-int32_t
-thrift_protocol_write_field_end (ThriftProtocol *protocol, int *error)
-{
-  return protocol->write_field_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_write_field_stop (ThriftProtocol *protocol, int *error)
-{
-  return protocol->write_field_stop (protocol, error);
-}
-
-int32_t
-thrift_protocol_write_map_begin (ThriftProtocol *protocol,
-                                 const ThriftType key_type,
-                                 const ThriftType value_type,
-                                 const u_int32_t size, int *error)
-{
-  return protocol->write_map_begin (protocol, key_type, value_type,
-                                    size, error);
-}
-
-int32_t
-thrift_protocol_write_map_end (ThriftProtocol *protocol, int *error)
-{
-  return protocol->write_map_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_write_list_begin (ThriftProtocol *protocol,
-                                  const ThriftType element_type,
-                                  const u_int32_t size, int *error)
-{
-  return protocol->write_list_begin (protocol, element_type, size, error);
-}
-
-int32_t
-thrift_protocol_write_list_end (ThriftProtocol *protocol, int *error)
-{
-  return protocol->write_list_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_write_set_begin (ThriftProtocol *protocol,
-                                 const ThriftType element_type,
-                                 const u_int32_t size, int *error)
-{
-  return protocol->write_set_begin (protocol, element_type, size, error);
-}
-
-int32_t
-thrift_protocol_write_set_end (ThriftProtocol *protocol, int *error)
-{
-  return protocol->write_set_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_write_bool (ThriftProtocol *protocol,
-                            const u_int8_t value, int *error)
-{
-  return protocol->write_bool (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_write_byte (ThriftProtocol *protocol, const int8_t value,
-                            int *error)
-{
-  return protocol->write_byte (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_write_i16 (ThriftProtocol *protocol, const int16_t value,
-                           int *error)
-{
-  return protocol->write_i16 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_write_i32 (ThriftProtocol *protocol, const int32_t value,
-                           int *error)
-{
-  return protocol->write_i32 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_write_i64 (ThriftProtocol *protocol, const int64_t value,
-                           int *error)
-{
-  return protocol->write_i64 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_write_u16 (ThriftProtocol *protocol, const u_int16_t value,
-                           int *error)
-{
-  return protocol->write_u16 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_write_u32 (ThriftProtocol *protocol, const u_int32_t value,
-                           int *error)
-{
-  return protocol->write_u32 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_write_u64 (ThriftProtocol *protocol, const u_int64_t value,
-                           int *error)
-{
-  return protocol->write_u64 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_write_ipv4 (ThriftProtocol *protocol, const u_int32_t value,
-                           int *error)
-{
-  return protocol->write_ipv4 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_write_ipaddr (ThriftProtocol *protocol, const ipaddr_t *value,
-                              int *error)
-{
-  return protocol->write_ipaddr (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_write_double (ThriftProtocol *protocol,
-                              const double value, int *error)
-{
-  return protocol->write_double (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_write_string (ThriftProtocol *protocol,
-                              const char *str, int *error)
-{
-  return protocol->write_string (protocol, str, error);
-}
-
-int32_t
-thrift_protocol_write_binary (ThriftProtocol *protocol, const void *buf,
-                              const u_int32_t len, int *error)
-{
-  return protocol->write_binary (protocol, buf, len, error);
-}
-
-int32_t
-thrift_protocol_write_xml (ThriftProtocol *protocol,
-                           const char *str, int *error)
-{
-  return protocol->write_xml (protocol, str, error);
-}
-
-int32_t
-thrift_protocol_write_uuid_t (ThriftProtocol *protocol,
-                           const uuid_t value, int *error)
-{
-  return protocol->write_uuid_t (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_read_message_begin (ThriftProtocol *protocol,
-                                    char **name,
-                                    ThriftMessageType *message_type,
-                                    int32_t *seqid, int *error)
-{
-  return protocol->read_message_begin (protocol, name, message_type,
-                                       seqid, error);
-}
-
-int32_t
-thrift_protocol_read_message_end (ThriftProtocol *protocol,
-                                  int *error)
-{
-  return protocol->read_message_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_read_sandesh_begin (ThriftProtocol *protocol,
-                                    char **name,
-                                    int *error)
-{
-  return protocol->read_sandesh_begin (protocol, name, error);
-}
-
-int32_t
-thrift_protocol_read_sandesh_end (ThriftProtocol *protocol,
-                                  int *error)
-{
-  return protocol->read_sandesh_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_read_struct_begin (ThriftProtocol *protocol,
-                                   char **name,
-                                   int *error)
-{
-  return protocol->read_struct_begin (protocol, name, error);
-}
-
-int32_t
-thrift_protocol_read_struct_end (ThriftProtocol *protocol, int *error)
-{
-  return protocol->read_struct_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_read_field_begin (ThriftProtocol *protocol,
-                                  char **name,
-                                  ThriftType *field_type,
-                                  int16_t *field_id,
-                                  int *error)
-{
-  return protocol->read_field_begin (protocol, name, field_type, field_id,
-                                     error);
-}
-
-int32_t
-thrift_protocol_read_field_end (ThriftProtocol *protocol,
-                                int *error)
-{
-  return protocol->read_field_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_read_map_begin (ThriftProtocol *protocol,
-                                ThriftType *key_type,
-                                ThriftType *value_type, u_int32_t *size,
-                                int *error)
-{
-  return protocol->read_map_begin (protocol, key_type, value_type, size,
-                                   error);
-}
-
-int32_t
-thrift_protocol_read_map_end (ThriftProtocol *protocol, int *error)
-{
-  return protocol->read_map_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_read_list_begin (ThriftProtocol *protocol,
-                                 ThriftType *element_type,
-                                 u_int32_t *size, int *error)
-{
-  return protocol->read_list_begin (protocol, element_type, size, error);
-}
-
-int32_t
-thrift_protocol_read_list_end (ThriftProtocol *protocol, int *error)
-{
-  return protocol->read_list_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_read_set_begin (ThriftProtocol *protocol,
-                                ThriftType *element_type,
-                                u_int32_t *size, int *error)
-{
-  return protocol->read_set_begin (protocol, element_type, size, error);
-}
-
-int32_t
-thrift_protocol_read_set_end (ThriftProtocol *protocol, int *error)
-{
-  return protocol->read_set_end (protocol, error);
-}
-
-int32_t
-thrift_protocol_read_bool (ThriftProtocol *protocol, u_int8_t *value,
-                           int *error)
-{
-  return protocol->read_bool (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_read_byte (ThriftProtocol *protocol, int8_t *value,
-                           int *error)
-{
-  return protocol->read_byte (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_read_i16 (ThriftProtocol *protocol, int16_t *value,
-                          int *error)
-{
-  return protocol->read_i16 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_read_i32 (ThriftProtocol *protocol, int32_t *value,
-                          int *error)
-{
-  return protocol->read_i32 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_read_i64 (ThriftProtocol *protocol, int64_t *value,
-                          int *error)
-{
-  return protocol->read_i64 (protocol, value, error);
-}
-
-int32_t 
-thrift_protocol_read_u16 (ThriftProtocol *protocol, u_int16_t *value,
-                          int *error)
-{
-  return protocol->read_u16 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_read_u32 (ThriftProtocol *protocol, u_int32_t *value,
-                          int *error)
-{
-  return protocol->read_u32 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_read_u64 (ThriftProtocol *protocol, u_int64_t *value,
-                          int *error)
-{
-  return protocol->read_u64 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_read_ipv4 (ThriftProtocol *protocol, u_int32_t *value,
-                          int *error)
-{
-  return protocol->read_ipv4 (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_read_ipaddr (ThriftProtocol *protocol, ipaddr_t *value,
-                             int *error)
-{
-  return protocol->read_ipaddr (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_read_double (ThriftProtocol *protocol,
-                             double *value, int *error)
-{
-  return protocol->read_double (protocol, value, error);
-}
-
-int32_t
-thrift_protocol_read_string (ThriftProtocol *protocol,
-                             char **str, int *error)
-{
-  return protocol->read_string (protocol, str, error);
-}
-
-int32_t
-thrift_protocol_read_binary (ThriftProtocol *protocol, void **buf,
-                             u_int32_t *len, int *error)
-{
-  return protocol->read_binary (protocol, buf, len, error);
-}
-
-int32_t
-thrift_protocol_read_xml (ThriftProtocol *protocol,
-                          char **str, int *error)
-{
-  return protocol->read_xml (protocol, str, error);
-}
-
-int32_t
-thrift_protocol_read_uuid_t (ThriftProtocol *protocol,
-                          uuid_t *value, int *error)
-{
-  return protocol->read_uuid_t (protocol, value, error);
-}
-
 int32_t
 thrift_protocol_skip (ThriftProtocol *protocol, ThriftType type, int *error)
 {
@@ -537,7 +103,7 @@ thrift_protocol_skip (ThriftProtocol *protocol, ThriftType type, int *error)
       }
     case T_UUID:
       {
-        uuid_t uuid;
+        ct_uuid_t uuid;
         return thrift_protocol_read_uuid_t (protocol, &uuid, error);
       }
     case T_STRUCT:
@@ -562,20 +128,6 @@ thrift_protocol_skip (ThriftProtocol *protocol, ThriftType type, int *error)
         result += thrift_protocol_read_struct_end (protocol, error);
         return result;
       }
-    case T_MAP:
-      {
-        u_int32_t result = 0;
-        ThriftType elem_type;
-        u_int32_t i, size;
-        result += thrift_protocol_read_set_begin (protocol, &elem_type, &size,
-                                                  error);
-        for (i = 0; i < size; i++)
-        {
-          result += thrift_protocol_skip (protocol, elem_type, error);
-        }
-        result += thrift_protocol_read_set_end (protocol, error);
-        return result;
-      }
     case T_LIST:
       {
         u_int32_t result = 0;
@@ -588,6 +140,191 @@ thrift_protocol_skip (ThriftProtocol *protocol, ThriftType type, int *error)
           result += thrift_protocol_skip (protocol, elem_type, error);
         }
         result += thrift_protocol_read_list_end (protocol, error);
+        return result;
+      }
+    default:
+      return 0;
+  }
+}
+
+int32_t
+thrift_binary_protocol_skip_from_buffer (uint8_t *buf, const uint32_t buflen,
+                                         ThriftType type, int *error)
+{
+  switch (type)
+  {
+    case T_BOOL:
+    case T_BYTE:
+      {
+        if (1 > buflen)
+        {
+          *error = THRIFT_TRANSPORT_ERROR_RECEIVE;
+          os_log (OS_LOG_ERR, "Unable to read %d bytes from buffer of length %d",
+            1, buflen);
+          return -1;
+        }
+        return 1;
+      }
+    case T_I16:
+    case T_U16:
+      {
+        if (2 > buflen)
+        {
+          *error = THRIFT_TRANSPORT_ERROR_RECEIVE;
+          os_log (OS_LOG_ERR, "Unable to read %d bytes from buffer of length %d",
+            2, buflen);
+          return -1;
+        }
+        return 2;
+      }
+    case T_I32:
+    case T_U32:
+    case T_IPV4:
+      {
+        if (4 > buflen)
+        {
+          *error = THRIFT_TRANSPORT_ERROR_RECEIVE;
+          os_log (OS_LOG_ERR, "Unable to read %d bytes from buffer of length %d",
+            4, buflen);
+          return -1;
+        }
+        return 4;
+      }
+    case T_I64:
+    case T_U64:
+    case T_DOUBLE:
+      {
+        if (8 > buflen)
+        {
+          *error = THRIFT_TRANSPORT_ERROR_RECEIVE;
+          os_log (OS_LOG_ERR, "Unable to read %d bytes from buffer of length %d",
+            8, buflen);
+          return -1;
+        }
+        return 8;
+      }
+    case T_STRING:
+    case T_XML:
+      {
+        uint32_t result = 0;
+        union {
+          void * b[4];
+          int32_t all;
+        } bytes;
+        int32_t read_len;
+
+        /* read the length into nread_len */
+        if (4 > buflen)
+        {
+          *error = THRIFT_TRANSPORT_ERROR_RECEIVE;
+          os_log (OS_LOG_ERR, "Unable to read %d bytes from buffer of length %d",
+            4, buflen);
+          return -1;
+        }
+        memcpy (bytes.b, buf, 4);
+        result += 4;
+        read_len = ntohl (bytes.all);
+        if (read_len > 0)
+        {
+          if (result + read_len > buflen)
+          {
+            *error = THRIFT_TRANSPORT_ERROR_RECEIVE;
+            os_log (OS_LOG_ERR, "Unable to read %d bytes from buffer of length %d",
+              result + read_len, buflen);
+            return -1;
+          }
+          result += read_len;
+        }
+        return result;
+      }
+    case T_UUID:
+      {
+        if (16 > buflen)
+        {
+          *error = THRIFT_TRANSPORT_ERROR_RECEIVE;
+          os_log (OS_LOG_ERR, "Unable to read %d bytes from buffer of length %d",
+            16, buflen);
+          return -1;
+        }
+        return 16;
+      }
+    case T_STRUCT:
+      {
+        uint32_t result = 0;
+        void * b[1];
+        ThriftType ftype;
+
+        while (1)
+        {
+          if (1 > buflen - result)
+          {
+            *error = THRIFT_TRANSPORT_ERROR_RECEIVE;
+            os_log (OS_LOG_ERR, "Unable to read %d bytes from buffer of length %d",
+              1, buflen - result);
+            return -1;
+          }
+          memcpy (b, buf + result, 1);
+          result += 1;
+          ftype = *(int8_t *) b;
+          if (ftype == T_STOP)
+          {
+            break;
+          }
+          if (2 > buflen - result)
+          {
+            *error = THRIFT_TRANSPORT_ERROR_RECEIVE;
+            os_log (OS_LOG_ERR, "Unable to read %d bytes from buffer of length %d",
+              2, buflen - result);
+            return -1;
+          }
+          result += 2;
+          result += thrift_binary_protocol_skip_from_buffer (buf + result,
+              buflen - result, ftype, error);
+        }
+        return result;
+      }
+    case T_LIST:
+      {
+        uint32_t result = 0;
+        ThriftType elem_type;
+        int32_t i, size;
+        void * b[1];
+        union {
+          void * b[4];
+          int32_t all;
+        } bytes;
+
+        if (1 > buflen)
+        {
+            *error = THRIFT_TRANSPORT_ERROR_RECEIVE;
+            os_log (OS_LOG_ERR, "Unable to read %d bytes from buffer of length %d",
+              1, buflen);
+            return -1;
+        }
+        memcpy (b, buf, 1);
+        result += 1;
+        elem_type = * (ThriftType *) b;
+        if (result + 4 > buflen)
+        {
+            *error = THRIFT_TRANSPORT_ERROR_RECEIVE;
+            os_log (OS_LOG_ERR, "Unable to read %d bytes from buffer of length %d",
+              result + 4, buflen);
+            return -1;
+        }
+        memcpy (bytes.b, buf + result, 4);
+        result += 4;
+        size = ntohl (bytes.all);
+        if (size < 0)
+        {
+            *error = THRIFT_PROTOCOL_ERROR_NEGATIVE_SIZE;
+            os_log (OS_LOG_ERR, "Got negative size of %d", size);
+            return -1;
+        }
+        for (i = 0; i < size; i++)
+        {
+          result += thrift_binary_protocol_skip_from_buffer (buf + result,
+              buflen - result, elem_type, error);
+        }
         return result;
       }
     default:

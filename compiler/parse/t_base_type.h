@@ -224,7 +224,7 @@ class t_base_type : public t_type {
       case TYPE_IPV4   : return       "ipv4"; break;
       case TYPE_IPADDR : return       "ipaddr"; break;
       case TYPE_XML    : return       "xml"; break;
-      case TYPE_UUID   : return       "uuid_t"; break;
+      case TYPE_UUID   : return       "ct_uuid_t"; break;
       case TYPE_STATIC_CONST_STRING :
           return    "static const string"; break;
       case TYPE_SANDESH_SYSTEM   : return      "system"; break;
