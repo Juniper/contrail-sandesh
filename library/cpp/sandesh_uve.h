@@ -15,6 +15,7 @@
 #include <map>
 #include <vector>
 #include <boost/ptr_container/ptr_map.hpp>
+#include <boost/assign/ptr_map_inserter.hpp>
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
 #include <tbb/mutex.h>

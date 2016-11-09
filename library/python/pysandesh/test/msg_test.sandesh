@@ -12,7 +12,7 @@ systemlog sandesh SystemLogTest {
     1: "Async Test";
     2: list<i32> list1;
     3: map<i32, string> map1;
-    4: uuid_t uuid1;
+    4: ct_uuid_t uuid1;
 }
 
 struct StructObject {
