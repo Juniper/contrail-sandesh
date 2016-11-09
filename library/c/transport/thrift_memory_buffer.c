@@ -90,34 +90,6 @@ thrift_memory_buffer_wrote_bytes (ThriftMemoryBuffer *t, u_int32_t len)
   return 0;
 }
 
-/* implements thrift_transport_is_open */
-u_int8_t
-thrift_memory_buffer_is_open (ThriftTransport *transport)
-{
-  THRIFT_UNUSED_VAR (transport);
-  return 1;
-}
-
-/* implements thrift_transport_open */
-u_int8_t
-thrift_memory_buffer_open (ThriftTransport *transport ,
-                           int *error)
-{
-  THRIFT_UNUSED_VAR (transport);
-  THRIFT_UNUSED_VAR (error);
-  return 1;
-}
-
-/* implements thrift_transport_close */
-u_int8_t
-thrift_memory_buffer_close (ThriftTransport *transport ,
-                            int *error)
-{
-  THRIFT_UNUSED_VAR (transport);
-  THRIFT_UNUSED_VAR (error);
-  return 1;
-}
-
 /* implements thrift_transport_read */
 int32_t
 thrift_memory_buffer_read (ThriftTransport *transport, void *buf,
@@ -189,39 +161,12 @@ thrift_memory_buffer_write (ThriftTransport *transport,
   return 1;
 }
 
-/* implements thrift_transport_write_end
- * called when write is complete.  nothing to do on our end. */
-u_int8_t
-thrift_memory_buffer_write_end (ThriftTransport *transport ,
-                                int *error)
-{
-  THRIFT_UNUSED_VAR (transport);
-  THRIFT_UNUSED_VAR (error);
-  return 1;
-}
-
-/* implements thrift_transport_flush */
-u_int8_t
-thrift_memory_buffer_flush (ThriftTransport *transport ,
-                            int *error)
-{
-  THRIFT_UNUSED_VAR (transport);
-  THRIFT_UNUSED_VAR (error);
-  return 1;
-}
-
 static void
 thrift_memory_buffer_transport_init (ThriftTransport *transport)
 {
   transport->ttype = T_TRANSPORT_MEMORY_BUFFER;
-  transport->is_open = thrift_memory_buffer_is_open;
-  transport->open = thrift_memory_buffer_open;
-  transport->close = thrift_memory_buffer_close;
   transport->read = thrift_memory_buffer_read;
-  transport->read_end = thrift_memory_buffer_read_end;
   transport->write = thrift_memory_buffer_write;
-  transport->write_end = thrift_memory_buffer_write_end;
-  transport->flush = thrift_memory_buffer_flush;
 }
 
 /* initializes the instance */
