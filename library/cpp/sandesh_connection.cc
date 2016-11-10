@@ -11,6 +11,7 @@
 #include <io/tcp_session.h>
 #include <io/tcp_server.h>
 #include <base/logging.h>
+#include <boost/algorithm/string.hpp>
 #include <sandesh/protocol/TXMLProtocol.h>
 
 #include <sandesh/sandesh_types.h>

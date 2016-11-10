@@ -274,7 +274,7 @@ class DSSum {
             // We want each time bucket to represent between
             // 1/128th and 1/256th of the entire range
             // This ensures that there will never be more than 256 buckets
-            while ((1 << (shifter_ + 8)) < range_usecs_) shifter_++;   
+            while (((uint64_t)1 << (shifter_ + 8)) < range_usecs_) shifter_++;
         }
     }
     uint64_t samples_;

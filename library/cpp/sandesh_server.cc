@@ -10,6 +10,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/assign.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <sandesh/protocol/TXMLProtocol.h>
 #include <sandesh/sandesh_types.h>
