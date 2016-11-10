@@ -91,6 +91,7 @@ public:
     void ResetSessionWaterMarkInfo();
     void GetSessionWaterMarkInfo(
         std::vector<Sandesh::QueueWaterMarkInfo> &scwm_info) const;
+    void ReConfigCollectors(std::vector<std::string>);
 
     friend class CollectorInfoRequest;
 protected:
