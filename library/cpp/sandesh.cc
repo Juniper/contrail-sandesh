@@ -9,7 +9,7 @@
 //
 
 #include <boost/bind.hpp>
-#include <boost/tokenizer.hpp>
+#include <boost/foreach.hpp>
 #include <base/logging.h>
 #include <base/parse_object.h>
 #include <base/queue_task.h>
@@ -102,7 +102,8 @@ void Sandesh::InitClient(EventManager *evm, Endpoint server, bool periodicuve) {
         connect_to_collector_);
     // Create and initialize the client
     assert(client_ == NULL);
-    client_ = new SandeshClient(evm, server, Endpoint(), 0, periodicuve);
+    std::vector<Endpoint> collector_endpoints = boost::assign::list_of(server);
+    client_ = new SandeshClient(evm, collector_endpoints, 0, periodicuve);
     client_->Initiate();
 }
 
@@ -202,34 +203,10 @@ bool Sandesh::ConnectToCollector(const std::string &collector_ip,
     return true;
 }
 
-void Sandesh::ReConfigCollectors(std::vector<std::string> list) {
+void Sandesh::ReConfigCollectors(const std::vector<std::string>& collector_list) {
     if (client_) {
-        client_->ReConfigCollectors(list);
+        client_->ReConfigCollectors(collector_list);
     }
-}
-
-
-static bool make_endpoint(TcpServer::Endpoint& ep,const std::string& epstr) {
-
-    typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
-    boost::char_separator<char> sep(":");
-
-    tokenizer tokens(epstr, sep);
-    tokenizer::iterator it = tokens.begin();
-    std::string sip(*it);
-    ++it;
-    std::string sport(*it);
-    int port;
-    stringToInteger(sport, port);
-    boost::system::error_code ec;
-    address addr = address::from_string(sip, ec);
-    if (ec) {
-        SANDESH_LOG(ERROR, __func__ << ": Invalid collector address: " <<
-                sip << " Error: " << ec);
-        return false;
-    }
-    ep = TcpServer::Endpoint(addr, port);
-    return true;
 }
 
 bool Sandesh::InitClient(EventManager *evm, 
@@ -238,23 +215,17 @@ bool Sandesh::InitClient(EventManager *evm,
     connect_to_collector_ = true;
     SANDESH_LOG(INFO, "SANDESH: CONNECT TO COLLECTOR: " <<
         connect_to_collector_);
-
-    Endpoint primary = Endpoint();
-    Endpoint secondary = Endpoint();
-
-    if (collectors.size()!=0) {
-        if (!make_endpoint(primary, collectors[0])) {
+    std::vector<Endpoint> collector_endpoints;
+    BOOST_FOREACH(const std::string &collector, collectors) {
+        Endpoint ep;
+        if (!MakeEndpoint(&ep, collector)) {
+            SANDESH_LOG(ERROR, __func__ << ": Invalid collector address: " <<
+                        collector);
             return false;
         }
-        if (collectors.size()>1) {
-            if (!make_endpoint(secondary, collectors[1])) {
-                return false;
-            } 
-        }
+        collector_endpoints.push_back(ep);
     }
-
-    client_ = new SandeshClient(evm,
-            primary, secondary, csf, true);
+    client_ = new SandeshClient(evm, collector_endpoints, csf, true);
     client_->Initiate();
     return true;
 }

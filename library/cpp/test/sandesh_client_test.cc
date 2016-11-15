@@ -28,6 +28,7 @@ using namespace std;
 using namespace boost::assign;
 using namespace boost::posix_time;
 using boost::system::error_code;
+using boost::asio::ip::address;
 using namespace contrail::sandesh::protocol;
 using namespace contrail::sandesh::transport;
 
@@ -86,7 +87,7 @@ private:
 
 class SandeshClientMock : public SandeshClient {
 public:
-    SandeshClientMock(EventManager *evm, Endpoint dummy) :
+    SandeshClientMock(EventManager *evm, std::vector<Endpoint> dummy) :
         SandeshClient(evm, dummy),
         session_(NULL),
         old_session_(NULL) {
@@ -150,7 +151,7 @@ private:
 class SandeshClientStateMachineTest : public ::testing::Test {
 protected:
     SandeshClientStateMachineTest() :
-        client_(new SandeshClientMock((&evm_), Endpoint())),
+        client_(new SandeshClientMock((&evm_), std::vector<Endpoint>())),
         timer_(TimerManager::CreateTimer(*evm_.io_service(), "Dummy timer")),
         sm_(dynamic_cast<SandeshClientSMImpl *>(client_->state_machine())) {
         task_util::WaitForIdle();
@@ -179,6 +180,17 @@ protected:
         return false;
     }
 
+    std::vector<Endpoint> GetCollectorEndpoints(
+                            const std::vector<string>& collectors) {
+        boost::system::error_code ec;
+        std::vector<Endpoint> collector_endpoints;
+        BOOST_FOREACH(const std::string &collector, collectors) {
+            Endpoint ep(address::from_string(collector, ec), 8086);
+            collector_endpoints.push_back(ep);
+        }
+        return collector_endpoints;
+    }
+
     void RunToState(SandeshClientSM::State state) {
         timer_->Start(15000,
                      boost::bind(&SandeshClientStateMachineTest::DummyTimerHandler, this));
@@ -198,6 +210,12 @@ protected:
             VerifyState(state);
             break;
         }
+        case SandeshClientSM::DISCONNECT: {
+            GetToState(SandeshClientSM::IDLE);
+            EvAdminUpNoHoldTime();
+            RunToState(state);
+            break;
+        }
         case SandeshClientSM::CONNECT: {
             GetToState(SandeshClientSM::IDLE);
             EvAdminUp();
@@ -209,6 +227,12 @@ protected:
             Endpoint endpoint;
             client_->session()->Connected(endpoint);
             VerifyState(SandeshClientSM::CLIENT_INIT);
+            break;
+        }
+        case SandeshClientSM::ESTABLISHED: {
+            GetToState(SandeshClientSM::CLIENT_INIT);
+            EvSandeshCtrlMessageRecv();
+            RunToState(SandeshClientSM::ESTABLISHED);
             break;
         }
         default: {
@@ -227,17 +251,26 @@ protected:
 
         switch (state) {
         case SandeshClientSM::IDLE:
-            EXPECT_TRUE(!ConnectTimerRunning());
+            EXPECT_FALSE(ConnectTimerRunning());
+            EXPECT_TRUE(client_->session() == NULL);
+            break;
+        case SandeshClientSM::DISCONNECT:
+            EXPECT_FALSE(ConnectTimerRunning());
             EXPECT_TRUE(client_->session() == NULL);
             break;
         case SandeshClientSM::CONNECT:
             EXPECT_TRUE(ConnectTimerRunning());
-            EXPECT_TRUE(!IdleHoldTimerRunning());
+            EXPECT_FALSE(IdleHoldTimerRunning());
             EXPECT_TRUE(client_->session() != NULL);
             break;
         case SandeshClientSM::CLIENT_INIT:
             EXPECT_TRUE(ConnectTimerRunning());
-            EXPECT_TRUE(!IdleHoldTimerRunning());
+            EXPECT_FALSE(IdleHoldTimerRunning());
+            EXPECT_TRUE(client_->session() != NULL);
+            break;
+        case SandeshClientSM::ESTABLISHED:
+            EXPECT_FALSE(ConnectTimerRunning());
+            EXPECT_FALSE(IdleHoldTimerRunning());
             EXPECT_TRUE(client_->session() != NULL);
             break;
         default:
@@ -265,6 +298,10 @@ protected:
         sm_->SetAdminState(false);
         sm_->set_idle_hold_time(1);
     }
+    void EvAdminUpNoHoldTime() {
+        sm_->SetAdminState(false);
+        sm_->set_idle_hold_time(0);
+    }
     void EvAdminDown() {
         sm_->SetAdminState(true);
         sm_->set_idle_hold_time(1);
@@ -291,6 +328,26 @@ protected:
         string xml((const char *)msg, sizeof(msg));
         sm_->OnMessage(session, xml);
     }
+    void EvSandeshCtrlMessageRecv(SandeshSessionMock *session = NULL) {
+        session = GetSession(session);
+        string xml;
+        contrail::sandesh::test::CreateFakeCtrlMessage(xml);
+        sm_->OnMessage(session, xml);
+    }
+    void EvCollectorUpdateTrue() {
+        if (collector_list_ != collector_list1_) {
+            collector_list_ = collector_list1_;
+        } else {
+            collector_list_ = collector_list2_;
+        }
+        sm_->SetCollectors(GetCollectorEndpoints(collector_list_));
+    }
+    void EvCollectorUpdateFalse() {
+        if (collector_list_.size() == 0) {
+            collector_list_ = collector_list1_;
+        }
+        sm_->SetCollectors(GetCollectorEndpoints(collector_list_));
+    }
 
     bool IdleHoldTimerRunning() { return sm_->IdleHoldTimerRunning(); }
     bool ConnectTimerRunning() { return sm_->ConnectTimerRunning(); }
@@ -299,7 +356,16 @@ protected:
     SandeshClientMock *client_;
     SandeshClientSMImpl *sm_;
     Timer *timer_;
+    std::vector<string> collector_list_;
+
+    static const std::vector<string> collector_list1_;
+    static const std::vector<string> collector_list2_;
 };
+
+const std::vector<string> SandeshClientStateMachineTest::collector_list1_ =
+    boost::assign::list_of("1.1.1.1")("2.2.2.2");
+const std::vector<string> SandeshClientStateMachineTest::collector_list2_ =
+    boost::assign::list_of("3.3.3.3");
 
 typedef boost::function<void(void)> EvGen;
 struct EvGenComp {
@@ -318,31 +384,43 @@ TEST_F(SandeshClientStateMachineTest, Matrix) {
             (SandeshSessionMock *) NULL), E)
 
     Transitions idle = map_list_of
-            CLIENT_SSM_TRANSITION(EvAdminUp, SandeshClientSM::CONNECT);
+            CLIENT_SSM_TRANSITION(EvAdminUp, SandeshClientSM::CONNECT)
+            CLIENT_SSM_TRANSITION(EvAdminUpNoHoldTime, SandeshClientSM::DISCONNECT)
+            CLIENT_SSM_TRANSITION(EvCollectorUpdateTrue, SandeshClientSM::IDLE) // collector_list1_
+            CLIENT_SSM_TRANSITION(EvCollectorUpdateFalse, SandeshClientSM::IDLE); // collector_list1_
 
-    Transitions none = map_list_of
-            CLIENT_SSM_TRANSITION(EvAdminDown, SandeshClientSM::IDLE);
+    Transitions disconnect = map_list_of
+            CLIENT_SSM_TRANSITION(EvCollectorUpdateTrue, SandeshClientSM::CONNECT) // collector_list2_
+            CLIENT_SSM_TRANSITION(EvCollectorUpdateFalse, SandeshClientSM::CONNECT); // collector_list2_
 
     Transitions connect = map_list_of
             CLIENT_SSM_TRANSITION(EvAdminDown, SandeshClientSM::IDLE)
             CLIENT_SSM_TRANSITION(EvConnectTimerExpired, SandeshClientSM::IDLE)
             CLIENT_SSM_TRANSITION(EvTcpConnected, SandeshClientSM::CLIENT_INIT)
             CLIENT_SSM_TRANSITION(EvTcpConnectFail, SandeshClientSM::IDLE)
-            CLIENT_SSM_TRANSITION2(EvTcpClose, SandeshClientSM::IDLE);
+            CLIENT_SSM_TRANSITION2(EvTcpClose, SandeshClientSM::IDLE)
+            CLIENT_SSM_TRANSITION(EvCollectorUpdateTrue, SandeshClientSM::IDLE) // collector_list1_
+            CLIENT_SSM_TRANSITION(EvCollectorUpdateFalse, SandeshClientSM::CONNECT); // collector_list1_
 
     Transitions client_init = map_list_of
             CLIENT_SSM_TRANSITION2(EvTcpClose, SandeshClientSM::IDLE)
-            CLIENT_SSM_TRANSITION2(EvSandeshMessageRecv, SandeshClientSM::CLIENT_INIT);
+            CLIENT_SSM_TRANSITION2(EvSandeshMessageRecv, SandeshClientSM::CLIENT_INIT)
+            CLIENT_SSM_TRANSITION2(EvSandeshCtrlMessageRecv, SandeshClientSM::ESTABLISHED)
+            CLIENT_SSM_TRANSITION(EvCollectorUpdateTrue, SandeshClientSM::IDLE) // collector_list2_
+            CLIENT_SSM_TRANSITION(EvCollectorUpdateFalse, SandeshClientSM::CLIENT_INIT); // collector_list2_
+
+    Transitions established = map_list_of
+            CLIENT_SSM_TRANSITION2(EvTcpClose, SandeshClientSM::IDLE)
+            CLIENT_SSM_TRANSITION2(EvSandeshMessageRecv, SandeshClientSM::ESTABLISHED)
+            CLIENT_SSM_TRANSITION(EvCollectorUpdateTrue, SandeshClientSM::CONNECT) // collector_list1_
+            CLIENT_SSM_TRANSITION(EvCollectorUpdateFalse, SandeshClientSM::ESTABLISHED) // collector_list1_
+            CLIENT_SSM_TRANSITION2(EvTcpClose, SandeshClientSM::CONNECT);
 
     Transitions matrix[] =
-        { idle, none, connect, client_init };
+        { idle, disconnect, connect, client_init, established };
 
-    for (int k = SandeshClientSM::IDLE; k <= SandeshClientSM::CLIENT_INIT; k++) {
+    for (int k = SandeshClientSM::IDLE; k <= SandeshClientSM::ESTABLISHED; k++) {
         SandeshClientSM::State i = static_cast<SandeshClientSM::State>(k);
-        // Ignore DISCONNECT and ESTABLISHED in SandeshClientSM
-        if (i == SandeshClientSM::ESTABLISHED || i == SandeshClientSM::DISCONNECT) {
-            continue;
-        }
         int count = 0;
         for (Transitions::iterator j = matrix[i].begin();
                 j != matrix[i].end(); j++) {

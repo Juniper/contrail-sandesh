@@ -10,6 +10,7 @@
 
 #include <boost/bind.hpp>
 #include <boost/assign.hpp>
+#include <boost/foreach.hpp>
 
 #include <base/task_annotations.h>
 #include <io/event_manager.h>
@@ -30,6 +31,7 @@
 #include <sandesh/common/vns_constants.h>
 #include "sandesh_client.h"
 #include "sandesh_uve.h"
+#include "sandesh_util.h"
 
 using boost::asio::ip::address;
 using namespace boost::asio;
@@ -53,21 +55,18 @@ const std::vector<Sandesh::QueueWaterMarkInfo>
                                                (2500, SandeshLevel::INVALID, false, false);
 
 SandeshClient::SandeshClient(EventManager *evm,
-        Endpoint primary, Endpoint secondary, Sandesh::CollectorSubFn csf, bool periodicuve)
+        const std::vector<Endpoint> &collectors, Sandesh::CollectorSubFn csf,
+        bool periodicuve)
     :   TcpServer(evm),
         sm_task_instance_(kSMTaskInstance),
         sm_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSMTask)),
         session_task_instance_(kSessionTaskInstance),
         session_writer_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSessionWriterTask)),
         session_reader_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSessionReaderTask)),
-        primary_(primary),
-        secondary_(secondary),
+        collectors_(collectors),
         csf_(csf),
         sm_(SandeshClientSM::CreateClientSM(evm, this, sm_task_instance_, sm_task_id_, periodicuve)),
         session_wm_info_(kSessionWaterMarkInfo) {
-    SANDESH_LOG(INFO,"primary  " << primary_);
-    SANDESH_LOG(INFO,"secondary  " << secondary_);
-
     // Set task policy for exclusion between state machine and session tasks since
     // session delete happens in state machine task
     if (!task_policy_set_) {
@@ -82,69 +81,40 @@ SandeshClient::SandeshClient(EventManager *evm,
 SandeshClient::~SandeshClient() {}
 
 void SandeshClient::CollectorHandler(std::vector<DSResponse> resp) {
-
-    Endpoint primary = Endpoint();
-    Endpoint secondary = Endpoint();
-    
+    std::vector<Endpoint> collectors;
     if (resp.size()>=1) {
-        primary = resp[0].ep;
-        SANDESH_LOG(INFO, "DiscUpdate for primary " << primary);
+        collectors.push_back(resp[0].ep);
+        SANDESH_LOG(INFO, "Discovery update for collector #1 " << resp[0].ep);
     }
     if (resp.size()>=2) {
-        secondary = resp[1].ep;
-        SANDESH_LOG(INFO, "DiscUpdate for secondary " << secondary);
+        collectors.push_back(resp[1].ep);
+        SANDESH_LOG(INFO, "Discovery update for collector #2 " << resp[1].ep);
     }
-    if (primary!=Endpoint()) {
-        sm_->SetCandidates(primary, secondary);
+    if (collectors.size()) {
+        sm_->SetCollectors(collectors);
     }
 }
 
-void SandeshClient::ReConfigCollectors(std::vector<std::string> collector_list) {
+void SandeshClient::ReConfigCollectors(
+        const std::vector<std::string>& collector_list) {
+    std::vector<Endpoint> collector_endpoints;
 
-    Endpoint primary = Endpoint();
-    Endpoint secondary = Endpoint();
-
-    std::vector<std::string> ep;
-    uint32_t port;
-    address addr;
-    boost::system::error_code ec;
-    if (collector_list.size()>=1) {
-        boost::split(ep, collector_list[0], boost::is_any_of(":"));
-
-        addr = address::from_string(ep[0], ec);
-        if (ec) {
-            SANDESH_LOG(ERROR, "ReConfig for primary failed Error: " << ec);
+    BOOST_FOREACH(const std::string& collector, collector_list) {
+        Endpoint ep;
+        if (!MakeEndpoint(&ep, collector)) {
+            SANDESH_LOG(ERROR, __func__ << ": Invalid collector address: " <<
+                        collector);
             return;
         }
-        primary.address(addr);
-        port = strtoul(ep[1].c_str(), NULL, 0);
-        primary.port(port);
-
-        SANDESH_LOG(INFO, "ReConfig for primary " << primary);
+        collector_endpoints.push_back(ep);
     }
-    if (collector_list.size()>=2) {
-        boost::split(ep, collector_list[1], boost::is_any_of(":"));
-
-        addr = address::from_string(ep[0], ec);
-        if (ec) {
-            SANDESH_LOG(ERROR, "ReConfig for secondary failed Error: " << ec);
-            return;
-        }
-        secondary.address(addr);
-        port = strtoul(ep[1].c_str(), NULL, 0);
-        secondary.port(port);
-
-        SANDESH_LOG(INFO, "ReConfig for secondary " << secondary);
-    }
-    if (primary!=Endpoint()) {
-        sm_->SetCandidates(primary, secondary);
-    }
+    sm_->SetCollectors(collector_endpoints);
 }
 
 void SandeshClient::Initiate() {
     sm_->SetAdminState(false);
-    if (primary_ != Endpoint())
-        sm_->SetCandidates(primary_,secondary_);
+    if (collectors_.size())
+        sm_->SetCollectors(collectors_);
     // subscribe for the collector service only if the collector list
     // is not provided by the generator.
     else if (csf_ != 0) {
@@ -304,7 +274,8 @@ static uint64_t client_start_time;
 
 void SandeshClient::SendUVE(int count,
         const string & stateName, const string & server,
-        Endpoint primary, Endpoint secondary) {
+        const Endpoint & server_ip,
+        const std::vector<TcpServer::Endpoint> & collector_eps) {
     ModuleClientState mcs;
     mcs.set_name(Sandesh::source() + ":" + Sandesh::node_type() +
         ":" + Sandesh::module() + ":" + Sandesh::instance_id());
@@ -313,18 +284,22 @@ void SandeshClient::SendUVE(int count,
         client_start_time = UTCTimestampUsec(); 
         client_start = true;
     }
-    std::ostringstream pri,sec;
-    pri << primary;
-    sec << secondary;
-
     sci.set_start_time(client_start_time);
     sci.set_successful_connections(count);
     sci.set_pid(getpid());
     sci.set_http_port(Sandesh::http_port());
     sci.set_status(stateName);
     sci.set_collector_name(server);
-    sci.set_primary(pri.str());
-    sci.set_secondary(sec.str());
+    std::ostringstream collector_ip;
+    collector_ip << server_ip;
+    sci.set_collector_ip(collector_ip.str());
+    std::vector<std::string> collectors;
+    BOOST_FOREACH(const TcpServer::Endpoint& ep, collector_eps) {
+        std::ostringstream collector_ip;
+        collector_ip << ep;
+        collectors.push_back(collector_ip.str());
+    }
+    sci.set_collector_list(collectors);
     // Sandesh client socket statistics
     SocketIOStats rx_stats;
     GetRxSocketStats(rx_stats);
