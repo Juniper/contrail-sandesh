@@ -37,6 +37,7 @@ private:
 };
 
 void CreateFakeMessage(uint8_t *data, size_t length);
+void CreateFakeCtrlMessage(std::string& data);
 
 } // end namespace test
 } // end namespace sandesh

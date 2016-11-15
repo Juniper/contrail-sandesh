@@ -226,6 +226,9 @@ struct SandeshClientInfo {
     4: optional u32 http_port
     5: optional u64 start_time
     6: optional string collector_name
+    11: optional string collector_ip
+    12: optional list<string> collector_list
+    // primary and secondary fields are deprecated
     7: optional string primary
     8: optional string secondary
     9: optional io.SocketIOStats rx_socket_stats

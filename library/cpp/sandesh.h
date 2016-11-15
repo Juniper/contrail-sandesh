@@ -186,7 +186,7 @@ public:
             SandeshContext *client_context = NULL);
     static bool ConnectToCollector(const std::string &collector_ip,
             int collector_port, bool periodicuve = false);
-    static void ReConfigCollectors(std::vector<std::string> list);
+    static void ReConfigCollectors(const std::vector<std::string>& collector_list);
     static void Uninit();
 
     // Disk Usage
@@ -255,6 +255,8 @@ public:
         boost::ptr_map<std::string, SandeshMessageTypeStats> *mtype_stats,
         SandeshMessageStats *magg_stats);
     static const char *  SandeshRoleToString(SandeshRole::type role);
+    static bool MakeEndpoint(TcpServer::Endpoint& ep,
+                             const std::string& ep_str);
 
     virtual void Release() { delete this; }
     virtual void Log() const = 0;

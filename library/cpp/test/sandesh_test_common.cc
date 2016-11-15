@@ -67,6 +67,37 @@ void CreateFakeMessage(uint8_t *data, size_t length) {
     EXPECT_EQ(offset, length);
 }
 
+void CreateFakeCtrlMessage(std::string& data) {
+    const std::string ctrl_xml("<SandeshCtrlServerToClient type=\"sandesh\"><success type=\"bool\" identifier=\"2\">true</success></SandeshCtrlServerToClient>");
+    SandeshHeader header;
+    // Populate the header
+    header.set_Namespace("Test");
+    header.set_Timestamp(123456);
+    header.set_Module("SandeshStateMachineTest");
+    header.set_Source("TestMachine");
+    header.set_Context("");
+    header.set_SequenceNum(0);
+    header.set_VersionSig(0);
+    header.set_Type(SandeshType::REQUEST);
+    header.set_Hints(g_sandesh_constants.SANDESH_CONTROL_HINT);
+    boost::shared_ptr<TMemoryBuffer> btrans =
+            boost::shared_ptr<TMemoryBuffer>(
+                    new TMemoryBuffer(512));
+    boost::shared_ptr<TXMLProtocol> prot =
+            boost::shared_ptr<TXMLProtocol>(
+                    new TXMLProtocol(btrans));
+    // Write the sandesh header
+    int nbytes = header.write(prot);
+    EXPECT_GT(nbytes, 0);
+    // Get the buffer
+    uint8_t *hbuffer;
+    uint32_t hlen;
+    btrans->getBuffer(&hbuffer, &hlen);
+    EXPECT_EQ(hlen, nbytes);
+    data.append((char*)hbuffer, hlen);
+    data.append(ctrl_xml);
+}
+
 } // end namespace test
 } // end namespace sandesh
 } // end namespace contrail

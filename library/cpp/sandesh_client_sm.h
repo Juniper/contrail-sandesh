@@ -39,8 +39,8 @@ public:
                         const uint32_t header_offset) = 0;
             virtual void SendUVE(int count,
                         const std::string & stateName, const std::string & server,
-                        TcpServer::Endpoint pri = TcpServer::Endpoint(), 
-                        TcpServer::Endpoint sec = TcpServer::Endpoint()) = 0;
+                        const TcpServer::Endpoint & server_ip,
+                        const std::vector<TcpServer::Endpoint> & collectors) = 0;
             virtual SandeshSession *CreateSMSession(
                         TcpSession::EventObserver eocb,
                         SandeshReceiveMsgCb rmcb,
@@ -74,8 +74,8 @@ public:
     // This function is used to start and stop the state machine
     virtual void SetAdminState(bool down) = 0;
 
-    // This function should be called when there is a discovery service update
-    virtual void SetCandidates(TcpServer::Endpoint active, TcpServer::Endpoint backup) = 0;
+    // This function should be called when there is a change in the Collector list
+    virtual void SetCollectors(const std::vector<TcpServer::Endpoint> &collectors) = 0;
 
     // This function is used to send UVE sandesh's to the server
     virtual bool SendSandeshUVE(Sandesh* snh) = 0;
