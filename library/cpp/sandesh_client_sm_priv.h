@@ -59,9 +59,10 @@ public:
     }
 
     void SetAdminState(bool down);
-    void SetCandidates(TcpServer::Endpoint active, TcpServer::Endpoint backup);
-    void GetCandidates(TcpServer::Endpoint& active,
-            TcpServer::Endpoint &backup) const;
+    void SetCollectors(const std::vector<TcpServer::Endpoint>& collectors);
+    void GetCollectors(std::vector<TcpServer::Endpoint>& collectors);
+    TcpServer::Endpoint GetCollector() const;
+    TcpServer::Endpoint GetNextCollector();
     bool SendSandeshUVE(Sandesh* snh);
     bool SendSandesh(Sandesh* snh);
     void EnqueDelSession(SandeshSession * session);
@@ -89,8 +90,8 @@ public:
     bool IdleHoldTimerRunning();
     void IdleHoldTimerFired();
 
-    bool DiscUpdate(State from_state, bool update,
-            TcpServer::Endpoint active, TcpServer::Endpoint backup);
+    bool CollectorUpdate(const std::vector<TcpServer::Endpoint> &collectors);
+    bool CollectorChange();
 
     // Calculate Timer value for active to connect transition.
     int GetConnectTime() const;
@@ -136,7 +137,8 @@ public:
     
     void unconsumed_event(const sc::event_base &event);
     void SendUVE () {
-        mgr_->SendUVE(connects(), StateName(), collector_name(), active_, backup_);
+        mgr_->SendUVE(connects(), StateName(), collector_name(), server(),
+                      collectors_);
     }
 private:
     static const int kStatisticsSendInterval = 30000; // 30 sec .. specified in milliseconds
@@ -159,8 +161,9 @@ private:
     void UpdateEventEnqueueFail(const sc::event_base &event);
     void UpdateEventStats(const sc::event_base &event, bool enqueue, bool fail);
 
+    std::vector<TcpServer::Endpoint> collectors_;
+    int collector_index_;
     TcpServer::Endpoint active_;
-    TcpServer::Endpoint backup_;
     WorkQueue<EventContainer> work_queue_;
     Timer *connect_timer_;
     Timer *idle_hold_timer_;

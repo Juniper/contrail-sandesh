@@ -38,8 +38,7 @@ class SandeshHeader;
 class SandeshClient : public TcpServer, public SandeshClientSM::Mgr {
 public:
     
-    SandeshClient(EventManager *evm, Endpoint primary,
-             Endpoint secondary = Endpoint(),
+    SandeshClient(EventManager *evm, const std::vector<Endpoint> &collectors,
              Sandesh::CollectorSubFn csf = 0,
              bool periodicuve = false);
 
@@ -62,7 +61,7 @@ public:
         const uint32_t header_offset);
     void SendUVE(int count,
         const std::string & stateName, const std::string & server,
-        Endpoint primary, Endpoint secondary);
+        const Endpoint & server_ip, const std::vector<Endpoint> & collector_eps);
 
     bool SendSandesh(Sandesh *snh);
 
@@ -91,7 +90,7 @@ public:
     void ResetSessionWaterMarkInfo();
     void GetSessionWaterMarkInfo(
         std::vector<Sandesh::QueueWaterMarkInfo> &scwm_info) const;
-    void ReConfigCollectors(std::vector<std::string>);
+    void ReConfigCollectors(const std::vector<std::string>&);
 
     friend class CollectorInfoRequest;
 protected:
@@ -110,7 +109,7 @@ private:
     int session_task_instance_;
     int session_writer_task_id_;
     int session_reader_task_id_;
-    Endpoint primary_, secondary_;
+    std::vector<Endpoint> collectors_;
     Sandesh::CollectorSubFn csf_;
     boost::scoped_ptr<SandeshClientSM> sm_;
     std::vector<Sandesh::QueueWaterMarkInfo> session_wm_info_;

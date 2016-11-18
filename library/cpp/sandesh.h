@@ -90,6 +90,7 @@
 #include <base/queue_task.h>
 #include <base/string_util.h>
 #include <base/time_util.h>
+#include <sandesh/sandesh_util.h>
 #include <sandesh/sandesh_types.h>
 #include <sandesh/protocol/TProtocol.h>
 #include <sandesh/transport/TBufferTransports.h>
@@ -186,7 +187,7 @@ public:
             SandeshContext *client_context = NULL);
     static bool ConnectToCollector(const std::string &collector_ip,
             int collector_port, bool periodicuve = false);
-    static void ReConfigCollectors(std::vector<std::string> list);
+    static void ReConfigCollectors(const std::vector<std::string>& collector_list);
     static void Uninit();
 
     // Disable flow collection
