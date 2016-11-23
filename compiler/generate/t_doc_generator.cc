@@ -130,6 +130,7 @@ class t_doc_generator : public t_generator {
   void generate_stat_schema_struct_base_member(string, t_field*, string);
   void generate_stat_table_schema_header(string, string, string, string);
   string get_datatype_from_tfield(t_type* tfield);
+  void generate_table_entry(string name, string datatype, string index);
   template <typename T>
   string get_type_of_member(string, t_field*, t_struct*, T*);
   template <typename T>
@@ -1130,7 +1131,9 @@ void t_doc_generator::generate_stat_schema_suffixes(string prefix, t_field* tfie
                 suffix = suffix + ", \"" + suffix_name + "\"";
             }
         }
-        f_stats_tables_ << ",\n\t{\"name\":\"" << fname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << ",\"suffixes\":[" << suffix << "]}";
+        indent_up();
+        f_stats_tables_ << "," << endl << indent() << "{\"name\":\"" << fname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << ",\"suffixes\":[" << suffix << "]}";
+        indent_down();
     }
 }
 
@@ -1198,6 +1201,16 @@ string t_doc_generator::get_datatype_from_tfield(t_type* ttype) {
     return datatype;
 }
 
+void t_doc_generator::generate_table_entry(string name, string datatype, string index) {
+    indent_up();
+    if (!first_member_) {
+        f_stats_tables_ << "," << endl;
+    }
+    f_stats_tables_ << indent() << "{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
+    first_member_ = false;
+    indent_down();
+}
+
 template <typename T>
 void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t_type* valtype, t_field* tfield, T* tstruct, bool is_top_level) {
     map<string, vector<string> > suffixes;
@@ -1210,7 +1223,7 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
     if (jt == tfield->annotations_.end())
         is_empty_tag = true;
     if (!is_top_level && !is_empty_tag) {
-	return;
+        return;
     }
     if(!prefix.empty()) {
         tname = prefix + "." + tname;
@@ -1224,11 +1237,7 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
     bool is_suffixed_field = false;
     is_indexed_or_suffixed_field(string("__key"), member_tags, suffixes, index, is_suffixed_field);
     if (!is_suffixed_field) {
-	if (first_member_) {
-            f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "},\n";
-	} else {
-            f_stats_tables_ << ",\n\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "},\n";
-	}
+        generate_table_entry(name, datatype, index);
     }
     if(valtype->is_base_type()) {
         name = tname + string(".__value");
@@ -1239,8 +1248,7 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
                 index = "true";
             }
         }
-        f_stats_tables_ << "\t{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
-        first_member_ = false;
+        generate_table_entry(name, datatype, index);
     }
 
     string empty_prefix;
@@ -1248,9 +1256,9 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
         string sname = valtype->get_name();
         t_struct *cstruct = find_struct_with_name(sname);
         if (cstruct) {
-	    if(!is_empty_tag) {
+            if(!is_empty_tag) {
                 generate_stat_schema_struct_members(empty_prefix, tfield, cstruct, member_tags, suffixes);
-	    }
+            }
             generate_stat_schema_toplevel_tags(tstruct, top_level_tags);
             generate_stat_schema_suffixes(empty_prefix, tfield, cstruct, tstruct, suffixes);
         }
@@ -1266,12 +1274,7 @@ void t_doc_generator::generate_stat_schema_struct_base_member(string prefix, t_f
         fname = prefix+ "." + fname;
     }
     string datatype = get_datatype_from_tfield(tfield->get_type());
-    if (!first_member_) {
-        f_stats_tables_ << ",\n\t{\"name\":\"" << fname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
-    } else {
-        first_member_ = false;
-        f_stats_tables_ << "\t{\"name\":\"" << fname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
-    }
+    generate_table_entry(fname, datatype, index);
 }
 
 template <typename T>
@@ -1347,7 +1350,7 @@ void t_doc_generator::generate_stat_schema_list(string name, t_type* ttype, t_fi
         if (jt == tfield->annotations_.end())
             is_empty_tag = true;
         if (!is_top_level && !is_empty_tag) {
-	    return;
+            return;
         }
         if(!name.empty()) {
             tname = name + "." + tname;
@@ -1360,12 +1363,7 @@ void t_doc_generator::generate_stat_schema_list(string name, t_type* ttype, t_fi
         bool is_suffixed_field = false;
         is_indexed_or_suffixed_field(tname, member_tags, suffixes, index, is_suffixed_field);
         if (!is_suffixed_field) {
-            if (first_member_) {
-                first_member_ = false;
-                f_stats_tables_ << "\t{\"name\":\"" << tname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
-            } else {
-                f_stats_tables_ << ",\n\t{\"name\":\"" << tname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
-            }
+            generate_table_entry(tname, datatype, index);
         }
     }
 }
@@ -1585,44 +1583,48 @@ bool t_doc_generator::generate_introspect_cli(t_sandesh* tsandesh, ofstream &f_o
             lindex++;
           }
           string content(f.substr(lindex + 1));
-	  content.erase(content.length()-1);
+          content.erase(content.length()-1);
           if (boost::starts_with(type, "cli_name")) {
-	    cli_name = content;
-	  } else if (boost::starts_with(type, "description")) {
-	    cli_help = content;
-	  }
+            cli_name = content;
+          } else if (boost::starts_with(type, "description")) {
+            cli_help = content;
+          }
         }
       }
     }
     if (cli_name == "")
-	return false;
+        return false;
     if (!first_file) {
-	f_out << ",\n";
+        f_out << ",\n";
     } else {
-	first_file = false;
+        first_file = false;
     }
 
-    f_out << "\t\"" << tsandesh->get_name() << "\" : {\n";
-    f_out << "\t\"" << cli_name << "\" : " << "{ \"" << cli_help << "\" :\n";
+    indent_up();
+    f_out << indent() << "\"" << tsandesh->get_name() << "\" : {" << endl;
+    f_out << indent() << "\"" << cli_name << "\" : " << "{ \"" << cli_help << "\" :" << endl;
     vector<t_field*> members = tsandesh->get_members();
     int size = members.size();
     int count = 0;
-    f_out << "\t[ \n";
+    f_out << indent() << "[ " << endl;
+    indent_up();
     BOOST_FOREACH(t_field *tfield, members) {
-      f_out << "\t\t[\"" << tfield->get_name();
+      f_out << indent() << "[\"" << tfield->get_name();
       string field_doc = "\"\"";
       if (!tfield->get_doc().empty()) {
-	field_doc = tfield->get_doc();
-	field_doc.erase(field_doc.length()-1);
-	field_doc = "\""+field_doc+"\"";
+        field_doc = tfield->get_doc();
+        field_doc.erase(field_doc.length()-1);
+        field_doc = "\""+field_doc+"\"";
       }
       f_out << "\", " << field_doc << "]";
       count++;
       if (count < size)
         f_out << ",";
-      f_out << "\n";
+      f_out << endl;
     }
-    f_out << "\t]}}";
+    indent_down();
+    f_out << indent() << "]}}";
+    indent_down();
     return true;
   }
   return false;
