@@ -77,7 +77,7 @@ class SandeshReqImpl(object):
         client = self._sandesh.client()
         if client is not None:
             if client.connection() is not None:
-                collector = client.connection().server()
+                collector = client.connection().collector()
                 if collector is not None:
                     collector = collector.split(':')
                     resp.ip = collector[0]

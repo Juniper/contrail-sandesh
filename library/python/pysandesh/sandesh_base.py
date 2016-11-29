@@ -82,7 +82,6 @@ class Sandesh(object):
         self._instance_id = instance_id
         self._host_ip = host_ip
         self._client_context = client_context
-        self._collectors = collectors
         self._connect_to_collector = connect_to_collector
         self._rcv_queue = WorkQueue(self._process_rx_sandesh)
         self._send_level = SandeshLevel.INVALID
@@ -110,18 +109,9 @@ class Sandesh(object):
             self._http_server = SandeshHttp(
                 self, module, http_port, sandesh_req_uve_pkg_list)
             self._gev_httpd = gevent.spawn(self._http_server.start_http_server)
-        primary_collector = None
-        secondary_collector = None
-        if self._collectors is not None:
-            if len(self._collectors) > 0:
-                primary_collector = self._collectors[0]
-            if len(self._collectors) > 1:
-                secondary_collector = self._collectors[1]
         if self._connect_to_collector:
-            self._client = SandeshClient(
-                self, primary_collector, secondary_collector,
-                discovery_client)
-            self._client.initiate()
+            self._client = SandeshClient(self)
+            self._client.initiate(collectors, discovery_client)
     # end init_generator
 
     def uninit(self):
@@ -244,6 +234,10 @@ class Sandesh(object):
     def msg_stats(self):
         return self._msg_stats
     # end msg_stats
+
+    def reconfig_collectors(self, collectors):
+        self._client.set_collectors(collectors)
+    # end reconfig_collectors
 
     @classmethod
     def next_seqnum(cls):
@@ -419,6 +413,8 @@ class Sandesh(object):
     def send_generator_info(self):
         from gen_py.sandesh_uve.ttypes import SandeshClientInfo, \
             ModuleClientState, SandeshModuleClientTrace
+        if not self._client or not self._client.connection():
+            return
         client_info = SandeshClientInfo()
         try:
             client_start_time = self._start_time
@@ -429,17 +425,14 @@ class Sandesh(object):
             client_info.pid = os.getpid()
             if self._http_server is not None:
                 client_info.http_port = self._http_server.get_port()
-            client_info.collector_name = self._client.connection().collector()
+            client_info.collector_name = \
+                self._client.connection().collector_name() or ''
+            client_info.collector_ip = \
+                self._client.connection().collector() or ''
+            client_info.collector_list = self._client.connection().collectors()
             client_info.status = self._client.connection().state()
             client_info.successful_connections = (
                 self._client.connection().statemachine().connect_count())
-            client_info.primary = self._client.connection().primary_collector()
-            if client_info.primary is None:
-                client_info.primary = ''
-            client_info.secondary = (
-                self._client.connection().secondary_collector())
-            if client_info.secondary is None:
-                client_info.secondary = ''
             module_state = ModuleClientState(name=self._source + ':' +
                                              self._node_type + ':' +
                                              self._module + ':' +
