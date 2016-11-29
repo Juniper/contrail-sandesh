@@ -18,7 +18,6 @@ class State(object):
     _IDLE = 'Idle'
     _DISCONNECT = 'Disconnect'
     _CONNECT = 'Connect'
-    _CONNECT_TO_BACKUP = 'ConnectToBackup'
     _CLIENT_INIT = 'ClientInit'
     _ESTABLISHED = 'Established'
 
@@ -31,7 +30,6 @@ class Event(object):
     _EV_IDLE_HOLD_TIMER_EXPIRED = 'EvIdleHoldTimerExpired'
     _EV_CONNECT_TIMER_EXPIRED = 'EvConnectTimerExpired'
     _EV_COLLECTOR_UNKNOWN = 'EvCollectorUnknown'
-    _EV_BACKUP_COLLECTOR_UNKNOWN = 'EvBackupCollectorUnknown'
     _EV_TCP_CONNECTED = 'EvTcpConnected'
     _EV_TCP_CONNECT_FAIL = 'EvTcpConnectFail'
     _EV_TCP_CLOSE = 'EvTcpClose'
@@ -40,13 +38,12 @@ class Event(object):
     _EV_SANDESH_UVE_SEND = 'EvSandeshUVESend'
 
     def __init__(self, event, session=None, msg=None, source=None,
-                 primary_collector=None, secondary_collector=None): 
+                 collectors=None):
         self.event = event
         self.session = session
         self.msg = msg
         self.source = source
-        self.primary_collector = primary_collector
-        self.secondary_collector = secondary_collector
+        self.collectors = collectors
     #end __init__
 
 #end class Event
@@ -56,13 +53,12 @@ class SandeshStateMachine(object):
     _IDLE_HOLD_TIME = 5 # in seconds
     _CONNECT_TIME = 30 # in seconds
 
-    def __init__(self, connection, logger, primary_collector, 
-                 secondary_collector):
+    def __init__(self, connection, logger, collectors):
 
         def _update_connection_state(e, status):
             from connection_info import ConnectionState
             from gen_py.process_info.ttypes import ConnectionType
-            collector_addr = e.sm._active_collector
+            collector_addr = e.sm.collector()
             if collector_addr is None:
                 collector_addr = ''
             ConnectionState.update(conn_type = ConnectionType.COLLECTOR,
@@ -90,15 +86,14 @@ class SandeshStateMachine(object):
         def _on_idle(e):
             if e.sm._connect_timer is not None:
                 e.sm._cancel_connect_timer()
-            # Reset active and backup collector
-            self._active_collector = self._connection.primary_collector()
-            self._backup_collector = self._connection.secondary_collector()
             # clean up existing connection
             e.sm._delete_session()
             if e.sm._disable != True:
 	        e.sm._start_idle_hold_timer()
             # update connection state
             _connection_state_down(e)
+            e.sm._collector_name = None
+            e.sm._connection.sandesh_instance().send_generator_info()
         #end _on_idle
 
         def _on_disconnect(e):
@@ -109,36 +104,19 @@ class SandeshStateMachine(object):
         def _on_connect(e):
             if e.sm._idle_hold_timer is not None:
                 e.sm._cancel_idle_hold_timer()
-            e.sm._connection.reset_collector()
+            e.sm._collector_name = None
             # clean up existing connection
             e.sm._delete_session()
-            if e.sm._active_collector is not None:
+            collector = e.sm._get_next_collector()
+            if collector is not None:
                 # update connection state
                 _connection_state_init(e)
-                e.sm._create_session()
+                e.sm._create_session(collector)
                 e.sm._start_connect_timer()
                 e.sm._session.connect()
             else:
                 e.sm.enqueue_event(Event(event = Event._EV_COLLECTOR_UNKNOWN))
         #end _on_connect
-
-        def _on_connect_to_backup(e):
-            if e.sm._connect_timer is not None:
-                e.sm._cancel_connect_timer()
-            # clean up existing connection
-            e.sm._delete_session()
-            # try to connect to the backup collector, if known
-            if e.sm._backup_collector is not None:
-                e.sm._active_collector, e.sm._backup_collector = \
-                    e.sm._backup_collector, e.sm._active_collector
-                # update connection state
-                _connection_state_init(e)
-                e.sm._create_session()
-                e.sm._start_connect_timer()
-                e.sm._session.connect()
-            else:
-                e.sm.enqueue_event(Event(event = Event._EV_BACKUP_COLLECTOR_UNKNOWN))
-        #end _on_connect_to_backup
 
         def _on_client_init(e):
             e.sm._connects += 1
@@ -151,7 +129,7 @@ class SandeshStateMachine(object):
         
         def _on_established(e):
             e.sm._cancel_connect_timer()
-            e.sm._connection.set_collector(e.sm_event.source)
+            e.sm._collector_name = e.sm_event.source
             e.sm._connection.handle_sandesh_ctrl_msg(e.sm_event.msg)
             e.sm._connection.sandesh_instance().send_generator_info()
             # update connection state
@@ -192,11 +170,11 @@ class SandeshStateMachine(object):
                                       },
                                       {'name' : Event._EV_TCP_CONNECT_FAIL,
                                        'src'  : State._CONNECT,
-                                       'dst'  : State._CONNECT_TO_BACKUP
+                                       'dst'  : State._IDLE
                                       },
                                       {'name' : Event._EV_CONNECT_TIMER_EXPIRED,
                                        'src'  : State._CONNECT,
-                                       'dst'  : State._CONNECT_TO_BACKUP
+                                       'dst'  : State._IDLE
                                       },
                                       {'name' : Event._EV_COLLECTOR_CHANGE,
                                        'src'  : State._CONNECT,
@@ -204,28 +182,6 @@ class SandeshStateMachine(object):
                                       },
                                       {'name' : Event._EV_TCP_CONNECTED,
                                        'src'  : State._CONNECT,
-                                       'dst'  : State._CLIENT_INIT
-                                      },
-
-                                      # _CONNECT_TO_BACKUP
-                                      {'name' : Event._EV_BACKUP_COLLECTOR_UNKNOWN,
-                                       'src'  : State._CONNECT_TO_BACKUP,
-                                       'dst'  : State._IDLE
-                                      },
-                                      {'name' : Event._EV_TCP_CONNECT_FAIL,
-                                       'src'  : State._CONNECT_TO_BACKUP,
-                                       'dst'  : State._IDLE
-                                      },
-                                      {'name' : Event._EV_CONNECT_TIMER_EXPIRED,
-                                       'src'  : State._CONNECT_TO_BACKUP,
-                                       'dst'  : State._IDLE
-                                      },
-                                      {'name' : Event._EV_COLLECTOR_CHANGE,
-                                       'src'  : State._CONNECT_TO_BACKUP,
-                                       'dst'  : State._IDLE
-                                      },
-                                      {'name' : Event._EV_TCP_CONNECTED,
-                                       'src'  : State._CONNECT_TO_BACKUP,
                                        'dst'  : State._CLIENT_INIT
                                       },
 
@@ -250,7 +206,7 @@ class SandeshStateMachine(object):
                                       # _ESTABLISHED
                                       {'name' : Event._EV_TCP_CLOSE,
                                        'src'  : State._ESTABLISHED,
-                                       'dst'  : State._CONNECT_TO_BACKUP
+                                       'dst'  : State._CONNECT
                                       },
                                       {'name' : Event._EV_STOP,
                                        'src'  : State._ESTABLISHED,
@@ -264,7 +220,6 @@ class SandeshStateMachine(object):
                            'callbacks': {
                                          'on' + State._IDLE : _on_idle,
                                          'on' + State._CONNECT : _on_connect,
-                                         'on' + State._CONNECT_TO_BACKUP : _on_connect_to_backup,
                                          'on' + State._CLIENT_INIT : _on_client_init,
                                          'on' + State._ESTABLISHED : _on_established,
                                         }
@@ -276,8 +231,9 @@ class SandeshStateMachine(object):
         self._disable = False
         self._idle_hold_timer = None
         self._connect_timer = None
-        self._active_collector = primary_collector
-        self._backup_collector = secondary_collector
+        self._collectors = collectors
+        self._collector_name = None
+        self._collector_index = -1
         self._logger = logger
         self._event_queue = WorkQueue(self._dequeue_event,
                                       self._is_ready_to_dequeue_event)
@@ -315,13 +271,19 @@ class SandeshStateMachine(object):
         return self._connects
     #end connect_count
 
-    def active_collector(self):
-        return self._active_collector
-    #end active_collector
+    def collector(self):
+        if self._collector_index is -1:
+            return None
+        return self._collectors[self._collector_index]
+    # end collector
 
-    def backup_collector(self):
-        return self._backup_collector
-    #end backup_collector
+    def collector_name(self):
+        return self._collector_name
+    # end collector_name
+
+    def collectors(self):
+        return self._collectors
+    # end collectors
 
     def enqueue_event(self, event):
         self._event_queue.enqueue(event)
@@ -367,12 +329,12 @@ class SandeshStateMachine(object):
 
     # Private functions
 
-    def _create_session(self):
+    def _create_session(self, collector):
         assert self._session is None
-        col_info = self._active_collector.split(':')
-        collector = (col_info[0], int(col_info[1]))
+        collector_ip_port = collector.split(':')
+        server = (collector_ip_port[0], int(collector_ip_port[1]))
         self._session = SandeshSession(self._connection.sandesh_instance(),
-                                       collector,
+                                       server,
                                        self.on_session_event,
                                        self._connection._receive_sandesh_msg) 
     #end _create_session
@@ -381,8 +343,20 @@ class SandeshStateMachine(object):
         if self._session:
             self._session.close()
             self._session = None
-            self._connection.reset_collector()
+            self._collector_name = None
     #end _delete_session 
+
+    def _get_next_collector(self):
+        if self._collector_index is -1:
+            if not self._collectors:
+                return None
+            self._collector_index = 0
+        else:
+            self._collector_index += 1
+            if self._collector_index == len(self._collectors):
+                self._collector_index = 0
+        return self._collectors[self._collector_index]
+    # end _get_next_collector
 
     def _start_idle_hold_timer(self):
         if self._idle_hold_timer is None:
@@ -443,13 +417,17 @@ class SandeshStateMachine(object):
                               % (event.event))
             return
         if event.event == Event._EV_COLLECTOR_CHANGE:
-            old_active_collector = self._active_collector
-            self._active_collector = event.primary_collector
-            self._backup_collector = event.secondary_collector
-            if old_active_collector == self._active_collector:
-                self._logger.info("No change in active collector. Ignore event [%s]" \
-                                  % (event.event))
+            collector = self.collector()
+            if self._collectors != event.collectors:
+                self._collectors = event.collectors
+                # update the collector_list in the ModuleClientState UVE
+                self._connection.sandesh_instance().send_generator_info()
+            if self._collectors and self._collectors[0] == collector:
+                self._collector_index = 0
+                self._logger.info("No change in collector. "
+                    "Ignore event [%s]" % (event.event))
                 return
+            self._collector_index = -1
         if event.event == Event._EV_SANDESH_UVE_SEND:
             if self._fsm.current == State._ESTABLISHED or self._fsm.current == State._CLIENT_INIT:
                 self._connection.handle_sandesh_uve_msg(event.msg)
