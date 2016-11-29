@@ -15,25 +15,22 @@ from gen_py.sandesh.ttypes import SandeshTxDropReason, SandeshRxDropReason
 
 class SandeshClient(object):
 
-    def __init__(self, sandesh, primary_collector, secondary_collector,
-                 discovery_client):
+    def __init__(self, sandesh):
         self._sandesh_instance = sandesh
-        self._primary_collector  = primary_collector
-        self._secondary_collector = secondary_collector
-        self._discovery_client = discovery_client
         self._logger = sandesh._logger
         self._connection = None
     #end __init__
 
     # Public functions
 
-    def initiate(self):
-        self._connection = SandeshConnection(self._sandesh_instance,
-                                             self,
-                                             self._primary_collector,
-                                             self._secondary_collector,
-                                             self._discovery_client)
+    def initiate(self, collectors, discovery_client):
+        self._connection = SandeshConnection(self._sandesh_instance, self,
+                                             collectors, discovery_client)
     #end initiate
+
+    def set_collectors(self, collectors):
+        self._connection.set_collectors(collectors)
+    # end set_collectors
 
     def connection(self):
         return self._connection

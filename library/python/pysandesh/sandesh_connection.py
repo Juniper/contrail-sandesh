@@ -18,24 +18,19 @@ from gen_py.sandesh.constants import *
 
 class SandeshConnection(object):
 
-    def __init__(self, sandesh_instance, client, primary_collector, 
-                 secondary_collector, discovery_client):
+    def __init__(self, sandesh_instance, client, collectors, discovery_client):
         self._sandesh_instance = sandesh_instance
         self._logger = sandesh_instance.logger()
         self._client = client
-        self._primary_collector = primary_collector
-        self._secondary_collector = secondary_collector
         # Collector name. Updated upon receiving the control message 
         # from the Collector during connection negotiation.
-        self._collector = None 
         self._admin_down = False
         self._state_machine = SandeshStateMachine(self, self._logger, 
-                                                  primary_collector, 
-                                                  secondary_collector)
+                                                  collectors)
         self._state_machine.initialize()
         from sandesh_common.vns.constants import \
             COLLECTOR_DISCOVERY_SERVICE_NAME
-        if primary_collector is None and discovery_client is not None:
+        if collectors is None and discovery_client is not None:
             discovery_client.subscribe(COLLECTOR_DISCOVERY_SERVICE_NAME, 2,
                                        self._handle_collector_update)
     #end __init__
@@ -54,29 +49,17 @@ class SandeshConnection(object):
         return self._sandesh_instance
     #end sandesh_instance
 
-    def server(self):
-        return self._state_machine.active_collector()
-    #end server
-
-    def primary_collector(self):
-        return self._primary_collector
-    #end primary_collector
-
-    def secondary_collector(self):
-        return self._secondary_collector
-    #end secondary_collector
+    def collectors(self):
+        return self._state_machine.collectors()
+    # end collectors
 
     def collector(self):
-        return self._collector
-    #end collector
+        return self._state_machine.collector()
+    # end collector
 
-    def set_collector(self, collector):
-        self._collector = collector
-    #end set_collector
-
-    def reset_collector(self):
-        self._collector = None
-    #end reset_collector
+    def collector_name(self):
+        return self._state_machine.collector_name()
+    # end collector_name
 
     def state(self):
         return self._state_machine.state()
@@ -110,38 +93,28 @@ class SandeshConnection(object):
             self._state_machine.set_admin_state(down)
     #end set_admin_state
 
+    def set_collectors(self, collectors):
+        self._state_machine.enqueue_event(Event(
+            event=Event._EV_COLLECTOR_CHANGE, collectors=collectors))
+    # end set_collectors
+
     # Private methods
 
     def _handle_collector_update(self, collector_info):
         if collector_info is not None:
             self._logger.info('Received discovery update %s for collector service' \
                               % (str(collector_info)))
-            old_primary_collector = self._primary_collector
-            old_secondary_collector = self._secondary_collector
-            if len(collector_info) > 0:
+            collectors = []
+            for collector in collector_info:
                 try:
-                    self._primary_collector = collector_info[0]['ip-address'] \
-                        + ':' + collector_info[0]['port']
+                    collectors.append(
+                        collector['ip-address'] + ':' + collector['port'])
                 except KeyError:
-                    self._logger.error('Failed to decode collector info from the discovery service')
+                    self._logger.error('Failed to decode collector from '
+                        'dicovery service')
                     return
-            else:
-                self._primary_collector = None
-            if len(collector_info) > 1:
-                try:
-                    self._secondary_collector = collector_info[1]['ip-address'] \
-                        + ':' + collector_info[1]['port']
-                except KeyError:
-                    self._logger.error('Failed to decode collector info from the discovery service')
-                    return
-            else:
-                self._secondary_collector = None
-            if (old_primary_collector != self._primary_collector) or \
-               (old_secondary_collector != self._secondary_collector):
-                self._state_machine.enqueue_event(Event(
-                                event = Event._EV_COLLECTOR_CHANGE,
-                                primary_collector = self._primary_collector,
-                                secondary_collector = self._secondary_collector))
+            self._state_machine.enqueue_event(Event(
+                event=Event._EV_COLLECTOR_CHANGE, collectors=collectors))
     #end _handle_collector_update
 
     def _receive_sandesh_msg(self, session, msg):
