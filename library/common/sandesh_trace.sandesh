@@ -8,11 +8,21 @@
  *  Sandesh trace definitions
  */
 
+/**
+ * @description: request to get sandesh traces
+ * @cli_name: read sandesh trace buffer
+ */
 request sandesh SandeshTraceRequest {
+    /** name of the trace buffer */
     1: string buf_name;
+    /** number of the traces to be displayed */
     2: optional i32 count;
 }
 
+/**
+ * @description: request to get list sandesh trace buffers
+ * @cli_name: read sandesh trace buffer list
+ */
 request sandesh SandeshTraceBufferListRequest { 
 }
 
@@ -32,7 +42,12 @@ response sandesh SandeshTraceTextResponse {
     1: list<string> traces;
 }
 
+/**
+ * @description: request to configure sandesh tracing
+ * @cli_name: update sandesh tracing
+ */
 request sandesh SandeshTraceEnableDisableReq {
+    /** enable or disable tracing of sandesh messages */
     1: optional bool enable;
 }
 
@@ -40,6 +55,10 @@ response sandesh SandeshTraceEnableDisableRes {
     1: string enable_disable_status;
 }
 
+/**
+ * @description: request to get sandesh trace buffers status
+ * @cli_name: read sandesh trace buffers status
+ */
 request sandesh SandeshTraceBufStatusReq {
 }
 
@@ -52,8 +71,14 @@ response sandesh SandeshTraceBufStatusRes {
     1: list<SandeshTraceBufStatusInfo>  trace_buf_status_list;
 }
 
+/**
+ * @description: request to configure sandesh trace buffer
+ * @cli_name: update sandesh trace buffer
+ */
 request sandesh SandeshTraceBufferEnableDisableReq {
+    /** name of the buffer to configure */
     1: string trace_buf_name;
+    /** enable or disable this buffer */
     2: optional bool enable
 }
 

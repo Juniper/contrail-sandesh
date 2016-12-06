@@ -7,8 +7,14 @@
  *
  */
 
+/**
+ * @description: sandesh request to get sandesh alarm cache
+ * @cli_name: read sandesh alarm cache
+ */
 request sandesh SandeshAlarmCacheRequest {
+    /** name of the table for the alarm */
     1: string table
+    /** name of the uve for the alarm */
     2: optional string name
 }
 
@@ -16,6 +22,10 @@ response sandesh SandeshAlarmCacheResponse {
     1: u32 count
 }
 
+/**
+ * @description: sandesh request to get sandesh alarm types
+ * @cli_name: read sandesh alarm types
+ */
 request sandesh SandeshAlarmTypesRequest {
 }
 
@@ -27,10 +37,18 @@ response sandesh SandeshAlarmTypesResponse {
     1: list<SandeshAlarmTypeInfo> type_info
 }
 
+/**
+ * @description: sandesh request to get sandesh alarm acknowledgements
+ * @cli_name: read sandesh alarm acknowledgements
+ */
 request sandesh SandeshAlarmAckRequest {
+    /** name of the table for the alarm */
     1: string table
+    /** name of the uve for the alarm */
     2: string name
+    /** name of the alarm type */
     3: string type
+    /** timestamp of the alarm */
     4: u64 timestamp
 }
 
