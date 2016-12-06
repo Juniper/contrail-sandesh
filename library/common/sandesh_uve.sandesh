@@ -97,6 +97,10 @@ struct SandeshGeneratorBasicStats {
     3: SandeshQueueStats send_queue_stats;
 }
 
+/**
+ * @description: sandesh request to get sandesh message statistics
+ * @cli_name: read sandesh message statistics
+ */
 request sandesh SandeshMessageStatsReq {
 }
 
@@ -104,27 +108,56 @@ response sandesh SandeshMessageStatsResp {
     1: SandeshGeneratorStats stats;
 }
 
+/**
+ * @description: sandesh request to set sandesh logging parameters
+ * @cli_name: update sandesh logging parameters
+ */
 request sandesh SandeshLoggingParamsSet {
+    /** enable or disable logging */
     1: optional bool enable;
+    /** category of messages to be considered for logging  */
     2: optional string category;
+    /** minimum level of messages to be considered for logging  */
     3: optional string log_level;
+    /** enable or disable trace print */
     4: optional bool trace_print;
+    /** enable or disable flow logging */
     5: optional bool enable_flow_log;
+    /** threshold for throttling sandesh messages */
     6: optional u32 sandesh_throttling_rate;
 }
 
+/**
+ * @description: sandesh request to get sandesh logging parameters
+ * @cli_name: read sandesh logging parameters
+ */
 request sandesh SandeshLoggingParamsStatus {
 }
 
+/**
+ * @description: sandesh request to set sandesh sending parameters
+ * @cli_name: create sandesh sending parameters
+ */
 request sandesh SandeshSendingParamsSet {
+    /** for high watermark or low watermark */
     1: optional bool high;
+    /** queue count for this level */
     2: optional u32 queue_count;
+    /** highest message level for this watermark */
     3: optional string sending_level;
 }
 
+/**
+ * @description: sandesh request to reset sandesh sending parameters
+ * @cli_name: update sandesh sending parameters
+ */
 request sandesh SandeshSendingParamsReset {
 }
 
+/**
+ * @description: sandesh request to get sandesh sending parameters
+ * @cli_name: read sandesh sending parameters
+ */
 request sandesh SandeshSendingParamsStatus {
 }
 
@@ -147,10 +180,19 @@ response sandesh SandeshLoggingParams {
     6: u32 sandesh_throttling_rate;
 }
 
+/**
+ * @description: sandesh request to set sandesh send queue
+ * @cli_name: update sandesh send queue
+ */
 request sandesh SandeshSendQueueSet {
+    /** enable or disable sandesh send queue */
     1: optional bool enable;
 }
 
+/**
+ * @description: sandesh request to get sandesh send queue status
+ * @cli_name: read sandesh send queue status
+ */
 request sandesh SandeshSendQueueStatus {
 }
 
@@ -158,6 +200,10 @@ response sandesh SandeshSendQueueResponse {
    1: bool enable;
 }
 
+/**
+ * @description: sandesh request to get collector info
+ * @cli_name: read collector information
+ */
 request sandesh CollectorInfoRequest {
 }
 
@@ -167,6 +213,9 @@ response sandesh CollectorInfoResponse {
     3: string status;
 }
 
+/**
+ * @description: sandesh request to get derived stats config
+ */
 request sandesh SandeshUVEDSConfReq {
     1: string tname
     2: string dsattr
