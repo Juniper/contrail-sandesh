@@ -56,6 +56,7 @@ std::string Sandesh::node_type_;
 std::string Sandesh::instance_id_;
 int Sandesh::recv_task_id_ = -1;
 SandeshContext* Sandesh::client_context_ = NULL;
+SandeshConfig* Sandesh::sandesh_config_ = NULL;
 Sandesh::SandeshCallback Sandesh::response_callback_ = 0;
 SandeshLevel::type Sandesh::logging_level_ = SandeshLevel::INVALID;
 SandeshLevel::type Sandesh::logging_ut_level_ =
@@ -119,7 +120,8 @@ bool Sandesh::Initialize(SandeshRole::type role,
                          const std::string &instance_id,
                          EventManager *evm,
                          unsigned short http_port,
-                         SandeshContext *client_context) {
+                         SandeshContext *client_context,
+                         SandeshConfig *sandesh_config) {
     PullSandeshGenStatsReq = 1;
     PullSandeshUVE = 1;
     PullSandeshTraceReq = 1;
@@ -141,6 +143,7 @@ bool Sandesh::Initialize(SandeshRole::type role,
     node_type_      = node_type;
     instance_id_    = instance_id;
     client_context_ = client_context;
+    sandesh_config_ = sandesh_config;
     event_manager_  = evm;
     //If Sandesh::sandesh_send_ratelimit_ is not defined by client,
     // assign a default value to it
@@ -234,6 +237,7 @@ bool Sandesh::InitGenerator(const std::string &module,
                             EventManager *evm,
                             unsigned short http_port,
                             SandeshContext *client_context, 
+                            SandeshConfig *sandesh_config,
                             std::map<std::string,
                                 std::map<std::string,std::string> > ds) {
     assert(SandeshUVETypeMaps::InitDerivedStats(ds));
@@ -250,6 +254,7 @@ bool Sandesh::InitGenerator(const std::string &module,
                             CollectorSubFn csf,
                             const std::vector<std::string> &collectors,
                             SandeshContext *client_context,
+                            SandeshConfig *sandesh_config,
                             std::map<std::string,
                                 std::map<std::string,std::string> > ds) {
     assert(SandeshUVETypeMaps::InitDerivedStats(ds));
@@ -611,7 +616,8 @@ bool Sandesh::Dispatch(SandeshConnection * sconn) {
 
 bool SandeshResponse::Dispatch(SandeshConnection * sconn) {
     assert(sconn == NULL);
-    if (context().find("http%") == 0) {
+    if ((context().find("http%") == 0) ||
+        (context().find("https%") == 0)) {
         SandeshHttp::Response(this, context());
         return true;
     }
@@ -623,7 +629,8 @@ bool SandeshResponse::Dispatch(SandeshConnection * sconn) {
 
 bool SandeshTrace::Dispatch(SandeshConnection * sconn) {
     assert(sconn == NULL);
-    if (0 == context().find("http%")) {
+    if ((0 == context().find("http%")) ||
+        (0 == context().find("https%"))) {
         SandeshHttp::Response(this, context());
         return true;
     }
@@ -632,7 +639,8 @@ bool SandeshTrace::Dispatch(SandeshConnection * sconn) {
 
 bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
     assert(sconn == NULL);
-    if (0 == context().find("http%")) {
+    if ((0 == context().find("http%")) ||
+        (0 == context().find("https%"))) {
         SandeshHttp::Response(this, context());
         return true;
     }
