@@ -139,6 +139,12 @@ struct SandeshConfig {
 };
 
 struct SandeshElement;
+struct SandeshConfig {
+    bool ssl_enabled;
+    std::string path_to_server_cert;
+    std::string path_to_server_priv_key;
+    std::string path_to_ca_cert;
+};
 
 class Sandesh {
 public:
@@ -405,6 +411,7 @@ private:
     static std::auto_ptr<SandeshRxQueue> recv_queue_;
     static int recv_task_id_;
     static SandeshContext *client_context_;
+    static SandeshConfig *sandesh_config_;
     static ModuleContextMap module_context_;
     static bool enable_local_log_;  // whether to just enable local logging
     static bool enable_flow_log_;  // whether to enable flow sandesh message logging
