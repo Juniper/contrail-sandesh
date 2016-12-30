@@ -155,7 +155,7 @@ bool Sandesh::Initialize(SandeshRole::type role,
 
     InitReceive(Task::kTaskInstanceAny);
     bool success(SandeshHttp::Init(evm, module, http_port,
-        &SandeshHttpCallback, &http_port_));
+        &SandeshHttpCallback, &http_port_, config_));
     if (!success) {
         SANDESH_LOG(ERROR, "SANDESH: HTTP INIT FAILED (PORT " <<
             http_port << ")");
@@ -621,7 +621,8 @@ bool Sandesh::Dispatch(SandeshConnection * sconn) {
 
 bool SandeshResponse::Dispatch(SandeshConnection * sconn) {
     assert(sconn == NULL);
-    if (context().find("http%") == 0) {
+    if ((context().find("http%") == 0) ||
+        (context().find("https%") == 0)) {
         SandeshHttp::Response(this, context());
         return true;
     }
@@ -633,7 +634,8 @@ bool SandeshResponse::Dispatch(SandeshConnection * sconn) {
 
 bool SandeshTrace::Dispatch(SandeshConnection * sconn) {
     assert(sconn == NULL);
-    if (0 == context().find("http%")) {
+    if ((0 == context().find("http%")) ||
+        (0 == context().find("https%"))) {
         SandeshHttp::Response(this, context());
         return true;
     }
@@ -642,7 +644,8 @@ bool SandeshTrace::Dispatch(SandeshConnection * sconn) {
 
 bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
     assert(sconn == NULL);
-    if (0 == context().find("http%")) {
+    if ((0 == context().find("http%")) ||
+        (0 == context().find("https%"))) {
         SandeshHttp::Response(this, context());
         return true;
     }
