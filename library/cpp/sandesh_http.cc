@@ -350,7 +350,7 @@ SandeshHttp::Response(Sandesh *snh, std::string context) {
 //
 bool
 SandeshHttp::Init(EventManager *evm, const string module,
-    short port, RequestCallbackFn reqcb, int *hport) {
+    short port, RequestCallbackFn reqcb, int *hport, const SandeshConfig &config) {
     if (hServ_) {
         *hport = hServ_->GetPort();
         return true;
@@ -361,7 +361,16 @@ SandeshHttp::Init(EventManager *evm, const string module,
     SANDESH_TRACE_TEXT_TRACE(httpbuf, "<Initializing httpbuf");
     SANDESH_TRACE_TEXT_TRACE(httpbuf, "Size 100");
 
-    hServ_ = new HttpServer(evm);
+    if(config.introspect_ssl_enable) {
+        struct SslConfig sslConfig;
+        sslConfig.ssl_enabled = config.introspect_ssl_enable;
+        sslConfig.path_to_ca_cert = config.ca_cert;
+        sslConfig.path_to_server_cert = config.certfile;
+        sslConfig.path_to_server_priv_key = config.keyfile;
+        hServ_ = new HttpServer(evm, &sslConfig);
+    } else {
+        hServ_ = new HttpServer(evm);
+    }
     httpreqcb = reqcb;
     index_ss << "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"" << 
         " \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">" << endl;
