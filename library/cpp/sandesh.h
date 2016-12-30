@@ -124,6 +124,12 @@ class SandeshConnection;
 class SandeshRequest;
 
 struct SandeshElement;
+struct SandeshConfig {
+    bool ssl_enabled;
+    std::string path_to_server_cert;
+    std::string path_to_server_priv_key;
+    std::string path_to_ca_cert;
+};
 
 class Sandesh {
 public:
@@ -156,7 +162,8 @@ public:
             const std::vector<std::string> &collectors,
             SandeshContext *client_context = NULL,
             std::map<std::string, std::map<std::string,std::string> > ds = 
-                std::map<std::string, std::map<std::string,std::string> >());
+                std::map<std::string, std::map<std::string,std::string> >(),
+            SandeshConfig *sandesh_config = NULL);
     static bool InitGenerator(const std::string &module,
             const std::string &source, 
             const std::string &node_type,
@@ -165,7 +172,8 @@ public:
             unsigned short http_port,
             SandeshContext *client_context = NULL,
             std::map<std::string, std::map<std::string,std::string> > ds = 
-                std::map<std::string, std::map<std::string,std::string> >());
+                std::map<std::string, std::map<std::string,std::string> >(),
+            SandeshConfig *sandesh_config = NULL);
     static void RecordPort(const std::string& name, const std::string& module,
             unsigned short port);
     // Collector
@@ -374,7 +382,8 @@ private:
             const std::string &instance_id,
             EventManager *evm,
             unsigned short http_port,
-            SandeshContext *client_context = NULL);
+            SandeshContext *client_context = NULL,
+            SandeshConfig *sandesh_config = NULL);
 
     static SandeshRole::type role_;
     static std::string module_;
@@ -385,6 +394,7 @@ private:
     static std::auto_ptr<SandeshRxQueue> recv_queue_;
     static int recv_task_id_;
     static SandeshContext *client_context_;
+    static SandeshConfig *sandesh_config_;
     static ModuleContextMap module_context_;
     static bool enable_local_log_;  // whether to just enable local logging
     static bool enable_flow_log_;  // whether to enable flow sandesh message logging

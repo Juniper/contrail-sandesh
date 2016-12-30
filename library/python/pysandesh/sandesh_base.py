@@ -74,7 +74,8 @@ class Sandesh(object):
                        http_port, sandesh_req_uve_pkg_list=None,
                        discovery_client=None, connect_to_collector=True,
                        logger_class=None, logger_config_file=None,
-                       host_ip='127.0.0.1', alarm_ack_callback=None):
+                       host_ip='127.0.0.1', alarm_ack_callback=None,
+                       sandesh_config=None):
         self._role = self.SandeshRole.GENERATOR
         self._module = module
         self._source = source
@@ -107,7 +108,8 @@ class Sandesh(object):
         self._gev_httpd = None
         if http_port != -1:
             self._http_server = SandeshHttp(
-                self, module, http_port, sandesh_req_uve_pkg_list)
+                self, module, http_port, sandesh_req_uve_pkg_list,
+                sandesh_config)
             self._gev_httpd = gevent.spawn(self._http_server.start_http_server)
         if self._connect_to_collector:
             self._client = SandeshClient(self)
