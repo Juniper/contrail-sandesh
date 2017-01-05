@@ -74,7 +74,8 @@ class Sandesh(object):
                        http_port, sandesh_req_uve_pkg_list=None,
                        discovery_client=None, connect_to_collector=True,
                        logger_class=None, logger_config_file=None,
-                       host_ip='127.0.0.1', alarm_ack_callback=None):
+                       host_ip='127.0.0.1', alarm_ack_callback=None,
+                       config=None):
         self._role = self.SandeshRole.GENERATOR
         self._module = module
         self._source = source
@@ -656,6 +657,20 @@ class Sandesh(object):
 # end class Sandesh
 
 sandesh_global = Sandesh()
+
+
+class SandeshConfig(object):
+
+    def __init__(self, keyfile=None, certfile=None, ca_cert=None,
+                 sandesh_ssl_enable=None, introspect_ssl_enable=None):
+        self.keyfile = keyfile
+        self.certfile = certfile
+        self.ca_cert = ca_cert
+        self.sandesh_ssl_enable = sandesh_ssl_enable
+        self.introspect_ssl_enable = introspect_ssl_enable
+    # end __init__
+
+# end class SandeshConfig
 
 
 class SandeshAsync(Sandesh):
