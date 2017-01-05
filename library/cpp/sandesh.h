@@ -123,6 +123,7 @@ class SandeshMessageBasicStats;
 class SandeshConnection;
 class SandeshRequest;
 
+struct SandeshConfig;
 struct SandeshElement;
 
 class Sandesh {
@@ -156,7 +157,8 @@ public:
             const std::vector<std::string> &collectors,
             SandeshContext *client_context = NULL,
             std::map<std::string, std::map<std::string,std::string> > ds = 
-                std::map<std::string, std::map<std::string,std::string> >());
+                std::map<std::string, std::map<std::string,std::string> >(),
+            const SandeshConfig *config = NULL);
     static bool InitGenerator(const std::string &module,
             const std::string &source, 
             const std::string &node_type,
@@ -165,7 +167,8 @@ public:
             unsigned short http_port,
             SandeshContext *client_context = NULL,
             std::map<std::string, std::map<std::string,std::string> > ds = 
-                std::map<std::string, std::map<std::string,std::string> >());
+                std::map<std::string, std::map<std::string,std::string> >(),
+            const SandeshConfig *config = NULL);
     static void RecordPort(const std::string& name, const std::string& module,
             unsigned short port);
     // Collector
@@ -176,7 +179,8 @@ public:
             EventManager *evm,
             const std::string &collector_ip, int collector_port,
             unsigned short http_port,
-            SandeshContext *client_context = NULL);
+            SandeshContext *client_context = NULL,
+            const SandeshConfig *config = NULL);
     // Test
     static bool InitGeneratorTest(const std::string &module,
             const std::string &source,
@@ -184,7 +188,8 @@ public:
             const std::string &instance_id, 
             EventManager *evm,
             unsigned short http_port,
-            SandeshContext *client_context = NULL);
+            SandeshContext *client_context = NULL,
+            const SandeshConfig *config = NULL);
     static bool ConnectToCollector(const std::string &collector_ip,
             int collector_port, bool periodicuve = false);
     static void ReConfigCollectors(const std::vector<std::string>& collector_list);
@@ -374,7 +379,8 @@ private:
             const std::string &instance_id,
             EventManager *evm,
             unsigned short http_port,
-            SandeshContext *client_context = NULL);
+            SandeshContext *client_context = NULL,
+            const SandeshConfig *config = NULL);
 
     static SandeshRole::type role_;
     static std::string module_;
@@ -411,6 +417,14 @@ private:
     std::string category_;
     std::string name_;
     static tbb::atomic<uint32_t> sandesh_send_ratelimit_;
+};
+
+struct SandeshConfig {
+    std::string keyfile;
+    std::string certfile;
+    std::string ca_certs;
+    bool sandesh_ssl_enable;
+    bool introspect_ssl_enable;
 };
 
 struct SandeshElement {
