@@ -214,9 +214,6 @@ CURLcode curl_fetch(const char* url, struct MemoryStruct *chk)
   LOG(DEBUG, "bytes retrieved " <<  (long)chk->size);
   //LOG(DEBUG, chk->memory);
   
-  /* we're done with libcurl, so clean it up */ 
-  curl_global_cleanup();
- 
   return ret;
 }
 
