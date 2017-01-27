@@ -99,7 +99,6 @@ class t_doc_generator : public t_generator {
   void generate_index();
   void generate_stats_schema_program();
   bool generate_sandesh_program(doc_ftype::type dtype);
-  bool generate_introspect_cli_program();
   void generate_const_enum_typedef_object_program();
   void generate_doc_type(ofstream &f_out);
   void generate_program();
@@ -408,26 +407,6 @@ void t_doc_generator::generate_stats_schema_program() {
   f_stats_tables_ << "]" << endl << "}" << endl;
 }
 
-bool t_doc_generator::generate_introspect_cli_program() {
-  string fname = get_out_dir() + program_->get_name() + "_introspect_cli.json";
-  ofstream f_out;
-  f_out.open(fname.c_str());
-  if (!program_->get_sandeshs().empty()) {
-    vector<t_sandesh*> sandeshs = program_->get_sandeshs();
-    vector<t_sandesh*>::iterator snh_iter;
-    f_out << "{\n";
-    bool first_file = true;
-    for (snh_iter = sandeshs.begin(); snh_iter != sandeshs.end(); ++snh_iter) {
-      sandesh_name_ = get_sandesh_name(*snh_iter);
-      if (!is_sandesh_type(*snh_iter, doc_ftype::INTROSPECT)) {
-        continue;
-      }
-      generate_introspect_cli(*snh_iter, f_out, first_file);
-    }
-    f_out << "\n}\n";
-  }
-}
-
 void t_doc_generator::generate_sandesh_program_doc_schema(t_program* tprog,
   ofstream &f_out, string fsuffix, doc_ftype::type dtype) {
   bool init = false;
@@ -455,8 +434,19 @@ void t_doc_generator::generate_sandesh_program_doc_schema(t_program* tprog,
       }
       f_out << "}";
     }
+    f_out << "}," << endl << "\"sandesh_cli\":{" << endl;
+    bool first_file = true;
+    for (snh_iter = sandeshs.begin(); snh_iter != sandeshs.end(); ++snh_iter) {
+      sandesh_name_ = get_sandesh_name(*snh_iter);
+      if (!is_sandesh_type(*snh_iter, doc_ftype::INTROSPECT)) {
+        continue;
+      }
+      generate_introspect_cli(*snh_iter, f_out, first_file);
+    }
+    f_out << endl << "}" << endl << "}" << endl;
+  } else {
+    f_out << "}" << endl << "}" << endl;
   }
-  f_out << "}" << endl << "}" << endl;
 }
 
 bool t_doc_generator::generate_sandesh_program_doc(t_program* tprog,
@@ -653,7 +643,6 @@ void t_doc_generator::generate_program() {
   f_uve_initialized_ = generate_sandesh_program(doc_ftype::UVES);
   f_trace_initialized_ = generate_sandesh_program(doc_ftype::TRACES);
   f_introspect_initialized_ = generate_sandesh_program(doc_ftype::INTROSPECT);
-  generate_introspect_cli_program();
   generate_index();
   generate_const_enum_typedef_object_program();
 }
@@ -1103,7 +1092,9 @@ void t_doc_generator::generate_stat_schema_toplevel_tags(T* tstruct, vector<stri
 }
 
 template <typename T>
-void t_doc_generator::generate_stat_schema_suffixes(string prefix, t_field* tfield, t_struct* cstruct, T* tstruct, map<string, vector<string> >& suffixes) {
+void t_doc_generator::generate_stat_schema_suffixes(string prefix,
+    t_field* tfield, t_struct* cstruct, T* tstruct, map<string,
+    vector<string> >& suffixes) {
     map<string, vector<string> >::iterator it;
     for (it=suffixes.begin(); it!=suffixes.end(); ++it) {
         string fname = it->first;
@@ -1132,12 +1123,17 @@ void t_doc_generator::generate_stat_schema_suffixes(string prefix, t_field* tfie
             }
         }
         indent_up();
-        f_stats_tables_ << "," << endl << indent() << "{\"name\":\"" << fname << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << ",\"suffixes\":[" << suffix << "]}";
+        f_stats_tables_ << "," << endl;
+        indent(f_stats_tables_) << "{\"name\":\"" << fname <<
+            "\",\"datatype\":\"" << datatype << "\",\"index\":" << index <<
+            ",\"suffixes\":[" << suffix << "]}";
         indent_down();
     }
 }
 
-void t_doc_generator::is_indexed_or_suffixed_field(string fname, vector<string> tags, map<string, vector<string> > suffixes, string& index, bool& is_suffixed_field) {
+void t_doc_generator::is_indexed_or_suffixed_field(string fname,
+    vector<string> tags, map<string, vector<string> > suffixes,
+    string& index, bool& is_suffixed_field) {
     BOOST_FOREACH(const string &tag, tags) {
         string field_name = string(".") + fname;
         string trimmed_tag = tag;
@@ -1158,7 +1154,9 @@ void t_doc_generator::is_indexed_or_suffixed_field(string fname, vector<string> 
     }
 }
 
-void t_doc_generator::generate_stat_schema_struct_members(string prefix, t_field* tfield, t_struct* tstruct, vector<string> tags, map<string, vector<string> > suffixes) {
+void t_doc_generator::generate_stat_schema_struct_members(string prefix,
+    t_field* tfield, t_struct* tstruct, vector<string> tags,
+    map<string, vector<string> > suffixes) {
     const vector<t_field*> members = tstruct->get_members();
     vector<t_field*>::const_iterator m_iter;
     string name = tfield->get_name();
@@ -1206,7 +1204,7 @@ void t_doc_generator::generate_table_entry(string name, string datatype, string 
     if (!first_member_) {
         f_stats_tables_ << "," << endl;
     }
-    f_stats_tables_ << indent() << "{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
+    indent(f_stats_tables_) << "{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
     first_member_ = false;
     indent_down();
 }
@@ -1593,23 +1591,23 @@ bool t_doc_generator::generate_introspect_cli(t_sandesh* tsandesh, ofstream &f_o
       }
     }
     if (cli_name == "")
-        return false;
+      return false;
     if (!first_file) {
-        f_out << ",\n";
+      f_out << "," << endl;
     } else {
-        first_file = false;
+      first_file = false;
     }
 
     indent_up();
-    f_out << indent() << "\"" << tsandesh->get_name() << "\" : {" << endl;
-    f_out << indent() << "\"" << cli_name << "\" : " << "{ \"" << cli_help << "\" :" << endl;
+    indent(f_out) << "\"" << tsandesh->get_name() << "\" : {" << endl;
+    indent(f_out) << "\"" << cli_name << "\" : " << "{ \"" << cli_help << "\" :" << endl;
     vector<t_field*> members = tsandesh->get_members();
     int size = members.size();
     int count = 0;
-    f_out << indent() << "[ " << endl;
+    indent(f_out) << "[ " << endl;
     indent_up();
     BOOST_FOREACH(t_field *tfield, members) {
-      f_out << indent() << "[\"" << tfield->get_name();
+      indent(f_out) << "[\"" << tfield->get_name();
       string field_doc = "\"\"";
       if (!tfield->get_doc().empty()) {
         field_doc = tfield->get_doc();
@@ -1623,7 +1621,7 @@ bool t_doc_generator::generate_introspect_cli(t_sandesh* tsandesh, ofstream &f_o
       f_out << endl;
     }
     indent_down();
-    f_out << indent() << "]}}";
+    indent(f_out) << "]}}";
     indent_down();
     return true;
   }
