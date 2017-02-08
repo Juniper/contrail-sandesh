@@ -20,7 +20,7 @@ public:
         const SandeshMessage *msg)> ReceiveMsgCb;
 
     SandeshServerTest(EventManager *evm, ReceiveMsgCb cb) :
-        SandeshServer(evm),
+        SandeshServer(evm, SandeshConfig()),
         cb_(cb) {
     }
 

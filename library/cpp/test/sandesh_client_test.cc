@@ -47,7 +47,7 @@ public:
         PASSIVE,
     };
 
-    SandeshSessionMock(TcpServer *server, State state, Direction direction)
+    SandeshSessionMock(SslServer *server, State state, Direction direction)
         : SandeshSession(server, NULL, Task::kTaskInstanceAny,
                 TaskScheduler::GetInstance()->GetTaskId("sandesh::Test::ClientSM"),
                 TaskScheduler::GetInstance()->GetTaskId("io::ReaderTask")),
@@ -88,7 +88,7 @@ private:
 class SandeshClientMock : public SandeshClient {
 public:
     SandeshClientMock(EventManager *evm, std::vector<Endpoint> dummy) :
-        SandeshClient(evm, dummy),
+        SandeshClient(evm, dummy, SandeshConfig()),
         session_(NULL),
         old_session_(NULL) {
     }

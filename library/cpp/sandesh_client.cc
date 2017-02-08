@@ -55,9 +55,12 @@ const std::vector<Sandesh::QueueWaterMarkInfo>
                                                (2500, SandeshLevel::INVALID, false, false);
 
 SandeshClient::SandeshClient(EventManager *evm,
-        const std::vector<Endpoint> &collectors, Sandesh::CollectorSubFn csf,
+        const std::vector<Endpoint> &collectors,
+        const SandeshConfig &config,
+        Sandesh::CollectorSubFn csf,
         bool periodicuve)
-    :   TcpServer(evm),
+    :   SslServer(evm, boost::asio::ssl::context::tlsv1_client,
+                  config.sandesh_ssl_enable),
         sm_task_instance_(kSMTaskInstance),
         sm_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSMTask)),
         session_task_instance_(kSessionTaskInstance),
@@ -75,6 +78,50 @@ SandeshClient::SandeshClient(EventManager *evm,
                 (TaskExclusion(session_reader_task_id_));
         TaskScheduler::GetInstance()->SetPolicy(sm_task_id_, sm_task_policy);
         task_policy_set_ = true;
+    }
+    if (config.sandesh_ssl_enable) {
+        boost::asio::ssl::context *ctx = context();
+        boost::system::error_code ec;
+        ctx->set_options(boost::asio::ssl::context::default_workarounds |
+                         boost::asio::ssl::context::no_sslv3 |
+                         boost::asio::ssl::context::no_sslv2, ec);
+        if (ec.value() != 0) {
+            SANDESH_LOG(ERROR, "Error setting ssl options: " << ec.message());
+            exit(EINVAL);
+        }
+        // CA certificate
+        if (!config.ca_cert.empty()) {
+            // Verify that the peer certificate is signed by a trusted CA
+            ctx->set_verify_mode(boost::asio::ssl::verify_peer |
+                                 boost::asio::ssl::verify_fail_if_no_peer_cert,
+                                 ec);
+            if (ec.value() != 0) {
+                SANDESH_LOG(ERROR, "Error setting verification mode: " <<
+                            ec.message());
+                exit(EINVAL);
+            }
+            ctx->load_verify_file(config.ca_cert, ec);
+            if (ec.value() != 0) {
+                SANDESH_LOG(ERROR, "Error loading CA certificate: " <<
+                            ec.message());
+                exit(EINVAL);
+            }
+        }
+        // Server certificate
+        ctx->use_certificate_chain_file(config.certfile, ec);
+        if (ec.value() != 0) {
+            SANDESH_LOG(ERROR, "Error using server certificate: " <<
+                        ec.message());
+            exit(EINVAL);
+        }
+        // Server private key
+        ctx->use_private_key_file(config.keyfile,
+                                  boost::asio::ssl::context::pem, ec);
+        if (ec.value() != 0) {
+            SANDESH_LOG(ERROR, "Error using server private key file: " <<
+                        ec.message());
+            exit(EINVAL);
+        }
     }
 }
 
@@ -221,7 +268,7 @@ SandeshSession *SandeshClient::CreateSMSession(
         TcpSession::EventObserver eocb,
         SandeshReceiveMsgCb rmcb,
         TcpServer::Endpoint ep) {
-    TcpSession *session = TcpServer::CreateSession();
+    TcpSession *session = SslServer::CreateSession();
     Socket *socket = session->socket();
 
     error_code ec;
@@ -387,7 +434,7 @@ void SandeshClient::GetSessionWaterMarkInfo(
     scwm_info = session_wm_info_;
 }
 
-TcpSession *SandeshClient::AllocSession(Socket *socket) {
+SslSession *SandeshClient::AllocSession(SslSocket *socket) {
     return new SandeshSession(this, socket, session_task_instance_, 
                               session_writer_task_id_,
                               session_reader_task_id_);

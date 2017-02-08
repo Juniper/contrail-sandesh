@@ -12,7 +12,7 @@ from functools import partial
 from transport import TTransport
 from protocol import TXMLProtocol
 from work_queue import WorkQueue, WaterMark
-from tcp_session import TcpSession
+from ssl_session import SslSession
 from sandesh_logger import SandeshLogger
 from gen_py.sandesh.ttypes import SandeshLevel, SandeshTxDropReason
 
@@ -262,7 +262,7 @@ class SandeshSendQueue(WorkQueue):
 # end class SandeshSendQueue
 
 
-class SandeshSession(TcpSession):
+class SandeshSession(SslSession):
     _KEEPALIVE_IDLE_TIME = 15  # in secs
     _KEEPALIVE_INTERVAL = 3  # in secs
     _KEEPALIVE_PROBES = 5
@@ -271,7 +271,10 @@ class SandeshSession(TcpSession):
 
     def __init__(self, sandesh_instance, server, event_handler,
                  sandesh_msg_handler):
-        TcpSession.__init__(self, server)
+        sandesh_config = sandesh_instance.config()
+        super(SandeshSession, self).__init__(server,
+            sandesh_config.sandesh_ssl_enable, sandesh_config.keyfile,
+            sandesh_config.certfile, sandesh_config.ca_cert)
         self._sandesh_instance = sandesh_instance
         self._logger = sandesh_instance._logger
         self._event_handler = event_handler
@@ -321,10 +324,10 @@ class SandeshSession(TcpSession):
         return self._send_queue
     # end send_queue
 
-    # Overloaded functions from TcpSession
+    # Overloaded functions from SslSession
 
     def connect(self):
-        TcpSession.connect(self, timeout=5)
+        super(SandeshSession, self).connect(timeout=5)
     # end connect
 
     def _on_read(self, buf):

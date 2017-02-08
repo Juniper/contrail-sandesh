@@ -54,6 +54,7 @@ pysandesh_modules = [
                      '__init__.py',
                      'Thrift.py',
                      'tcp_session.py',
+                     'ssl_session.py',
                      'work_queue.py',
                      'util.py',
                      'trace.py',
