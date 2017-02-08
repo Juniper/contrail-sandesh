@@ -49,6 +49,7 @@ bool Sandesh::connect_to_collector_ = false;
 bool Sandesh::disable_flow_collection_ = false;
 SandeshLevel::type Sandesh::sending_level_ = SandeshLevel::INVALID;
 SandeshClient *Sandesh::client_ = NULL;
+SandeshConfig Sandesh::config_;
 std::auto_ptr<Sandesh::SandeshRxQueue> Sandesh::recv_queue_;
 std::string Sandesh::module_;
 std::string Sandesh::source_;
@@ -93,14 +94,16 @@ void Sandesh::InitReceive(int recv_task_inst) {
             &Sandesh::ProcessRecv));
 }
 
-void Sandesh::InitClient(EventManager *evm, Endpoint server, bool periodicuve) {
+void Sandesh::InitClient(EventManager *evm, Endpoint server,
+                         const SandeshConfig &config, bool periodicuve) {
     connect_to_collector_ = true;
     SANDESH_LOG(INFO, "SANDESH: CONNECT TO COLLECTOR: " <<
         connect_to_collector_);
     // Create and initialize the client
     assert(client_ == NULL);
     std::vector<Endpoint> collector_endpoints = boost::assign::list_of(server);
-    client_ = new SandeshClient(evm, collector_endpoints, 0, periodicuve);
+    client_ = new SandeshClient(evm, collector_endpoints, config, 0,
+                                periodicuve);
     client_->Initiate();
 }
 
@@ -142,6 +145,7 @@ bool Sandesh::Initialize(SandeshRole::type role,
     node_type_      = node_type;
     instance_id_    = instance_id;
     client_context_ = client_context;
+    config_         = config;
     event_manager_  = evm;
     //If Sandesh::sandesh_send_ratelimit_ is not defined by client,
     // assign a default value to it
@@ -197,7 +201,7 @@ bool Sandesh::ConnectToCollector(const std::string &collector_ip,
     SANDESH_LOG(INFO, "SANDESH: COLLECTOR PORT : " << collector_port);
 
     tcp::endpoint collector(collector_addr, collector_port);
-    InitClient(event_manager_, collector, periodicuve);
+    InitClient(event_manager_, collector, Sandesh::config(), periodicuve);
     return true;
 }
 
@@ -209,6 +213,7 @@ void Sandesh::ReConfigCollectors(const std::vector<std::string>& collector_list)
 
 bool Sandesh::InitClient(EventManager *evm, 
                          const std::vector<std::string> &collectors,
+                         const SandeshConfig &config,
                          CollectorSubFn csf) {
     connect_to_collector_ = true;
     SANDESH_LOG(INFO, "SANDESH: CONNECT TO COLLECTOR: " <<
@@ -223,7 +228,7 @@ bool Sandesh::InitClient(EventManager *evm,
         }
         collector_endpoints.push_back(ep);
     }
-    client_ = new SandeshClient(evm, collector_endpoints, csf, true);
+    client_ = new SandeshClient(evm, collector_endpoints, config, csf, true);
     client_->Initiate();
     return true;
 }
@@ -260,7 +265,7 @@ bool Sandesh::InitGenerator(const std::string &module,
     if (!success) {
         return false;
     }
-    return InitClient(evm, collectors, csf);
+    return InitClient(evm, collectors, config, csf);
 }
 
 // Collector

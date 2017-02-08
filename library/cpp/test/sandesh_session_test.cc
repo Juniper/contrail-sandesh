@@ -38,7 +38,7 @@ SendAction send_action = SEND;
 
 class SandeshSessionTest : public SandeshSession {
 public:
-    SandeshSessionTest(TcpServer *client, Socket *socket)
+    SandeshSessionTest(SslServer *client, SslSocket *socket)
         : SandeshSession(client, socket, Task::kTaskInstanceAny,
                 TaskScheduler::GetInstance()->GetTaskId("sandesh::SandeshSessionTest"),
                 TaskScheduler::GetInstance()->GetTaskId("io::ReaderTask")),
@@ -149,13 +149,13 @@ class SandeshTest : public Sandesh {
 class SandeshServerTest : public SandeshServer {
 public:
     SandeshServerTest(EventManager *evm):
-            SandeshServer(evm) {
+            SandeshServer(evm, SandeshConfig()) {
     }
 
     virtual ~SandeshServerTest() {
     }
 
-    virtual TcpSession *AllocSession(Socket *socket) {
+    virtual SslSession *AllocSession(SslSocket *socket) {
         SandeshSessionTest *session = new SandeshSessionTest(this, socket);
         return session;
     }

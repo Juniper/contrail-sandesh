@@ -44,8 +44,9 @@ private:
 
 bool SandeshServer::task_policy_set_ = false;
 
-SandeshServer::SandeshServer(EventManager *evm)
-    : TcpServer(evm),
+SandeshServer::SandeshServer(EventManager *evm, const SandeshConfig &config)
+    : SslServer(evm, boost::asio::ssl::context::tlsv1_server,
+                config.sandesh_ssl_enable),
       sm_task_id_(TaskScheduler::GetInstance()->GetTaskId(kStateMachineTask)),
       session_reader_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSessionReaderTask)),
       lifetime_mgr_task_id_(TaskScheduler::GetInstance()->GetTaskId(kLifetimeMgrTask)),
@@ -60,6 +61,50 @@ SandeshServer::SandeshServer(EventManager *evm)
                 (TaskExclusion(session_reader_task_id_));
         TaskScheduler::GetInstance()->SetPolicy(lifetime_mgr_task_id_, lm_task_policy);
         task_policy_set_ = true;
+    }
+    if (config.sandesh_ssl_enable) {
+        boost::asio::ssl::context *ctx = context();
+        boost::system::error_code ec;
+        ctx->set_options(boost::asio::ssl::context::default_workarounds |
+                         boost::asio::ssl::context::no_sslv3 |
+                         boost::asio::ssl::context::no_sslv2, ec);
+        if (ec.value() != 0) {
+            SANDESH_LOG(ERROR, "Error setting ssl options: " << ec.message());
+            exit(EINVAL);
+        }
+        // CA certificate
+        if (!config.ca_cert.empty()) {
+            // Verify that the peer certificate is signed by a trusted CA
+            ctx->set_verify_mode(boost::asio::ssl::verify_peer |
+                                 boost::asio::ssl::verify_fail_if_no_peer_cert,
+                                 ec);
+            if (ec.value() != 0) {
+                SANDESH_LOG(ERROR, "Error setting verification mode: " <<
+                            ec.message());
+                exit(EINVAL);
+            }
+            ctx->load_verify_file(config.ca_cert, ec);
+            if (ec.value() != 0) {
+                SANDESH_LOG(ERROR, "Error loading CA certificate: " <<
+                            ec.message());
+                exit(EINVAL);
+            }
+        }
+        // Server certificate
+        ctx->use_certificate_chain_file(config.certfile, ec);
+        if (ec.value() != 0) {
+            SANDESH_LOG(ERROR, "Error using server certificate: " <<
+                        ec.message());
+            exit(EINVAL);
+        }
+        // Server private key
+        ctx->use_private_key_file(config.keyfile,
+                                  boost::asio::ssl::context::pem, ec);
+        if (ec.value() != 0) {
+            SANDESH_LOG(ERROR, "Error using server private key file: " <<
+                        ec.message());
+            exit(EINVAL);
+        }
     }
 }
 
@@ -122,7 +167,7 @@ TcpSession *SandeshServer::CreateSession() {
 #else
         SOL_SOCKET, SO_REUSEADDR> reuse_addr_t;
 #endif
-    TcpSession *session = TcpServer::CreateSession();
+    TcpSession *session = SslServer::CreateSession();
     Socket *socket = session->socket();
 
     boost::system::error_code err;
@@ -170,11 +215,11 @@ SandeshConnection *SandeshServer::FindConnection(const Endpoint &peer_addr) {
     return NULL;
 }
 
-TcpSession *SandeshServer::AllocSession(Socket *socket) {
+SslSession *SandeshServer::AllocSession(SslSocket *socket) {
     // Use the state machine task to run the session send queue since
     // they need to be exclusive as session delete happens from state
     // machine
-    TcpSession *session = new SandeshSession(this, socket,
+    SslSession *session = new SandeshSession(this, socket,
             AllocConnectionIndex(), session_writer_task_id(),
             session_reader_task_id());
     return session;

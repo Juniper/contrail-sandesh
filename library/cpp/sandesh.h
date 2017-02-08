@@ -308,6 +308,7 @@ public:
     static void set_response_callback(SandeshCallback response_cb) { response_callback_ = response_cb; }
     static SandeshCallback response_callback() { return response_callback_; }
     static SandeshClient* client() { return client_; }
+    static SandeshConfig& config() { return config_; }
 
     time_t timestamp() const { return timestamp_; }
     void set_context(std::string context) { context_ = context; }
@@ -382,9 +383,11 @@ private:
     typedef std::map<std::string, SandeshContext *> ModuleContextMap;
 
     static void InitReceive(int recv_task_inst = -1);
-    static void InitClient(EventManager *evm, Endpoint server, bool periodicuve);
+    static void InitClient(EventManager *evm, Endpoint server,
+                           const SandeshConfig &config, bool periodicuve);
     static bool InitClient(EventManager *evm,
                            const std::vector<std::string> &collectors,
+                           const SandeshConfig &config,
                            CollectorSubFn csf);
     static bool ProcessRecv(SandeshRequest *);
     static bool Initialize(SandeshRole::type role, const std::string &module,
@@ -420,6 +423,7 @@ private:
     static tbb::mutex stats_mutex_;
     static log4cplus::Logger logger_;
     static bool disable_flow_collection_; // disable flow collection
+    static SandeshConfig config_;
 
     const uint32_t seqnum_;
     std::string context_;

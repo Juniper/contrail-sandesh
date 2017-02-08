@@ -18,7 +18,7 @@
 #include <boost/tuple/tuple.hpp>
 
 #include <base/util.h>
-#include <io/tcp_session.h>
+#include <io/ssl_session.h>
 
 #include <sandesh/transport/TBufferTransports.h>
 #include <sandesh/sandesh.h>
@@ -137,9 +137,9 @@ private:
 
 class SandeshConnection;
 
-class SandeshSession : public TcpSession {
+class SandeshSession : public SslSession {
 public:
-    SandeshSession(TcpServer *client, Socket *socket, int task_instance, 
+    SandeshSession(SslServer *client, SslSocket *socket, int task_instance,
         int writer_task_id, int reader_task_id);
     virtual ~SandeshSession();
     virtual void Shutdown();

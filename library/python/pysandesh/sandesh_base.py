@@ -95,6 +95,7 @@ class Sandesh(object):
         self._trace = trace.Trace()
         self._sandesh_request_map = {}
         self._alarm_ack_callback = alarm_ack_callback
+        self._config = config or SandeshConfig()
         self._uve_type_maps = SandeshUVETypeMaps(self._logger)
         if sandesh_req_uve_pkg_list is None:
             sandesh_req_uve_pkg_list = []
@@ -323,6 +324,10 @@ class Sandesh(object):
     def alarm_ack_callback(self):
         return self._alarm_ack_callback
     # end alarm_ack_callback
+
+    def config(self):
+        return self._config
+    # end config
 
     def is_flow_logging_enabled(self):
         return self._sandesh_logger.is_flow_logging_enabled()

@@ -18,7 +18,7 @@
 #include <boost/dynamic_bitset.hpp>
 #include <base/lifetime.h>
 #include <sandesh/sandesh.h>
-#include <io/tcp_server.h>
+#include <io/ssl_server.h>
 #include <io/tcp_session.h>
 
 class SandeshConnection;
@@ -28,9 +28,9 @@ class LifetimeActor;
 class LifetimeManager;
 class SandeshMessage;
 
-class SandeshServer : public TcpServer {
+class SandeshServer : public SslServer {
 public:
-    explicit SandeshServer(EventManager *evm);
+    explicit SandeshServer(EventManager *evm, const SandeshConfig &config);
     virtual ~SandeshServer();
 
     virtual bool Initialize(short port);
@@ -59,7 +59,7 @@ public:
     void FreeConnectionIndex(int);
 
 protected:
-    virtual TcpSession *AllocSession(Socket *socket);
+    virtual SslSession *AllocSession(SslSocket *socket);
     virtual bool AcceptSession(TcpSession *session);
     // Session read, write, and state machine tasks run exclusively
     int session_writer_task_id() const { return sm_task_id_; }

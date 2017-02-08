@@ -64,6 +64,8 @@ SandeshLibs = ['gunit',
                'crypto',
                'base',
                'log4cplus',
+               'ssl',
+               'crypto'
                ]
 
 if env.UseSystemTBB():

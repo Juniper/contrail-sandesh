@@ -22,7 +22,8 @@
 #include <tbb/atomic.h>
 
 #include <io/tcp_server.h>
-#include <io/tcp_session.h>
+#include <io/ssl_server.h>
+#include <io/ssl_session.h>
 #include <base/queue_task.h>
 #include <base/timer.h>
 #include <sandesh/sandesh_session.h>
@@ -35,11 +36,11 @@ class SandeshUVE;
 class SandeshHeader;
 
 
-class SandeshClient : public TcpServer, public SandeshClientSM::Mgr {
+class SandeshClient : public SslServer, public SandeshClientSM::Mgr {
 public:
     
     SandeshClient(EventManager *evm, const std::vector<Endpoint> &collectors,
-             Sandesh::CollectorSubFn csf = 0,
+             const SandeshConfig &config, Sandesh::CollectorSubFn csf = 0,
              bool periodicuve = false);
 
     virtual ~SandeshClient();
@@ -48,7 +49,7 @@ public:
     void Shutdown();
 
     virtual SandeshSession *CreateSMSession(
-            TcpSession::EventObserver eocb,
+            SslSession::EventObserver eocb,
             SandeshReceiveMsgCb rmcb,
             TcpServer::Endpoint ep);
 
@@ -94,7 +95,7 @@ public:
 
     friend class CollectorInfoRequest;
 protected:
-    virtual TcpSession *AllocSession(Socket *socket);
+    virtual SslSession *AllocSession(SslSocket *socket);
 
 private:
     static const int kSMTaskInstance = 0;

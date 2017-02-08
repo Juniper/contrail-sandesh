@@ -277,9 +277,9 @@ void SandeshWriter::SendInternal(boost::shared_ptr<TMemoryBuffer> buf) {
 //
 // SandeshSession
 //
-SandeshSession::SandeshSession(TcpServer *client, Socket *socket,
+SandeshSession::SandeshSession(SslServer *client, SslSocket *socket,
         int task_instance, int writer_task_id, int reader_task_id) :
-    TcpSession(client, socket),
+    SslSession(client, socket),
     instance_(task_instance),
     writer_(new SandeshWriter(this)), 
     reader_(new SandeshReader(this)),
