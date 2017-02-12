@@ -102,7 +102,7 @@ void Sandesh::InitClient(EventManager *evm, Endpoint server,
     // Create and initialize the client
     assert(client_ == NULL);
     std::vector<Endpoint> collector_endpoints = boost::assign::list_of(server);
-    client_ = new SandeshClient(evm, collector_endpoints, config, 0,
+    client_ = new SandeshClient(evm, collector_endpoints, config,
                                 periodicuve);
     client_->Initiate();
 }
@@ -213,8 +213,7 @@ void Sandesh::ReConfigCollectors(const std::vector<std::string>& collector_list)
 
 bool Sandesh::InitClient(EventManager *evm, 
                          const std::vector<std::string> &collectors,
-                         const SandeshConfig &config,
-                         CollectorSubFn csf) {
+                         const SandeshConfig &config) {
     connect_to_collector_ = true;
     SANDESH_LOG(INFO, "SANDESH: CONNECT TO COLLECTOR: " <<
         connect_to_collector_);
@@ -228,7 +227,7 @@ bool Sandesh::InitClient(EventManager *evm,
         }
         collector_endpoints.push_back(ep);
     }
-    client_ = new SandeshClient(evm, collector_endpoints, config, csf, true);
+    client_ = new SandeshClient(evm, collector_endpoints, config, true);
     client_->Initiate();
     return true;
 }
@@ -253,7 +252,6 @@ bool Sandesh::InitGenerator(const std::string &module,
                             const std::string &instance_id,
                             EventManager *evm, 
                             unsigned short http_port,
-                            CollectorSubFn csf,
                             const std::vector<std::string> &collectors,
                             SandeshContext *client_context,
                             DerivedStats ds,
@@ -265,7 +263,7 @@ bool Sandesh::InitGenerator(const std::string &module,
     if (!success) {
         return false;
     }
-    return InitClient(evm, collectors, config, csf);
+    return InitClient(evm, collectors, config);
 }
 
 // Collector
