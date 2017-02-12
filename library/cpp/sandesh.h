@@ -94,7 +94,7 @@
 #include <sandesh/sandesh_types.h>
 #include <sandesh/protocol/TProtocol.h>
 #include <sandesh/transport/TBufferTransports.h>
-#include <discovery/client/discovery_client.h>
+#include <sandesh/sandesh_trace.h>
 
 // Forward declaration
 class EventManager;
@@ -158,8 +158,6 @@ public:
         };
     };
     typedef boost::tuple<size_t, SandeshLevel::type, bool, bool> QueueWaterMarkInfo;
-    typedef boost::function<void (std::string serviceName, uint8_t numbOfInstances,
-            DiscoveryServiceClient::ServiceHandler)> CollectorSubFn;
     typedef std::map<std::string, std::map<std::string,std::string> > DerivedStats;
 
     // Initialization APIs
@@ -169,7 +167,6 @@ public:
             const std::string &instance_id,
             EventManager *evm,
             unsigned short http_port,
-            CollectorSubFn csf,
             const std::vector<std::string> &collectors,
             SandeshContext *client_context = NULL,
             DerivedStats ds = DerivedStats(),
@@ -384,8 +381,7 @@ private:
     static void InitReceive(int recv_task_inst = -1);
     static void InitClient(EventManager *evm, Endpoint server, bool periodicuve);
     static bool InitClient(EventManager *evm,
-                           const std::vector<std::string> &collectors,
-                           CollectorSubFn csf);
+                           const std::vector<std::string> &collectors);
     static bool ProcessRecv(SandeshRequest *);
     static bool Initialize(SandeshRole::type role, const std::string &module,
             const std::string &source, 

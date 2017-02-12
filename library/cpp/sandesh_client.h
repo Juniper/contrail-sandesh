@@ -39,7 +39,6 @@ class SandeshClient : public TcpServer, public SandeshClientSM::Mgr {
 public:
     
     SandeshClient(EventManager *evm, const std::vector<Endpoint> &collectors,
-             Sandesh::CollectorSubFn csf = 0,
              bool periodicuve = false);
 
     virtual ~SandeshClient();
@@ -110,12 +109,10 @@ private:
     int session_writer_task_id_;
     int session_reader_task_id_;
     std::vector<Endpoint> collectors_;
-    Sandesh::CollectorSubFn csf_;
     boost::scoped_ptr<SandeshClientSM> sm_;
     std::vector<Sandesh::QueueWaterMarkInfo> session_wm_info_;
     static bool task_policy_set_;
 
-    void CollectorHandler(std::vector<DSResponse> resp);
     bool ReceiveCtrlMsg(const std::string &msg,
         const SandeshHeader &header, const std::string &sandesh_name,
         const uint32_t header_offset);
