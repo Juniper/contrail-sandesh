@@ -72,7 +72,7 @@ class Sandesh(object):
     def init_generator(self, module, source, node_type, instance_id,
                        collectors, client_context,
                        http_port, sandesh_req_uve_pkg_list=None,
-                       discovery_client=None, connect_to_collector=True,
+                       connect_to_collector=True,
                        logger_class=None, logger_config_file=None,
                        host_ip='127.0.0.1', alarm_ack_callback=None,
                        config=None):
@@ -112,7 +112,7 @@ class Sandesh(object):
             self._gev_httpd = gevent.spawn(self._http_server.start_http_server)
         if self._connect_to_collector:
             self._client = SandeshClient(self)
-            self._client.initiate(collectors, discovery_client)
+            self._client.initiate(collectors)
     # end init_generator
 
     def uninit(self):
