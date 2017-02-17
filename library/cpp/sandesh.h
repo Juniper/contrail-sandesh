@@ -284,6 +284,8 @@ public:
     bool Enqueue(SandeshQueue* queue);
     virtual int32_t WriteBinary(u_int8_t *buf, u_int32_t buf_len, int *error);
     virtual int32_t ReadBinary(u_int8_t *buf, u_int32_t buf_len, int *error);
+    virtual int32_t WriteBinaryToFile(const std::string& path, int *error);
+    virtual int32_t ReadBinaryFromFile(const std::string& path, int *error);
 
     bool IsLoggingAllowed() const;
     static bool IsLoggingDroppedAllowed(SandeshType::type);
