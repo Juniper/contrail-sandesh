@@ -17,6 +17,7 @@
 #include <io/tcp_session.h>
 
 #include <sandesh/transport/TBufferTransports.h>
+#include <sandesh/transport/TSimpleFileTransport.h>
 #include <sandesh/protocol/TBinaryProtocol.h>
 #include <sandesh/protocol/TProtocol.h>
 
@@ -519,6 +520,40 @@ int32_t Sandesh::ReadBinary(u_int8_t *buf, u_int32_t buf_len,
     if (xfer < 0) {
         SANDESH_LOG(DEBUG, __func__ << "Read sandesh from " << buf_len <<
                 " bytes FAILED" << std::endl);
+        *error = EINVAL;
+        return xfer;
+    }
+    return xfer;
+}
+
+int32_t Sandesh::WriteBinaryToFile(const std::string& path, int *error) {
+    int32_t xfer;
+    boost::shared_ptr<TSimpleFileTransport> btrans =
+            boost::shared_ptr<TSimpleFileTransport>(
+                    new TSimpleFileTransport(path, false, true));
+    boost::shared_ptr<TBinaryProtocol> prot =
+            boost::shared_ptr<TBinaryProtocol>(new TBinaryProtocol(btrans));
+    xfer = Write(prot);
+    if (xfer < 0) {
+        SANDESH_LOG(DEBUG, __func__ << "Write sandesh to file FAILED"
+                << std::endl);
+        *error = EINVAL;
+        return xfer;
+    }
+    return xfer;
+}
+
+int32_t Sandesh::ReadBinaryFromFile(const std::string& path, int *error) {
+    int32_t xfer;
+    boost::shared_ptr<TSimpleFileTransport> btrans =
+            boost::shared_ptr<TSimpleFileTransport>(
+                    new TSimpleFileTransport(path));
+    boost::shared_ptr<TBinaryProtocol> prot =
+            boost::shared_ptr<TBinaryProtocol>(new TBinaryProtocol(btrans));
+    xfer = Read(prot);
+    if (xfer < 0) {
+        SANDESH_LOG(DEBUG, __func__ << "Read sandesh from file FAILED"
+                << std::endl);
         *error = EINVAL;
         return xfer;
     }
