@@ -29,6 +29,7 @@ struct AnomalyResult {
     4: optional string error
     5: optional map<string,string> state
     6: optional double sigma
+    7: optional u64 metric
 }
 
 /* TODO: Not implemented yet */
