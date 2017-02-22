@@ -494,9 +494,9 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectCollectorInfo\">uve2</name>");
                 EXPECT_STREQ(mm["ewm_y"].c_str(),
-"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSAnomaly:EWM:0.8\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>0.8</element><element>stddev</element><element>0.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma></AnomalyResult></ewm_y>");
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSAnomaly:EWM:0.8\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>0.8</element><element>stddev</element><element>0.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma><metric type=\"u64\" identifier=\"7\">1</metric></AnomalyResult></ewm_y>");
                 EXPECT_STREQ(mm["ewmd_y"].c_str(),
-"<ewmd_y type=\"struct\" identifier=\"13\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>0.8</element><element>stddev</element><element>0.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma></AnomalyResult></ewmd_y>");
+"<ewmd_y type=\"struct\" identifier=\"13\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>0.8</element><element>stddev</element><element>0.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma><metric type=\"u64\" identifier=\"7\">1</metric></AnomalyResult></ewmd_y>");
                 EXPECT_STREQ(mm["ewmn_y"].c_str(),
 "<ewmn_y type=\"struct\" identifier=\"14\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">0</samples><algo type=\"string\" identifier=\"2\">Null</algo><config type=\"string\" identifier=\"3\">Null</config></AnomalyResult></ewmn_y>");
                 EXPECT_STREQ(mm["ewmi_y"].c_str(),
@@ -513,7 +513,7 @@ protected:
                 EXPECT_STREQ(mm["name"].c_str(),
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve2</name>");
                 EXPECT_STREQ(mm["ewm_y"].c_str(),
-"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSAnomaly:EWM:0.8\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>8.8</element><element>stddev</element><element>4.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma></AnomalyResult></ewm_y>");
+"<ewm_y type=\"struct\" identifier=\"10\" stats=\"y:DSAnomaly:EWM:0.8\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>8.8</element><element>stddev</element><element>4.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma><metric type=\"u64\" identifier=\"7\">11</metric></AnomalyResult></ewm_y>");
                 break;
             }
             case 4:
@@ -703,7 +703,7 @@ protected:
                 EXPECT_STREQ(mm["y"].c_str(),
 "<y type=\"i32\" identifier=\"7\">11</y>");
                 EXPECT_STREQ(mm["ewmd_y"].c_str(),
-"<ewmd_y type=\"struct\" identifier=\"13\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>8.8</element><element>stddev</element><element>4.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma></AnomalyResult></ewmd_y>");
+"<ewmd_y type=\"struct\" identifier=\"13\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>8.8</element><element>stddev</element><element>4.4</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma><metric type=\"u64\" identifier=\"7\">11</metric></AnomalyResult></ewmd_y>");
                 EXPECT_STREQ(mm["ewmn_y"].c_str(),
 "<ewmn_y type=\"struct\" identifier=\"14\" stats=\"y:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">0</samples><algo type=\"string\" identifier=\"2\">Null</algo><config type=\"string\" identifier=\"3\">Null</config></AnomalyResult></ewmn_y>");
                 EXPECT_STREQ(mm["ewmi_y"].c_str(),
@@ -825,7 +825,6 @@ protected:
 "<avg_jx type=\"struct\" identifier=\"10\" stats=\"2-jx:DSNone:3\"><int_P_><value type=\"i32\" identifier=\"2\">75</value></int_P_></avg_jx>");
                 EXPECT_STREQ(mm["avh_jx"].c_str(),
 "");
-
                 break;
             }
             case 25:
@@ -837,6 +836,11 @@ protected:
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
                 EXPECT_STREQ(mm["avg_x"].c_str(),
 "<avg_x type=\"struct\" identifier=\"7\" stats=\"x:DSAvg:3\"><int_P_><staging type=\"i32\" identifier=\"1\">94</staging></int_P_></avg_x>");
+                EXPECT_STREQ(mm["sum_ewm_x"].c_str(),
+"<sum_ewm_x type=\"struct\" identifier=\"12\" stats=\"1.DSSum-x:DSAnomaly:EWM:0.8\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>157.6</element><element>stddev</element><element>78.8</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma><metric type=\"u64\" identifier=\"7\">197</metric></AnomalyResult></sum_ewm_x>");
+                EXPECT_STREQ(mm["sum_ewm_x0"].c_str(),"");
+                EXPECT_STREQ(mm["sum_ewm_tsm"].c_str(),
+"<sum_ewm_tsm type=\"map\" identifier=\"13\" mstats=\"1.DSSum-tsm:DSAnomaly:EWM:0.8\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>13.6</element><element>stddev</element><element>6.8</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma><metric type=\"u64\" identifier=\"7\">17</metric></AnomalyResult><element>j3</element><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.8</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>21.6</element><element>stddev</element><element>10.8</element></map></state><sigma type=\"double\" identifier=\"6\">0.5</sigma><metric type=\"u64\" identifier=\"7\">27</metric></AnomalyResult></map></sum_ewm_tsm>");
                 EXPECT_STREQ(mm["x"].c_str(),
 "<x type=\"i32\" identifier=\"3\" hidden=\"yes\">97</x>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
@@ -849,6 +853,8 @@ protected:
 "<avi_jx type=\"i32\" identifier=\"11\" stats=\"0-jx:DSNone:3\">75</avi_jx>");
                 EXPECT_STREQ(mm["avg_jx"].c_str(),
 "<avg_jx type=\"struct\" identifier=\"10\" stats=\"2-jx:DSNone:3\"><int_P_><staging type=\"i32\" identifier=\"1\">75</staging></int_P_></avg_jx>");
+                EXPECT_STREQ(mm["deleted"].c_str(),
+"<deleted type=\"bool\" identifier=\"2\">false</deleted>");
                 break;
             }
             case 27:
@@ -865,6 +871,20 @@ protected:
 "<null_tsm type=\"map\" identifier=\"9\" mstats=\"tsm:DSNull:\"><map key=\"string\" value=\"struct\" size=\"1\"><element>i2</element><NullResult><samples type=\"u64\" identifier=\"3\">1</samples><value type=\"i32\" identifier=\"5\">20</value></NullResult></map></null_tsm>");
                 EXPECT_STREQ(mm["nh_tsm"].c_str(),
 "<nh_tsm type=\"map\" identifier=\"18\" hidden=\"yes\" mstats=\"tsm:DSNone:\"><map key=\"string\" value=\"i32\" size=\"1\"><element>i2</element><element>20</element></map></nh_tsm>");
+                break;
+            }
+            case 28:
+            {
+                EXPECT_EQ(6, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshPeriodicTest::sversionsig(), header.get_VersionSig());
+                if (mm.find("x")!=mm.end()) EXPECT_TRUE(false);
+                EXPECT_STREQ(mm["name"].c_str(),
+"<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
+                EXPECT_STREQ(mm["jx"].c_str(),
+"");
+                EXPECT_STREQ(mm["deleted"].c_str(),
+"<deleted type=\"bool\" identifier=\"2\">true</deleted>");
                 break;
             }
             default:
@@ -1151,7 +1171,22 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     SandeshUVETypeMaps::SyncIntrospect(
        "SandeshUVEData", "ObjectGeneratorInfo", "uve1");
 
-    TASK_UTIL_EXPECT_TRUE(msg_num_ == 28);
+    // Trigger Periodic Processing again
+    // case 28
+    SandeshUVETypeMaps::SyncAllMaps(uve_map, true);
+    SandeshUVETypeMaps::SyncAllMaps(uve_map, true);
+
+    // 
+    {
+        SandeshPeriodicData uve_data2;
+        uve_data2.set_name("uve1");
+        uve_data2.set_x(100);
+        uve_data2.set_proxy("ABC");
+        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 0, 4);
+        ASSERT_EQ(SandeshUVETypeMaps::Clear("ABC", 4), 1);
+
+    }    
+    TASK_UTIL_EXPECT_TRUE(msg_num_ == 29);
 }
 
 class SandeshBaseFactoryTest : public ::testing::Test {

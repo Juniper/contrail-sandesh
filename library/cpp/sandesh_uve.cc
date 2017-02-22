@@ -40,6 +40,22 @@ SandeshUVETypeMaps::InitDerivedStats(
     return success;
 }
 
+uint32_t
+SandeshUVETypeMaps::Clear(const std::string& proxy, int partition) {
+    int count=0;
+    for (uve_global_map::iterator it = map_->begin();
+            it != map_->end(); it++) {
+        uint32_t subcount = it->second.second->ClearUVEs(proxy, partition);
+        //if (subcount !=0) {
+            SANDESH_LOG(INFO, __func__ << " for " << it->first << " partition " <<
+                partition << " proxy " << proxy << " cleared " <<
+                subcount);
+            count += subcount;
+        //}
+    }
+    return count;
+}
+
 void
 SandeshUVETypeMaps::SyncAllMaps(const map<string,uint32_t> & inpMap, bool periodic) {
     static uint64_t periodic_count = 0;
@@ -91,6 +107,7 @@ SandeshUVETypesReq::HandleRequest() const {
         sti.set_seq_num(it->second.second->TypeSeq());
         sti.set_period(it->second.first);
         sti.set_dsconf(it->second.second->GetDSConf());
+        sti.set_timeout(it->second.second->GetTimeout());
         stv.push_back(sti);
     }
     SandeshUVETypesResp *sur = new SandeshUVETypesResp();

@@ -103,6 +103,7 @@ class DSAnomaly {
   public:
     DSAnomaly(const std::string &annotation) {
         size_t rpos = annotation.find(':');
+        started_ = false;
         algo_ = annotation.substr(0,rpos);
         config_ = annotation.substr(rpos+1, string::npos);
         if (algo_.compare("EWM") == 0) {
@@ -119,12 +120,12 @@ class DSAnomaly {
     DSReturnType FillResult(AnomalyResT &res) const {
         DSReturnType ret = DSR_OK;
         if (impl_) {
-            if (!impl_->FillResult(res)) ret = DSR_SKIP;
+            ret = impl_->FillResult(res);
             // We should have cleared impl_ if there was a parsing error
             // with the DSAnomaly config
             assert(error_.empty());
         }
-        
+        if (started_) res.set_metric(previous_);
 	res.set_algo(algo_);
 	res.set_config(config_);
 	if (!error_.empty()) res.set_error(error_);
@@ -132,12 +133,18 @@ class DSAnomaly {
     }
 
     void Update(const ElemT& raw, uint64_t mono_usec) {
-        if (impl_) impl_->Update(raw);
+        if (impl_) {
+            impl_->Update(raw);
+            started_ = true;
+            previous_ = raw;
+        }
     }
 
     std::string algo_;
     std::string config_;
     std::string error_;
+    ElemT previous_;
+    bool started_;
     boost::scoped_ptr<DSAnomalyIf<ElemT> > impl_;
 };
 

@@ -660,4 +660,8 @@ template <typename T>
 struct SandeshStructDeleteTrait {
     static bool get(const T& s) { return false; } 
 };
+template <typename T>
+struct SandeshStructProxyTrait {
+    static std::string get(const T& s) { return std::string(""); } 
+};
 #endif // __SANDESH_H__
