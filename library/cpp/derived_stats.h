@@ -143,6 +143,9 @@ class DerivedStatsIf {
     DerivedStatsIf(std::string annotation, bool is_agg = false):
         annotation_(annotation), is_agg_(is_agg) {}
 
+    template<template<class,class> class, typename,
+             template<class,class> class, typename> friend class DerivedStatsPeriodicAnomalyIf;
+
     bool IsResult(void) const {
         if ((!ds_) && (!dsm_)) return false;
         else return true;
@@ -376,6 +379,124 @@ class DerivedStatsPeriodicIf {
         isset = !mres.empty();
     }
 
+};
+
+class DSPeriodicIsSet {
+  public:
+    DSPeriodicIsSet() : value(false), staging(false) {}
+    bool value;
+    bool staging;
+};
+
+template <typename ElemT>
+class DSPeriodic {
+ public:
+
+  DSPeriodic() : value(0), staging(0) {
+  }
+
+  ElemT value;
+  ElemT staging;
+
+  DSPeriodicIsSet __isset;
+};
+
+template <template<class,class> class DSTT, typename ElemT,
+template<class,class> class PreT, typename ResultT>
+class DerivedStatsPeriodicAnomalyIf {
+  private:
+    //typedef std::map<std::string, boost::shared_ptr<PreT <ElemT,ElemT> > > result_map;
+    DerivedStatsPeriodicIf<PreT,  ElemT,  ElemT, DSPeriodic<ElemT> > periodic_;
+    typedef std::map<std::string, boost::shared_ptr<DSTT<ElemT,ResultT> > > result_map;
+    DerivedStatsIf<DSTT, ElemT,  ResultT> anomaly_;
+    bool init_;
+
+  public:
+    DerivedStatsPeriodicAnomalyIf(std::string annotation, bool is_agg=false):
+        periodic_("", is_agg),
+        anomaly_(annotation, false),
+        init_(false) {}
+
+    bool IsResult(void) const {
+        return periodic_.IsResult();
+    }
+
+    // This is the interface to feed in all updates to the raw stat
+    // on which the derived stat will be based.
+    void Update(ElemT raw, uint64_t mono_usec) {
+        init_ = true;
+        periodic_.Update(raw,  mono_usec);
+    }
+
+    void Update(const std::map<std::string, ElemT> & raw,
+            const std::map<std::string, bool> &del, uint64_t mono_usec) {
+        init_ = true;
+        periodic_.Update(raw, del, mono_usec);
+    }
+
+    bool Flush(const ResultT &res) {
+        (void) res;
+        if (!init_) return false;
+        DSPeriodic<ElemT> sres;
+        static ElemT zelem;
+        
+        if (periodic_.Flush(sres)) {
+            bool result_available;
+            periodic_.FillResult(sres, result_available);
+        }
+
+        // If there were no samples, we will assume the sum was 0
+        // the update time is not used by anomaly detection, so we can use 0
+        anomaly_.Update(sres.value, zelem);
+        return true;
+    }
+
+    bool Flush(const std::map<std::string, ResultT> &mres) {
+        (void) mres;
+        if (!init_) return false;
+        typename std::map<std::string, DSPeriodic<ElemT> > smres;
+        static ElemT zelem;
+
+        if (periodic_.Flush(smres)) {
+            bool result_available;
+            periodic_.FillResult(smres, result_available);
+        }
+        
+        typename std::map<std::string, ElemT> val;
+        std::map<std::string, bool> dmap; 
+
+        // Extract the reportable value of the periodic DerivedStat
+        for (typename std::map<std::string, DSPeriodic<ElemT> >::const_iterator
+                dit = smres.begin(); dit != smres.end(); dit++) {
+            val.insert(std::make_pair(dit->first, dit->second.value));
+            dmap.insert(std::make_pair(dit->first, false));
+        }
+
+        if (anomaly_.dsm_) {
+            // If existing element has no sample, assume 0   
+            for (typename result_map::const_iterator dit =
+                            anomaly_.dsm_->begin();
+                    dit != anomaly_.dsm_->end(); dit++) {
+                if (val.find(dit->first) == val.end()) {
+                    val.insert(std::make_pair(dit->first, zelem));
+                    dmap.insert(std::make_pair(dit->first, false));
+                }
+            }
+        }
+        anomaly_.Update(val, dmap, 0);
+   
+        return true;
+    }
+
+    // This is the interface to retrieve the current value
+    // of the DerivedStat object.
+    void FillResult(ResultT &res, bool& isset, bool force=false) const {
+        anomaly_.FillResult(res, isset, force);
+    }
+
+    void FillResult(std::map<std::string, ResultT> &mres, bool& isset, bool force=false) const {
+        anomaly_.FillResult(mres, isset, force);
+    }
 };
 
 } // namespace sandesh
