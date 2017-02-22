@@ -117,7 +117,11 @@ struct SandeshPeriodicData {
 
     // Inline DS
    11: optional i32 avi_jx (stats="0-jx:DSNone:3")
-} (period="60")
+
+   // PeriodicAnomaly
+   12: optional derived_stats_results.AnomalyResult sum_ewm_x (stats="1.DSSum-x:DSAnomaly:EWM:0.2")
+   13: optional map<string,derived_stats_results.AnomalyResult> sum_ewm_tsm (mstats="1.DSSum-tsm:DSAnomaly:EWM:0.2")
+} (period="60", timeout="1")
 
 uve sandesh SandeshPeriodicTest {
     1: SandeshPeriodicData data
