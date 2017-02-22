@@ -119,7 +119,7 @@ class DSAnomaly {
     DSReturnType FillResult(AnomalyResT &res) const {
         DSReturnType ret = DSR_OK;
         if (impl_) {
-            if (!impl_->FillResult(res)) ret = DSR_SKIP;
+            ret = impl_->FillResult(res);
             // We should have cleared impl_ if there was a parsing error
             // with the DSAnomaly config
             assert(error_.empty());

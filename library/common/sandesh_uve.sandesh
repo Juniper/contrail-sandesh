@@ -245,6 +245,7 @@ struct SandeshUVETypeInfo {
     2: u32 seq_num;
     3: i32 period
     4: map <string,string> dsconf
+    5: i32 timeout
 }
 
 response sandesh SandeshUVETypesResp {
