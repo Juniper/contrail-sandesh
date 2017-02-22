@@ -22,6 +22,13 @@ struct EWMResult {
     8: optional double sigma
 }
 
+typedef u64 anomaly_u64
+
+struct anomaly_u64_P_ {
+    1: optional anomaly_u64 value;
+    2: optional anomaly_u64 staging;
+}
+
 struct AnomalyResult {
     1: u64 samples
     2: string algo

@@ -825,7 +825,6 @@ protected:
 "<avg_jx type=\"struct\" identifier=\"10\" stats=\"2-jx:DSNone:3\"><int_P_><value type=\"i32\" identifier=\"2\">75</value></int_P_></avg_jx>");
                 EXPECT_STREQ(mm["avh_jx"].c_str(),
 "");
-
                 break;
             }
             case 25:
@@ -837,6 +836,10 @@ protected:
 "<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
                 EXPECT_STREQ(mm["avg_x"].c_str(),
 "<avg_x type=\"struct\" identifier=\"7\" stats=\"x:DSAvg:3\"><int_P_><staging type=\"i32\" identifier=\"1\">94</staging></int_P_></avg_x>");
+                EXPECT_STREQ(mm["sum_ewm_x"].c_str(),
+"<sum_ewm_x type=\"struct\" identifier=\"12\" stats=\"1.DSSum-x:DSAnomaly:EWM:0.2\"><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.2</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>39.4</element><element>stddev</element><element>78.8</element></map></state><sigma type=\"double\" identifier=\"6\">2</sigma></AnomalyResult></sum_ewm_x>");
+                EXPECT_STREQ(mm["sum_ewm_tsm"].c_str(),
+"<sum_ewm_tsm type=\"map\" identifier=\"13\" mstats=\"1.DSSum-tsm:DSAnomaly:EWM:0.2\"><map key=\"string\" value=\"struct\" size=\"2\"><element>j2</element><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.2</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>3.4</element><element>stddev</element><element>6.8</element></map></state><sigma type=\"double\" identifier=\"6\">2</sigma></AnomalyResult><element>j3</element><AnomalyResult><samples type=\"u64\" identifier=\"1\">1</samples><algo type=\"string\" identifier=\"2\">EWM</algo><config type=\"string\" identifier=\"3\">0.2</config><state type=\"map\" identifier=\"5\"><map key=\"string\" value=\"string\" size=\"2\"><element>mean</element><element>5.4</element><element>stddev</element><element>10.8</element></map></state><sigma type=\"double\" identifier=\"6\">2</sigma></AnomalyResult></map></sum_ewm_tsm>");
                 EXPECT_STREQ(mm["x"].c_str(),
 "<x type=\"i32\" identifier=\"3\" hidden=\"yes\">97</x>");
                 EXPECT_STREQ(mm["tsm"].c_str(),
