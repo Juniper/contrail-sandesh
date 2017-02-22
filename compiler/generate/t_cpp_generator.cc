@@ -173,12 +173,12 @@ void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, b
     DSInfo(bool is_map, size_t period, CacheAttribute cat,
           string rawtype, RawMetric rmtype,
           string resulttype, string algo, string annotation,
-          string compattr = string(""), string subcompattr = string("")) :
+          string compattr, string subcompattr, string prealgo) :
         is_map_(is_map), period_(period), cat_(cat),
         rawtype_(rawtype), rmtype_(rmtype),
         resulttype_(resulttype), algo_(algo),
         annotation_(annotation),
-        compattr_(compattr) , subcompattr_(subcompattr) {} 
+        compattr_(compattr) , subcompattr_(subcompattr), prealgo_(prealgo) {} 
     bool is_map_;
     size_t period_;
     CacheAttribute cat_;
@@ -189,6 +189,7 @@ void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, b
     string annotation_;
     string compattr_;
     string subcompattr_;
+    string prealgo_;
   };
   void derived_stats_info(t_struct* tstruct,
     map<string,DSInfo>& dsmap,
@@ -2277,8 +2278,17 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
       string rawperiodattr = tstr.substr(0,pos);
       size_t ppos = rawperiodattr.find("-");
       int period = -1;
+      string prealgo;
       if (ppos != string::npos) {
-        period = atoi(rawperiodattr.substr(0,ppos).c_str());
+        string periodpre = rawperiodattr.substr(0,ppos);
+        size_t prepos = periodpre.find(".");
+        if (prepos != string::npos) {
+            period = atoi(periodpre.substr(0,prepos).c_str());
+            prealgo = periodpre.substr(prepos+1, string::npos);
+        } else {
+            period = atoi(rawperiodattr.substr(0,ppos).c_str());
+        }
+        
         rawfullattr = rawperiodattr.substr(ppos+1, string::npos);
       } else {
         rawfullattr = rawperiodattr;
@@ -2383,7 +2393,7 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
       }
 
       DSInfo dsi(is_ds_map, period, cat, rawtype, rmt,
-          restype, algo, anno, compattr, subcompattr);
+          restype, algo, anno, compattr, subcompattr, prealgo);
 
       // map of derived stats
       dsmap.insert(make_pair((*m_iter)->get_name(), dsi));
@@ -2609,12 +2619,21 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
     // val is rawtype,resulttype,algo,annotation,compattr,subcompattr
     if ((ds_iter->second.cat_ == PERIODIC) ||
         (ds_iter->second.cat_ == HIDDEN_PER)) {
-      indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" << 
-        ds_iter->second.algo_ << ", " << 
-        ds_iter->second.rawtype_ << ", " <<
-        ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
-        ds_iter->second.resulttype_ << 
-        "> > __dsobj_" << ds_iter->first << ";" << endl;
+      if (ds_iter->second.prealgo_.empty()) {
+        indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" << 
+          ds_iter->second.algo_ << ", " << 
+          ds_iter->second.rawtype_ << ", " <<
+          ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
+          ds_iter->second.resulttype_ << 
+          "> > __dsobj_" << ds_iter->first << ";" << endl;
+      } else {
+        indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsPeriodicAnomalyIf< ::contrail::sandesh::" << 
+          ds_iter->second.algo_ << ", " << 
+          ds_iter->second.rawtype_ << ", ::contrail::sandesh::" <<
+          ds_iter->second.prealgo_ << ", " <<
+          ds_iter->second.resulttype_ << 
+          "> > __dsobj_" << ds_iter->first << ";" << endl;
+      }
     } else {
       indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" << 
         ds_iter->second.algo_ << ", " <<
@@ -3787,12 +3806,22 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
      
     if ((ds_iter->second.cat_ == PERIODIC) ||
         (ds_iter->second.cat_ == HIDDEN_PER)) {
-      indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
-        " ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" <<
-	ds_iter->second.algo_ << ", " << 
-	ds_iter->second.rawtype_ << ", " <<
-	ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
-	ds_iter->second.resulttype_ << "> >(_dci->second, is_agg);" << endl;
+
+      if (ds_iter->second.prealgo_.empty()) {
+        indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
+          " ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" <<
+	  ds_iter->second.algo_ << ", " << 
+	  ds_iter->second.rawtype_ << ", " <<
+	  ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
+	  ds_iter->second.resulttype_ << "> >(_dci->second, is_agg);" << endl;
+      } else {
+        indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
+          " ::contrail::sandesh::DerivedStatsPeriodicAnomalyIf< ::contrail::sandesh::" <<
+          ds_iter->second.algo_ << ", " << 
+          ds_iter->second.rawtype_ << ", ::contrail::sandesh::" <<
+          ds_iter->second.prealgo_ << ", " <<
+          ds_iter->second.resulttype_ << "> >(_dci->second, is_agg);" << endl;
+      }
     } else {
       indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
         " ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" <<
