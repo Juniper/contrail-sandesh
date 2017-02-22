@@ -91,6 +91,7 @@ SandeshUVETypesReq::HandleRequest() const {
         sti.set_seq_num(it->second.second->TypeSeq());
         sti.set_period(it->second.first);
         sti.set_dsconf(it->second.second->GetDSConf());
+        sti.set_timeout(it->second.second->GetTimeout());
         stv.push_back(sti);
     }
     SandeshUVETypesResp *sur = new SandeshUVETypesResp();
