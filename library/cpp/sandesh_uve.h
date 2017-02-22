@@ -74,7 +74,7 @@ public:
     virtual ~SandeshUVEPerTypeMap() { }
     virtual uint32_t TypeSeq() = 0;
     virtual uint32_t SyncUVE(const std::string &table, SandeshUVE::SendType st,
-            uint32_t seqno, uint32_t cycle, const std::string &ctx) const = 0;
+            uint32_t seqno, uint32_t cycle, const std::string &ctx) = 0;
     virtual bool InitDerivedStats(
             const std::map<std::string,std::string> & dsconf) = 0;
     virtual bool SendUVE(const std::string& table, const std::string& name,
@@ -99,10 +99,10 @@ public:
 // - The UVE key is in a field called "name"
 //
 
-#define SANDESH_UVE_DEF(x,y,z) \
-    static SandeshUVEPerTypeMapImpl<x, y, z> uvemap ## x(#y)
+#define SANDESH_UVE_DEF(x,y,z,w) \
+    static SandeshUVEPerTypeMapImpl<x, y, z, w> uvemap ## x(#y)
 
-template<typename T, typename U, int P>
+template<typename T, typename U, int P, int TM>
 class SandeshUVEPerTypeMapImpl : public SandeshUVEPerTypeMap {
 public:
 
@@ -172,6 +172,11 @@ public:
             send = T::UpdateUVE(data, imapentry->second->data, mono_usec);
             imapentry->second->seqno = seqnum;
         }
+        if (TM != 0) {
+            // If we get an update , mark this UVE so that it is not 
+            // deleted during the next round of periodic processing
+            imapentry->second->data.set_deleted(false);
+        }
         if (data.get_deleted()) {
             a->second.erase(imapentry);
             if (a->second.empty()) cmap_.erase(a);
@@ -216,7 +221,7 @@ public:
         // Copy the new conf into the old one if there we no errors
         dsconf_ = dsnew;
 
-        (const_cast<SandeshUVEPerTypeMapImpl<T,U,P> *>(this))->cmap_.rehash();
+        (const_cast<SandeshUVEPerTypeMapImpl<T,U,P,TM> *>(this))->cmap_.rehash();
         for (typename uve_cmap::iterator git = cmap_.begin();
                 git != cmap_.end(); git++) {
             typename uve_cmap::accessor a;
@@ -234,17 +239,18 @@ public:
     uint32_t SyncUVE(const std::string &table,
             SandeshUVE::SendType st,
             uint32_t seqno, uint32_t cycle,
-            const std::string &ctx) const {
+            const std::string &ctx) {
         // Global lock is needed for iterator
         tbb::mutex::scoped_lock lock(uve_mutex_);
         uint32_t count = 0;
-        (const_cast<SandeshUVEPerTypeMapImpl<T,U,P> *>(this))->cmap_.rehash();
-        for (typename uve_cmap::const_iterator git = cmap_.begin();
-                git != cmap_.end(); git++) {
-            typename uve_cmap::const_accessor a;
+        (const_cast<SandeshUVEPerTypeMapImpl<T,U,P,TM> *>(this))->cmap_.rehash();
+        typename uve_cmap::iterator git = cmap_.begin();
+        while (git != cmap_.end()) {
+            typename uve_cmap::accessor a;
             if (!cmap_.find(a, git->first)) continue;
-            for (typename uve_table_map::const_iterator uit = a->second.begin();
-                    uit != a->second.end(); uit++) {
+            typename uve_table_map::iterator uit = a->second.begin();
+            while (uit != a->second.end()) {
+                typename uve_table_map::iterator dit = a->second.end();
                 if (!table.empty() && uit->first != table) continue;
                 if ((seqno < uit->second->seqno) || (seqno == 0)) {
                     if (ctx.empty()) {
@@ -254,9 +260,27 @@ public:
                     }
                     T::Send(uit->second->data, st,
                             uit->second->seqno, cycle, ctx);
+                    if ((TM != 0) && (st == SandeshUVE::ST_PERIODIC)) {
+                        if ((cycle % TM) == 0) {
+                            if (uit->second->data.get_deleted()) {
+                                // This UVE was marked for deletion during the
+                                // last periodic processing round, and there
+                                // have been no UVE updates
+                                dit = uit;
+                            } else {
+                                // Mark this UVE to be deleted during the next
+                                // periodic processing round, unless it is updated
+                                uit->second->data.set_deleted(true);
+                            }
+                        }
+                    }
                     count++;
                 }
+                ++uit;
+                if (dit != a->second.end()) a->second.erase(dit);
             }
+            ++git;
+            if (a->second.empty()) cmap_.erase(a);
         }
         return count;
     }
