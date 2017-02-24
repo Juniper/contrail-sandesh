@@ -829,7 +829,8 @@ class SandeshResponse(Sandesh):
         self._context = context
         self._more = more
         self._seqnum = self.next_seqnum()
-        if self._context.find('http://') == 0:
+        if self._context.find('http://') == 0 or \
+                self._context.find('https://') == 0:
             SandeshHttp.create_http_response(self, sandesh)
         else:
             if self.handle_test(sandesh):
@@ -876,7 +877,8 @@ class SandeshUVE(Sandesh):
                 return -1
         self._context = context
         self._more = more
-        if self._context.find('http://') == 0:
+        if self._context.find('http://') == 0 or \
+                self._context.find('https://') == 0:
             SandeshHttp.create_http_response(self, sandesh)
         else:
             if self.handle_test(sandesh):
@@ -968,7 +970,8 @@ class SandeshTrace(Sandesh):
             return -1
         self._context = context
         self._more = more
-        if self._context.find('http://') == 0:
+        if self._context.find('http://') == 0 or \
+                self._context.find('https://') == 0:
             SandeshHttp.create_http_response(self, sandesh)
         else:
             if self.handle_test(sandesh):

@@ -86,7 +86,7 @@ void SandeshTraceRequest::HandleRequest() const {
     // TODO:
     // We should get the Sandesh Header to differentiate 
     // trace requests from non-http modules.
-    if (0 == context().find("http%")) {
+    if ((0 == context().find("http%")) || (0 == context().find("https%"))) {
         read_context = "Http";
     } else {
         read_context = "Collector";
