@@ -46,19 +46,6 @@ private:
     SandeshMessageStats detail_agg_stats_;
 };
 
-struct EventStats {
-    EventStats() :
-        enqueues(0),
-        enqueue_fails(0),
-        dequeues(0),
-        dequeue_fails(0) {
-    }
-    uint64_t enqueues;
-    uint64_t enqueue_fails;
-    uint64_t dequeues;
-    uint64_t dequeue_fails;
-};
-
 class SandeshEventStatistics {
 public:
     SandeshEventStatistics() {}
@@ -66,9 +53,9 @@ public:
     void Update(std::string &event_name, bool enqueue, bool fail);
     void Get(std::vector<SandeshStateMachineEvStats> *ev_stats) const;
 
-    typedef boost::ptr_map<std::string, EventStats> EventStatsMap;
-    EventStatsMap event_stats;
-    EventStats agg_stats;
+    typedef boost::ptr_map<std::string, SandeshStateMachineEvStats> EventStatsMap;
+    EventStatsMap event_stats_;
+    SandeshStateMachineEvStats agg_stats_;
 };
     
 #endif // __SANDESH_STATISTICS_H__
