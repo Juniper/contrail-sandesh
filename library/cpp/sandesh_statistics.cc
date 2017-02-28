@@ -36,13 +36,14 @@ void SandeshMessageStatistics::Get(DetailStatsList *v_detail_type_stats,
 // Basic stats
 static void PopulateBasicStats(const SandeshMessageStats &detail_stats,
     SandeshMessageBasicStats *basic_stats) {
-    basic_stats->messages_sent = detail_stats.messages_sent;
-    basic_stats->bytes_sent = detail_stats.bytes_sent;
-    basic_stats->messages_received = detail_stats.messages_received;
-    basic_stats->bytes_received = detail_stats.bytes_received;
-    basic_stats->messages_sent_dropped = detail_stats.messages_sent_dropped;
-    basic_stats->messages_received_dropped =
-        detail_stats.messages_received_dropped;
+    basic_stats->set_messages_sent(detail_stats.get_messages_sent());
+    basic_stats->set_bytes_sent(detail_stats.get_bytes_sent());
+    basic_stats->set_messages_received(detail_stats.get_messages_received());
+    basic_stats->set_bytes_received(detail_stats.get_bytes_received());
+    basic_stats->set_messages_sent_dropped(
+        detail_stats.get_messages_sent_dropped());
+    basic_stats->set_messages_received_dropped(
+        detail_stats.get_messages_received_dropped());
 }
 
 static void PopulateBasicTypeStats(const SandeshMessageTypeStats &detail_stats,
@@ -69,81 +70,121 @@ static void UpdateDetailStatsDrops(SandeshMessageStats *smstats,
     if (sent) {
         switch (send_dreason) {
           case SandeshTxDropReason::ValidationFailed:
-            smstats->messages_sent_dropped_validation_failed++;
-            smstats->bytes_sent_dropped_validation_failed += bytes;
+            smstats->set_messages_sent_dropped_validation_failed(
+                smstats->get_messages_sent_dropped_validation_failed() + 1);
+            smstats->set_bytes_sent_dropped_validation_failed(
+                smstats->get_bytes_sent_dropped_validation_failed() + bytes);
             break;
           case SandeshTxDropReason::RatelimitDrop:
-            smstats->messages_sent_dropped_rate_limited++;
-            smstats->bytes_sent_dropped_rate_limited += bytes;
+            smstats->set_messages_sent_dropped_rate_limited(
+                smstats->get_messages_sent_dropped_rate_limited() + 1);
+            smstats->set_bytes_sent_dropped_rate_limited(
+                smstats->get_bytes_sent_dropped_rate_limited() + bytes);
             break;
           case SandeshTxDropReason::QueueLevel:
-            smstats->messages_sent_dropped_queue_level++;
-            smstats->bytes_sent_dropped_queue_level += bytes;
+            smstats->set_messages_sent_dropped_queue_level(
+                smstats->get_messages_sent_dropped_queue_level() + 1);
+            smstats->set_bytes_sent_dropped_queue_level(
+                smstats->get_bytes_sent_dropped_queue_level() + bytes);
             break;
           case SandeshTxDropReason::NoClient:
-            smstats->messages_sent_dropped_no_client++;
-            smstats->bytes_sent_dropped_no_client += bytes;
+            smstats->set_messages_sent_dropped_no_client(
+                smstats->get_messages_sent_dropped_no_client() + 1);
+            smstats->set_bytes_sent_dropped_no_client(
+                smstats->get_bytes_sent_dropped_no_client() + bytes);
             break;
           case SandeshTxDropReason::NoSession:
-            smstats->messages_sent_dropped_no_session++;
-            smstats->bytes_sent_dropped_no_session += bytes;
+            smstats->set_messages_sent_dropped_no_session(
+                smstats->get_messages_sent_dropped_no_session() + 1);
+            smstats->set_bytes_sent_dropped_no_session(
+                smstats->get_bytes_sent_dropped_no_session() + bytes);
             break;
           case SandeshTxDropReason::NoQueue:
-            smstats->messages_sent_dropped_no_queue++;
-            smstats->bytes_sent_dropped_no_queue += bytes;
+            smstats->set_messages_sent_dropped_no_queue(
+                smstats->get_messages_sent_dropped_no_queue() + 1);
+            smstats->set_bytes_sent_dropped_no_queue(
+                smstats->get_bytes_sent_dropped_no_queue() + bytes);
             break;
           case SandeshTxDropReason::ClientSendFailed:
-            smstats->messages_sent_dropped_client_send_failed++;
-            smstats->bytes_sent_dropped_client_send_failed += bytes;
+            smstats->set_messages_sent_dropped_client_send_failed(
+                smstats->get_messages_sent_dropped_client_send_failed() + 1);
+            smstats->set_bytes_sent_dropped_client_send_failed(
+                smstats->get_bytes_sent_dropped_client_send_failed() + bytes);
             break;
           case SandeshTxDropReason::WrongClientSMState:
-            smstats->messages_sent_dropped_wrong_client_sm_state++;
-            smstats->bytes_sent_dropped_wrong_client_sm_state += bytes;
+            smstats->set_messages_sent_dropped_wrong_client_sm_state(
+                smstats->get_messages_sent_dropped_wrong_client_sm_state() + 1);
+            smstats->set_bytes_sent_dropped_wrong_client_sm_state(
+                smstats->get_bytes_sent_dropped_wrong_client_sm_state() +
+                bytes);
             break;
           case SandeshTxDropReason::WriteFailed:
-            smstats->messages_sent_dropped_write_failed++;
-            smstats->bytes_sent_dropped_write_failed += bytes;
+            smstats->set_messages_sent_dropped_write_failed(
+                smstats->get_messages_sent_dropped_write_failed() + 1);
+            smstats->set_bytes_sent_dropped_write_failed(
+                smstats->get_bytes_sent_dropped_write_failed() + bytes);
             break;
           case SandeshTxDropReason::HeaderWriteFailed:
-            smstats->messages_sent_dropped_header_write_failed++;
-            smstats->bytes_sent_dropped_header_write_failed += bytes;
+            smstats->set_messages_sent_dropped_header_write_failed(
+                smstats->get_messages_sent_dropped_header_write_failed() + 1);
+            smstats->set_bytes_sent_dropped_header_write_failed(
+                smstats->get_bytes_sent_dropped_header_write_failed() + bytes);
             break;
           case SandeshTxDropReason::SessionNotConnected:
-            smstats->messages_sent_dropped_session_not_connected++;
-            smstats->bytes_sent_dropped_session_not_connected += bytes;
+            smstats->set_messages_sent_dropped_session_not_connected(
+                smstats->get_messages_sent_dropped_session_not_connected() + 1);
+            smstats->set_bytes_sent_dropped_session_not_connected(
+                smstats->get_bytes_sent_dropped_session_not_connected() +
+                bytes);
             break;
           default:
             assert(0);
         }
-        smstats->messages_sent_dropped++;
-        smstats->bytes_sent_dropped += bytes;
+        smstats->set_messages_sent_dropped(
+            smstats->get_messages_sent_dropped() + 1);
+        smstats->set_bytes_sent_dropped(
+            smstats->get_bytes_sent_dropped() + bytes);
     } else {
         switch (recv_dreason) {
           case SandeshRxDropReason::QueueLevel:
-            smstats->messages_received_dropped_queue_level++;
-            smstats->bytes_received_dropped_queue_level += bytes;
+            smstats->set_messages_received_dropped_queue_level(
+                smstats->get_messages_received_dropped_queue_level() + 1);
+            smstats->set_bytes_received_dropped_queue_level(
+                smstats->get_bytes_received_dropped_queue_level() + bytes);
             break;
           case SandeshRxDropReason::NoQueue:
-            smstats->messages_received_dropped_no_queue++;
-            smstats->bytes_received_dropped_no_queue += bytes;
+            smstats->set_messages_received_dropped_no_queue(
+                smstats->get_messages_received_dropped_no_queue() + 1);
+            smstats->set_bytes_received_dropped_no_queue(
+                smstats->get_bytes_received_dropped_no_queue() + bytes);
             break;
           case SandeshRxDropReason::DecodingFailed:
-            smstats->messages_received_dropped_decoding_failed++;
-            smstats->bytes_received_dropped_decoding_failed += bytes;
+            smstats->set_messages_received_dropped_decoding_failed(
+                smstats->get_messages_received_dropped_decoding_failed() + 1);
+            smstats->set_bytes_received_dropped_decoding_failed(
+                smstats->get_bytes_received_dropped_decoding_failed() + bytes);
             break;
           case SandeshRxDropReason::ControlMsgFailed:
-            smstats->messages_received_dropped_control_msg_failed++;
-            smstats->bytes_received_dropped_control_msg_failed += bytes;
+            smstats->set_messages_received_dropped_control_msg_failed(
+                smstats->get_messages_received_dropped_control_msg_failed() +
+                1);
+            smstats->set_bytes_received_dropped_control_msg_failed(
+                smstats->get_bytes_received_dropped_control_msg_failed() +
+                bytes);
             break;
           case SandeshRxDropReason::CreateFailed:
-            smstats->messages_received_dropped_create_failed++;
-            smstats->bytes_received_dropped_create_failed += bytes;
+            smstats->set_messages_received_dropped_create_failed(
+                smstats->get_messages_received_dropped_create_failed() + 1);
+            smstats->set_bytes_received_dropped_create_failed(
+                smstats->get_bytes_received_dropped_create_failed() + bytes);
             break;
           default:
             assert(0);
         }
-        smstats->messages_received_dropped++;
-        smstats->bytes_received_dropped += bytes;
+        smstats->set_messages_received_dropped(
+            smstats->get_messages_received_dropped() + 1);
+        smstats->set_bytes_received_dropped(
+            smstats->get_bytes_received_dropped() + bytes);
     }
 }
 
@@ -190,16 +231,23 @@ void SandeshMessageStatistics::UpdateInternal(const std::string &msg_name,
         UpdateDetailStatsDrops(&detail_agg_stats_, is_tx,
             bytes, send_dreason, recv_dreason);
     } else {
+        SandeshMessageStats *d_smstats(&detail_mtstats->stats);
         if (is_tx) {
-            detail_mtstats->stats.messages_sent++;
-            detail_mtstats->stats.bytes_sent += bytes;
-            detail_agg_stats_.messages_sent++;
-            detail_agg_stats_.bytes_sent += bytes;
+            d_smstats->set_messages_sent(d_smstats->get_messages_sent() + 1);
+            d_smstats->set_bytes_sent(d_smstats->get_bytes_sent() + bytes);
+            detail_agg_stats_.set_messages_sent(
+                detail_agg_stats_.get_messages_sent() + 1);
+            detail_agg_stats_.set_bytes_sent(
+                detail_agg_stats_.get_bytes_sent() + bytes);
         } else {
-            detail_mtstats->stats.messages_received++;
-            detail_mtstats->stats.bytes_received += bytes;
-            detail_agg_stats_.messages_received++;
-            detail_agg_stats_.bytes_received += bytes;
+            d_smstats->set_messages_received(
+                d_smstats->get_messages_received() + 1);
+            d_smstats->set_bytes_received(
+                d_smstats->get_bytes_received() + bytes);
+            detail_agg_stats_.set_messages_received(
+                detail_agg_stats_.get_messages_received() + 1);
+            detail_agg_stats_.set_bytes_received(
+                detail_agg_stats_.get_bytes_received() + bytes);
         }
     }
 }
@@ -209,47 +257,36 @@ void SandeshMessageStatistics::UpdateInternal(const std::string &msg_name,
 //
 void SandeshEventStatistics::Get(
     std::vector<SandeshStateMachineEvStats> *ev_stats) const {
-    for (EventStatsMap::const_iterator it = event_stats.begin();
-            it != event_stats.end(); ++it) {
-        const EventStats *es = it->second;
-        SandeshStateMachineEvStats ev_stat;
-        ev_stat.event = it->first;
-        ev_stat.enqueues = es->enqueues;
-        ev_stat.dequeues = es->dequeues;
-        ev_stat.enqueue_fails = es->enqueue_fails;
-        ev_stat.dequeue_fails = es->dequeue_fails;
-        ev_stats->push_back(ev_stat);
+    BOOST_FOREACH(EventStatsMap::const_iterator::value_type it,
+        event_stats_) {
+        ev_stats->push_back(*it.second);
     }
-    SandeshStateMachineEvStats ev_agg_stat;
-    ev_agg_stat.enqueues = agg_stats.enqueues;
-    ev_agg_stat.dequeues = agg_stats.dequeues;
-    ev_agg_stat.enqueue_fails = agg_stats.enqueue_fails;
-    ev_agg_stat.dequeue_fails = agg_stats.dequeue_fails;
-    ev_stats->push_back(ev_agg_stat);
+    ev_stats->push_back(agg_stats_);
 }
 
 void SandeshEventStatistics::Update(std::string &event_name, bool enqueue,
     bool fail) {
-    EventStatsMap::iterator it = event_stats.find(event_name);
-    if (it == event_stats.end()) {
-        it = (event_stats.insert(event_name, new EventStats)).first;
+    EventStatsMap::iterator it = event_stats_.find(event_name);
+    if (it == event_stats_.end()) {
+        it = (event_stats_.insert(event_name, new SandeshStateMachineEvStats)).first;
     }
-    EventStats *es = it->second;
+    SandeshStateMachineEvStats *es = it->second;
+    es->set_event(event_name);
     if (enqueue) {
         if (fail) {
-            es->enqueue_fails++;
-            agg_stats.enqueue_fails++;
+            es->set_enqueue_fails(es->get_enqueue_fails() + 1);
+            agg_stats_.set_enqueue_fails(agg_stats_.get_enqueue_fails() + 1);
         } else {
-            es->enqueues++;
-            agg_stats.enqueues++;
+            es->set_enqueues(es->get_enqueues() + 1);
+            agg_stats_.set_enqueues(agg_stats_.get_enqueues() + 1);
         }
     } else {
         if (fail) {
-            es->dequeue_fails++;
-            agg_stats.dequeue_fails++;
+            es->set_dequeue_fails(es->get_dequeue_fails() + 1);
+            agg_stats_.set_dequeue_fails(agg_stats_.get_dequeue_fails() + 1);
         } else {
-            es->dequeues++;
-            agg_stats.dequeues++;
+            es->set_dequeues(es->get_dequeues() + 1);
+            agg_stats_.set_dequeues(agg_stats_.get_dequeues() + 1);
         }
     }
 }
