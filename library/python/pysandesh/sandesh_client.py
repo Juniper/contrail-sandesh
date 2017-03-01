@@ -23,9 +23,9 @@ class SandeshClient(object):
 
     # Public functions
 
-    def initiate(self, collectors, discovery_client):
+    def initiate(self, collectors):
         self._connection = SandeshConnection(self._sandesh_instance, self,
-                                             collectors, discovery_client)
+                                             collectors)
     #end initiate
 
     def set_collectors(self, collectors):

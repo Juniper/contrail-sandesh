@@ -20,6 +20,7 @@
 #include <sandesh/sandesh_constants.h>
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
+#include <sandesh/sandesh_trace.h>
 #include <sandesh/sandesh_session.h>
 
 #include "sandesh_state_machine.h"
@@ -57,7 +58,6 @@ const std::vector<Sandesh::QueueWaterMarkInfo>
 SandeshClient::SandeshClient(EventManager *evm,
         const std::vector<Endpoint> &collectors,
         const SandeshConfig &config,
-        Sandesh::CollectorSubFn csf,
         bool periodicuve)
     :   SslServer(evm, boost::asio::ssl::context::tlsv1_client,
                   config.sandesh_ssl_enable),
@@ -67,7 +67,6 @@ SandeshClient::SandeshClient(EventManager *evm,
         session_writer_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSessionWriterTask)),
         session_reader_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSessionReaderTask)),
         collectors_(collectors),
-        csf_(csf),
         sm_(SandeshClientSM::CreateClientSM(evm, this, sm_task_instance_, sm_task_id_, periodicuve)),
         session_wm_info_(kSessionWaterMarkInfo) {
     // Set task policy for exclusion between state machine and session tasks since
@@ -127,21 +126,6 @@ SandeshClient::SandeshClient(EventManager *evm,
 
 SandeshClient::~SandeshClient() {}
 
-void SandeshClient::CollectorHandler(std::vector<DSResponse> resp) {
-    std::vector<Endpoint> collectors;
-    if (resp.size()>=1) {
-        collectors.push_back(resp[0].ep);
-        SANDESH_LOG(INFO, "Discovery update for collector #1 " << resp[0].ep);
-    }
-    if (resp.size()>=2) {
-        collectors.push_back(resp[1].ep);
-        SANDESH_LOG(INFO, "Discovery update for collector #2 " << resp[1].ep);
-    }
-    if (collectors.size()) {
-        sm_->SetCollectors(collectors);
-    }
-}
-
 void SandeshClient::ReConfigCollectors(
         const std::vector<std::string>& collector_list) {
     std::vector<Endpoint> collector_endpoints;
@@ -162,13 +146,6 @@ void SandeshClient::Initiate() {
     sm_->SetAdminState(false);
     if (collectors_.size())
         sm_->SetCollectors(collectors_);
-    // subscribe for the collector service only if the collector list
-    // is not provided by the generator.
-    else if (csf_ != 0) {
-        SANDESH_LOG(INFO, "Subscribe to Discovery Service for Collector" );
-        csf_(g_vns_constants.COLLECTOR_DISCOVERY_SERVICE_NAME, 2,
-            boost::bind(&SandeshClient::CollectorHandler, this, _1));
-    }
 }
 
 void SandeshClient::Shutdown() {
