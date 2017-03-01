@@ -18,7 +18,7 @@ from gen_py.sandesh.constants import *
 
 class SandeshConnection(object):
 
-    def __init__(self, sandesh_instance, client, collectors, discovery_client):
+    def __init__(self, sandesh_instance, client, collectors):
         self._sandesh_instance = sandesh_instance
         self._logger = sandesh_instance.logger()
         self._client = client
@@ -28,11 +28,6 @@ class SandeshConnection(object):
         self._state_machine = SandeshStateMachine(self, self._logger, 
                                                   collectors)
         self._state_machine.initialize()
-        from sandesh_common.vns.constants import \
-            COLLECTOR_DISCOVERY_SERVICE_NAME
-        if not collectors and discovery_client is not None:
-            discovery_client.subscribe(COLLECTOR_DISCOVERY_SERVICE_NAME, 2,
-                                       self._handle_collector_update)
     #end __init__
 
     # Public methods
@@ -99,23 +94,6 @@ class SandeshConnection(object):
     # end set_collectors
 
     # Private methods
-
-    def _handle_collector_update(self, collector_info):
-        if collector_info is not None:
-            self._logger.info('Received discovery update %s for collector service' \
-                              % (str(collector_info)))
-            collectors = []
-            for collector in collector_info:
-                try:
-                    collectors.append(
-                        collector['ip-address'] + ':' + collector['port'])
-                except KeyError:
-                    self._logger.error('Failed to decode collector from '
-                        'dicovery service')
-                    return
-            self._state_machine.enqueue_event(Event(
-                event=Event._EV_COLLECTOR_CHANGE, collectors=collectors))
-    #end _handle_collector_update
 
     def _receive_sandesh_msg(self, session, msg):
         (hdr, hdr_len, sandesh_name) = SandeshReader.extract_sandesh_header(msg)
