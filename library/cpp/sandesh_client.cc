@@ -66,6 +66,7 @@ SandeshClient::SandeshClient(EventManager *evm,
         session_task_instance_(kSessionTaskInstance),
         session_writer_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSessionWriterTask)),
         session_reader_task_id_(TaskScheduler::GetInstance()->GetTaskId(kSessionReaderTask)),
+        dscp_value_(0),
         collectors_(collectors),
         sm_(SandeshClientSM::CreateClientSM(evm, this, sm_task_instance_, sm_task_id_, periodicuve)),
         session_wm_info_(kSessionWaterMarkInfo) {
@@ -261,6 +262,9 @@ SandeshSession *SandeshClient::CreateSMSession(
         DeleteSession(session);
         return NULL;
     }
+    if (dscp_value_) {
+        session->SetDscpSocketOption(dscp_value_);
+    }
     SandeshSession *sandesh_session =
             static_cast<SandeshSession *>(session);
     sandesh_session->SetReceiveMsgCb(rmcb);
@@ -415,4 +419,16 @@ SslSession *SandeshClient::AllocSession(SslSocket *socket) {
     return new SandeshSession(this, socket, session_task_instance_, 
                               session_writer_task_id_,
                               session_reader_task_id_);
+}
+
+void SandeshClient::SetDscpValue(uint8_t value) {
+    if (value == dscp_value_)
+        return;
+
+    dscp_value_ = value;
+    SandeshSession *sess = session();
+    if (sess) {
+        sess->SetDscpSocketOption(value);
+    }
+
 }

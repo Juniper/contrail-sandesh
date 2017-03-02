@@ -87,6 +87,8 @@ public:
         return sm_.get();
     }
 
+    void SetDscpValue(uint8_t value);
+
     void SetSessionWaterMarkInfo(Sandesh::QueueWaterMarkInfo &scwm);
     void ResetSessionWaterMarkInfo();
     void GetSessionWaterMarkInfo(
@@ -110,6 +112,7 @@ private:
     int session_task_instance_;
     int session_writer_task_id_;
     int session_reader_task_id_;
+    uint8_t dscp_value_;
     std::vector<Endpoint> collectors_;
     boost::scoped_ptr<SandeshClientSM> sm_;
     std::vector<Sandesh::QueueWaterMarkInfo> session_wm_info_;
