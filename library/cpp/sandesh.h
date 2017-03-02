@@ -205,6 +205,7 @@ public:
             int collector_port, bool periodicuve = false);
     static void ReConfigCollectors(const std::vector<std::string>& collector_list);
     static void Uninit();
+    static void SetDscpValue(uint8_t value);
 
     // Disable flow collection
     static void DisableFlowCollection(bool disable);

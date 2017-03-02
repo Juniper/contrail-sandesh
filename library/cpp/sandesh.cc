@@ -310,6 +310,13 @@ static void WaitForIdle() {
     }    
 }
 
+void Sandesh::SetDscpValue(uint8_t value) {
+    SandeshClient *client = Sandesh::client();
+    if (client) {
+        client->SetDscpValue(value);
+    }
+}
+
 void Sandesh::Uninit() {
 
     // Wait until all pending http session based tasks are cleaned up.
