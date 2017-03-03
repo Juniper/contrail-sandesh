@@ -418,16 +418,20 @@ class SandeshStateMachine(object):
             return
         if event.event == Event._EV_COLLECTOR_CHANGE:
             collector = self.collector()
+            self._collector_index = -1
+            collector_list_change = False
             if self._collectors != event.collectors:
                 self._collectors = event.collectors
-                # update the collector_list in the ModuleClientState UVE
-                self._connection.sandesh_instance().send_generator_info()
+                collector_list_change = True
             if self._collectors and self._collectors[0] == collector:
                 self._collector_index = 0
-                self._logger.info("No change in collector. "
+                self._logger.info("No change in active collector. "
                     "Ignore event [%s]" % (event.event))
+                if collector_list_change:
+                    # update the collector_list in the ModuleClientState UVE
+                    self._connection.sandesh_instance().send_generator_info()
                 return
-            self._collector_index = -1
+            self._connection.sandesh_instance().send_generator_info()
         if event.event == Event._EV_SANDESH_UVE_SEND:
             if self._fsm.current == State._ESTABLISHED or self._fsm.current == State._CLIENT_INIT:
                 self._connection.handle_sandesh_uve_msg(event.msg)
