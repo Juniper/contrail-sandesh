@@ -2009,8 +2009,25 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
         vector<t_field*>::const_iterator f_iter = fields.begin();
         assert((*f_iter)->get_name() == "data");
     
-        indent(out) << "static void Send(const " << type_name((*f_iter)->get_type()) <<
+        bool is_proxy = false;
+        std::map<std::string, std::string>::iterator ait;
+        ait = ((*f_iter)->get_type())->annotations_.find("timeout");
+        if (ait != ((*f_iter)->get_type())->annotations_.end()) {
+          is_proxy = true;
+        }
+
+        if (is_proxy) {
+          indent(out) << "static void Send(const " << type_name((*f_iter)->get_type()) <<
             "& data, std::string table = \"\", uint64_t mono_usec=0, int partition=-1);" << endl;
+          std::map<std::string, std::string>::iterator pit;
+          pit = ((*f_iter)->get_type())->annotations_.find("period");
+          indent(out) << "static const uint64_t kProxyPeriod_us = " <<
+            pit->second.c_str() << "000000;" << endl; 
+            
+        } else {
+          indent(out) << "static void Send(const " << type_name((*f_iter)->get_type()) <<
+            "& data, std::string table = \"\", uint64_t mono_usec=0);" << endl;
+        }
 
         indent(out) << "static void Send(const " << type_name((*f_iter)->get_type()) <<
             "& cdata, SandeshUVE::SendType stype, uint32_t seqno," <<
@@ -4233,12 +4250,14 @@ void t_cpp_generator::generate_sandesh_uve_creator(
     vector<t_field*>::const_iterator f_iter = fields.begin();
     assert((*f_iter)->get_name() == "data");
 
+    bool is_proxy = false;
     std::map<std::string, std::string>::iterator ait;
     ait = ((*f_iter)->get_type())->annotations_.find("period");
 
     std::string sname = tsandesh->get_name();
     indent(out) << "SANDESH_UVE_DEF(" << sname << "," <<
         type_name((*f_iter)->get_type());
+
     if (ait == ((*f_iter)->get_type())->annotations_.end()) {
       indent(out) << ", 0, 0);" << endl;
     } else {
@@ -4249,6 +4268,7 @@ void t_cpp_generator::generate_sandesh_uve_creator(
       } else {
         indent(out) << ", " << atoi(ait->second.c_str()) << ", " <<
           atoi(tmit->second.c_str()) << ");" << endl;
+        is_proxy = true;
       }
     }
 
@@ -4268,11 +4288,18 @@ void t_cpp_generator::generate_sandesh_uve_creator(
     indent(out) << "} else snh->Release();" << endl;
     indent_down();
     indent(out) << "}" << endl << endl; 
-    
-    indent(out) << "void " << sname <<
+    if (is_proxy) {
+      indent(out) << "void " << sname <<
         "::Send(const " << type_name((*f_iter)->get_type()) <<
         "& data, std::string table, uint64_t mono_usec, int partition) {" << endl;
-    indent_up();
+      indent_up();
+    } else {
+      indent(out) << "void " << sname <<
+        "::Send(const " << type_name((*f_iter)->get_type()) <<
+        "& data, std::string table, uint64_t mono_usec) {" << endl;
+      indent_up();
+      indent(out) << "int partition = -1;" << endl;
+    }
 
     indent(out) << type_name((*f_iter)->get_type()) <<
         " & cdata = const_cast<" << type_name((*f_iter)->get_type()) <<

@@ -887,6 +887,18 @@ protected:
 "<deleted type=\"bool\" identifier=\"2\">true</deleted>");
                 break;
             }
+            case 29:
+            {
+                EXPECT_EQ(7, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshPeriodicTest::sversionsig(), header.get_VersionSig());
+                if (mm.find("x")!=mm.end()) EXPECT_TRUE(false);
+                EXPECT_STREQ(mm["name"].c_str(),
+"<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve3</name>");
+                EXPECT_STREQ(mm["deleted"].c_str(),
+"<deleted type=\"bool\" identifier=\"2\">true</deleted>");
+                break;
+            }
             default:
                 EXPECT_FALSE(true);
         }
@@ -1179,7 +1191,7 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     // 
     {
         SandeshPeriodicData uve_data2;
-        uve_data2.set_name("uve1");
+        uve_data2.set_name("uve3");
         uve_data2.set_x(100);
         uve_data2.set_proxy("ABC");
         SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 0, 4);
