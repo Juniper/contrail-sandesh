@@ -15,6 +15,7 @@
 #include <map>
 #include <vector>
 #include <boost/ptr_container/ptr_map.hpp>
+#include <boost/assign/ptr_map_inserter.hpp>
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
 #include <tbb/mutex.h>
@@ -355,22 +356,23 @@ public:
     typedef SandeshUVEPerTypeMapImpl<T,U,P,TM> uve_emap;
 
     // One UVE Type Map per partition
-    typedef std::map<int, uve_emap> uve_pmap;
+    typedef boost::ptr_map<int, uve_emap> uve_pmap;
 
     // One set of per-partition UVE Type Maps for each proxy group
-    typedef std::map<string, uve_pmap> uve_gmap;
+    typedef boost::ptr_map<string, uve_pmap> uve_gmap;
 
     // Get the partition UVE Type maps for the given proxy group
     uve_pmap * GetGMap(const std::string& proxy) {
         tbb::mutex::scoped_lock lock(gmutex_);
         if (group_map_.find(proxy) == group_map_.end()) {
-            uve_pmap up;
+            uve_pmap* up = new uve_pmap;
+            std::string kstring(proxy);
             for (size_t idx=0; idx<SandeshUVETypeMaps::kProxyPartitions; idx++) {
-                up.insert(std::make_pair(idx,uve_emap()));
+                boost::assign::ptr_map_insert(*up)(idx);
             }
-            group_map_.insert(std::make_pair(proxy,up));
+            group_map_.insert(kstring ,up);
         }
-        return &(group_map_[proxy]);
+        return &(group_map_.at(proxy));
     }
    
     // Get the partition UVE Type maps for all proxy groups 
@@ -379,7 +381,7 @@ public:
         std::vector<uve_pmap *> pv;
         for (typename uve_gmap::iterator ugi = group_map_.begin();
                 ugi != group_map_.end(); ugi++) {
-            pv.push_back(&(ugi->second));
+            pv.push_back(ugi->second);
         }
         return pv;
     }
@@ -457,7 +459,7 @@ public:
         typename uve_gmap::iterator gi = group_map_.find(proxy);
         if (gi != group_map_.end()) {
             assert(partition < SandeshUVETypeMaps::kProxyPartitions);
-            return gi->second.at(partition).ClearUVEs();
+            return gi->second->at(partition).ClearUVEs();
         }
         return 0;
     }
