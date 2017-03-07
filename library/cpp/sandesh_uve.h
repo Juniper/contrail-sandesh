@@ -192,10 +192,32 @@ public:
     // Clear all UVEs in this cache
     // This is used ONLY with proxy groups
     uint32_t ClearUVEs(void) {
+
+        // Global lock is needed for iterator
         tbb::mutex::scoped_lock lock(uve_mutex_);
-        uint32_t siz = cmap_.size();
+        uint32_t count = 0;
+        (const_cast<SandeshUVEPerTypeMapImpl<T,U,P,TM> *>(this))->cmap_.rehash();
+        typename uve_cmap::iterator git = cmap_.begin();
+        while (git != cmap_.end()) {
+            typename uve_cmap::accessor a;
+            if (!cmap_.find(a, git->first)) continue;
+            typename uve_table_map::iterator uit = a->second.begin();
+            while (uit != a->second.end()) {
+                typename uve_table_map::iterator dit = a->second.end();
+		SANDESH_LOG(INFO, __func__ << " Clearing " << uit->first << 
+		    " val " << uit->second->data.log() << " proxy " <<
+		    SandeshStructProxyTrait<U>::get(uit->second->data) << 
+		    " seq " << uit->second->seqno);
+                uit->second->data.set_deleted(true);
+                T::Send(uit->second->data, SandeshUVE::ST_SYNC,
+                        uit->second->seqno, 0, "");
+                count++;
+                ++uit;
+            }
+            ++git;
+        }
         cmap_.clear();
-        return siz;
+        return count;
     }
 
     bool InitDerivedStats(const std::map<std::string,std::string> & dsconf) {
