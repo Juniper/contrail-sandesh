@@ -173,12 +173,12 @@ void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, b
     DSInfo(bool is_map, size_t period, CacheAttribute cat,
           string rawtype, RawMetric rmtype,
           string resulttype, string algo, string annotation,
-          string compattr = string(""), string subcompattr = string("")) :
+          string compattr, string subcompattr, string prealgo) :
         is_map_(is_map), period_(period), cat_(cat),
         rawtype_(rawtype), rmtype_(rmtype),
         resulttype_(resulttype), algo_(algo),
         annotation_(annotation),
-        compattr_(compattr) , subcompattr_(subcompattr) {} 
+        compattr_(compattr) , subcompattr_(subcompattr), prealgo_(prealgo) {} 
     bool is_map_;
     size_t period_;
     CacheAttribute cat_;
@@ -189,6 +189,7 @@ void generate_sandesh_async_creator_helper(ofstream &out, t_sandesh *tsandesh, b
     string annotation_;
     string compattr_;
     string subcompattr_;
+    string prealgo_;
   };
   void derived_stats_info(t_struct* tstruct,
     map<string,DSInfo>& dsmap,
@@ -2009,7 +2010,7 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
         assert((*f_iter)->get_name() == "data");
     
         indent(out) << "static void Send(const " << type_name((*f_iter)->get_type()) <<
-            "& data, std::string table = \"\", uint64_t mono_usec=0);" << endl;
+            "& data, std::string table = \"\", uint64_t mono_usec=0, int partition=-1);" << endl;
 
         indent(out) << "static void Send(const " << type_name((*f_iter)->get_type()) <<
             "& cdata, SandeshUVE::SendType stype, uint32_t seqno," <<
@@ -2277,8 +2278,17 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
       string rawperiodattr = tstr.substr(0,pos);
       size_t ppos = rawperiodattr.find("-");
       int period = -1;
+      string prealgo;
       if (ppos != string::npos) {
-        period = atoi(rawperiodattr.substr(0,ppos).c_str());
+        string periodpre = rawperiodattr.substr(0,ppos);
+        size_t prepos = periodpre.find(".");
+        if (prepos != string::npos) {
+            period = atoi(periodpre.substr(0,prepos).c_str());
+            prealgo = periodpre.substr(prepos+1, string::npos);
+        } else {
+            period = atoi(rawperiodattr.substr(0,ppos).c_str());
+        }
+        
         rawfullattr = rawperiodattr.substr(ppos+1, string::npos);
       } else {
         rawfullattr = rawperiodattr;
@@ -2383,7 +2393,7 @@ void t_cpp_generator::derived_stats_info(t_struct* tstruct,
       }
 
       DSInfo dsi(is_ds_map, period, cat, rawtype, rmt,
-          restype, algo, anno, compattr, subcompattr);
+          restype, algo, anno, compattr, subcompattr, prealgo);
 
       // map of derived stats
       dsmap.insert(make_pair((*m_iter)->get_name(), dsi));
@@ -2434,6 +2444,7 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
   }
 
   bool del_support = false;
+  bool proxy_support = false;
   if (has_nonrequired_fields && (!pointers || read)) {
 
     out <<
@@ -2452,6 +2463,11 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
           ((*m_iter)->get_name().compare("deleted") == 0)) {
 	t_base_type::t_base tbase = ((t_base_type*)t)->get_base();
         if (tbase == t_base_type::TYPE_BOOL) del_support = true;
+      }
+      if (t->is_base_type() &&
+          ((*m_iter)->get_name().compare("proxy") == 0)) {
+        t_base_type::t_base tbase = ((t_base_type*)t)->get_base();
+        if (tbase == t_base_type::TYPE_STRING) proxy_support = true;
       }
         
       if (first) {
@@ -2609,12 +2625,21 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
     // val is rawtype,resulttype,algo,annotation,compattr,subcompattr
     if ((ds_iter->second.cat_ == PERIODIC) ||
         (ds_iter->second.cat_ == HIDDEN_PER)) {
-      indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" << 
-        ds_iter->second.algo_ << ", " << 
-        ds_iter->second.rawtype_ << ", " <<
-        ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
-        ds_iter->second.resulttype_ << 
-        "> > __dsobj_" << ds_iter->first << ";" << endl;
+      if (ds_iter->second.prealgo_.empty()) {
+        indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" << 
+          ds_iter->second.algo_ << ", " << 
+          ds_iter->second.rawtype_ << ", " <<
+          ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
+          ds_iter->second.resulttype_ << 
+          "> > __dsobj_" << ds_iter->first << ";" << endl;
+      } else {
+        indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsPeriodicAnomalyIf< ::contrail::sandesh::" << 
+          ds_iter->second.algo_ << ", " << 
+          ds_iter->second.rawtype_ << ", ::contrail::sandesh::" <<
+          ds_iter->second.prealgo_ << ", " <<
+          ds_iter->second.resulttype_ << 
+          "> > __dsobj_" << ds_iter->first << ";" << endl;
+      }
     } else {
       indent(out) << "boost::shared_ptr< ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" << 
         ds_iter->second.algo_ << ", " <<
@@ -2953,6 +2978,16 @@ void t_cpp_generator::generate_struct_definition(ofstream& out,
 	tstruct->get_name() << "> {" << endl <<
       indent() << "  static bool get(const " <<  
 	tstruct->get_name() << "& s) { return s.get_deleted(); }" <<
+        endl <<
+      indent() << "};" << endl;
+  }
+  if (proxy_support) {
+    out <<
+      indent() << "template <>" << endl <<
+      indent() << "struct SandeshStructProxyTrait<" <<
+	tstruct->get_name() << "> {" << endl <<
+      indent() << "  static std::string get(const " <<  
+	tstruct->get_name() << "& s) { return s.get_proxy(); }" <<
         endl <<
       indent() << "};" << endl;
   }
@@ -3339,8 +3374,9 @@ void t_cpp_generator::generate_struct_writer(ofstream& out,
         for (it = (*f_iter)->annotations_.begin(); it != (*f_iter)->annotations_.end(); it++) {
             if (((*f_iter)->get_name() == "name") && (it->first == "key")) {
               out << indent() << "assert(!table_.empty());" << endl;
-              out << indent() << "annotations_.insert(std::make_pair(\"key\", "
-                  "table_));" << endl;
+              out << indent() << "annotations_.insert("
+                  "std::make_pair(\"key\", table_));" << endl;
+
             } else {
               out << indent() << "annotations_.insert(std::make_pair(\"" << (*it).first
                   << "\"" << ", \"" << (*it).second << "\"));" << endl;
@@ -3667,6 +3703,7 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
 
   for (s_iter = sfields.begin(); s_iter != sfields.end(); ++s_iter) {
     string snm = (*s_iter)->get_name(); 
+    if (snm == "deleted") continue;
 
     // For non-derived stats, setting of attribute would have also set
     // the isset flag
@@ -3787,12 +3824,22 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
      
     if ((ds_iter->second.cat_ == PERIODIC) ||
         (ds_iter->second.cat_ == HIDDEN_PER)) {
-      indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
-        " ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" <<
-	ds_iter->second.algo_ << ", " << 
-	ds_iter->second.rawtype_ << ", " <<
-	ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
-	ds_iter->second.resulttype_ << "> >(_dci->second, is_agg);" << endl;
+
+      if (ds_iter->second.prealgo_.empty()) {
+        indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
+          " ::contrail::sandesh::DerivedStatsPeriodicIf< ::contrail::sandesh::" <<
+	  ds_iter->second.algo_ << ", " << 
+	  ds_iter->second.rawtype_ << ", " <<
+	  ds_iter->second.resulttype_.substr(0, ds_iter->second.resulttype_.size() - 3) << ", " <<
+	  ds_iter->second.resulttype_ << "> >(_dci->second, is_agg);" << endl;
+      } else {
+        indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
+          " ::contrail::sandesh::DerivedStatsPeriodicAnomalyIf< ::contrail::sandesh::" <<
+          ds_iter->second.algo_ << ", " << 
+          ds_iter->second.rawtype_ << ", ::contrail::sandesh::" <<
+          ds_iter->second.prealgo_ << ", " <<
+          ds_iter->second.resulttype_ << "> >(_dci->second, is_agg);" << endl;
+      }
     } else {
       indent(out) << "_data.__dsobj_" << ds_iter->first << " = boost::make_shared<" <<
         " ::contrail::sandesh::DerivedStatsIf< ::contrail::sandesh::" <<
@@ -3830,7 +3877,7 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
           indent(out) << "if (_data.__isset." << snm << ") { send = true;" << endl;
         }
       } else {
-        if (snm.compare("name") == 0) {
+        if ((snm.compare("name") == 0) || (snm.compare("proxy") == 0)) {
           indent(out) << "{" << endl;
         } else {
           indent(out) << "{ send = true;" << endl;
@@ -4193,9 +4240,16 @@ void t_cpp_generator::generate_sandesh_uve_creator(
     indent(out) << "SANDESH_UVE_DEF(" << sname << "," <<
         type_name((*f_iter)->get_type());
     if (ait == ((*f_iter)->get_type())->annotations_.end()) {
-      indent(out) << ", 0);" << endl;
+      indent(out) << ", 0, 0);" << endl;
     } else {
-      indent(out) << ", " << atoi(ait->second.c_str()) << ");" << endl;  
+      std::map<std::string, std::string>::iterator tmit;
+      tmit = ((*f_iter)->get_type())->annotations_.find("timeout");
+      if (tmit == ((*f_iter)->get_type())->annotations_.end()) {
+        indent(out) << ", " << atoi(ait->second.c_str()) << ", 0);" << endl;  
+      } else {
+        indent(out) << ", " << atoi(ait->second.c_str()) << ", " <<
+          atoi(tmit->second.c_str()) << ");" << endl;
+      }
     }
 
     indent(out) << "void " << sname <<
@@ -4217,7 +4271,7 @@ void t_cpp_generator::generate_sandesh_uve_creator(
     
     indent(out) << "void " << sname <<
         "::Send(const " << type_name((*f_iter)->get_type()) <<
-        "& data, std::string table, uint64_t mono_usec) {" << endl;
+        "& data, std::string table, uint64_t mono_usec, int partition) {" << endl;
     indent_up();
 
     indent(out) << type_name((*f_iter)->get_type()) <<
@@ -4225,9 +4279,8 @@ void t_cpp_generator::generate_sandesh_uve_creator(
         " &>(data);" << endl;
     indent(out) << "uint32_t msg_seqno = lseqnum_.fetch_and_increment() + 1;" << endl;
     indent(out) << "if (!table.empty()) cdata.table_ = table;" << endl;
-
     indent(out) << "if (uvemap" << sname <<
-      ".UpdateUVE(cdata, msg_seqno, mono_usec)) {" << endl;
+      ".UpdateUVE(cdata, msg_seqno, mono_usec, partition)) {" << endl;
     indent_up();
     indent(out) << sname << " *snh = new " << sname << "(msg_seqno, cdata);" << endl;
     indent(out) << "snh->Dispatch();" << endl;
