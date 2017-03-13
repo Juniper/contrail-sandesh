@@ -99,8 +99,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
                 'table' : 'CollectorInfo',
                 'name' : 'node1',
                 'elements' : {'log_local' : 'True'},
-                'expected_elements' : {'log_level' : 'SYS_INFO',
-                                       'log_local' : 'True'},
+                'expected_elements' : {'log_local' : 'True'},
                 'seqnum' : 2
             },
             # add another uve
@@ -216,8 +215,7 @@ class SandeshUVEAlarmTest(unittest.TestCase):
                 'type' : (ConfigUVE, Config),
                 'table' : 'CollectorInfo',
                 'name' : 'node1',
-                'elements' : {'log_level' : 'SYS_INFO',
-                              'log_local' : 'True'},
+                'elements' : {'log_local' : 'True'},
                 'seqnum' : 2
             }
         ]
