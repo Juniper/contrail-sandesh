@@ -667,12 +667,14 @@ sandesh_global = Sandesh()
 class SandeshConfig(object):
 
     def __init__(self, keyfile=None, certfile=None, ca_cert=None,
-                 sandesh_ssl_enable=False, introspect_ssl_enable=False):
+                 sandesh_ssl_enable=False, introspect_ssl_enable=False,
+                 dscp_value=0):
         self.keyfile = keyfile
         self.certfile = certfile
         self.ca_cert = ca_cert
         self.sandesh_ssl_enable = sandesh_ssl_enable
         self.introspect_ssl_enable = introspect_ssl_enable
+        self.dscp_value = dscp_value
     # end __init__
 
 # end class SandeshConfig
