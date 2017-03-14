@@ -275,6 +275,7 @@ class SandeshSession(SslSession):
         super(SandeshSession, self).__init__(server,
             sandesh_config.sandesh_ssl_enable, sandesh_config.keyfile,
             sandesh_config.certfile, sandesh_config.ca_cert)
+        self._dscp_value = sandesh_config.dscp_value
         self._sandesh_instance = sandesh_instance
         self._logger = sandesh_instance._logger
         self._event_handler = event_handler
@@ -354,6 +355,9 @@ class SandeshSession(SslSession):
             self._socket.setsockopt(
                 socket.IPPROTO_TCP, socket.TCP_KEEPINTVL,
                 self._KEEPALIVE_INTERVAL)
+        if hasattr(socket, 'IP_TOS') and (self._dscp_value != 0):
+            self._socket.setsockopt(
+                socket.IPPROTO_IP, socket.IP_TOS, self._dscp_value)
         if hasattr(socket, 'TCP_KEEPCNT'):
             self._socket.setsockopt(
                 socket.IPPROTO_TCP, socket.TCP_KEEPCNT, self._KEEPALIVE_PROBES)
