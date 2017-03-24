@@ -129,9 +129,10 @@ class t_doc_generator : public t_generator {
   void generate_stat_schema_struct_base_member(string, t_field*, string);
   void generate_stat_table_schema_header(string, string, string, string);
   string get_datatype_from_tfield(t_type* tfield);
-  void generate_table_entry(string name, string datatype, string index);
+  void generate_table_entry(string name, string datatype, string index, string);
   template <typename T>
   string get_type_of_member(string, t_field*, t_struct*, T*);
+  string get_uve_type(string, t_field*, t_struct*);
   template <typename T>
   void populate_stat_schema_map_key_value(t_field* tfield, t_type*, t_type*, T*);
   void generate_stat_schema_struct_members(string name, t_field*, t_struct*, vector<string>, map<string, vector<string> >);
@@ -1044,6 +1045,27 @@ void t_doc_generator::generate_stat_table_schema_header(string type, string attr
     first_member_ = true;
 }
 
+string t_doc_generator::get_uve_type(string name, t_field* tfield, t_struct* cstruct) {
+    map<string, string>::iterator jt;
+    string uve_type = "";
+    if (cstruct) {
+        const vector<t_field*>& tmembers = cstruct->get_members();
+        vector<t_field*>::const_iterator m_iter;
+        for (m_iter = tmembers.begin(); m_iter != tmembers.end(); ++m_iter) {
+             if (name == (*m_iter)->get_name()) {
+                 jt = (*m_iter)->annotations_.find("uve_type");
+                 if (jt != cstruct->annotations_.end())
+                     uve_type = jt->second;
+             }
+        }
+    } else {
+        jt = tfield->annotations_.find("uve_type");
+        if (jt != tfield->annotations_.end())
+            uve_type = jt->second;
+    }
+    return uve_type;
+}
+
 template <typename T>
 string t_doc_generator::get_type_of_member(string name, t_field* tfield, t_struct* cstruct, T* tstruct) {
     string datatype;
@@ -1124,9 +1146,17 @@ void t_doc_generator::generate_stat_schema_suffixes(string prefix,
         }
         indent_up();
         f_stats_tables_ << "," << endl;
-        indent(f_stats_tables_) << "{\"name\":\"" << fname <<
-            "\",\"datatype\":\"" << datatype << "\",\"index\":" << index <<
-            ",\"suffixes\":[" << suffix << "]}";
+        string uve_type = get_uve_type(it->first.substr(1), tfield, cstruct);
+        if (uve_type != "") {
+            indent(f_stats_tables_) << "{\"name\":\"" << fname <<
+                "\",\"datatype\":\"" << datatype << "\",\"index\":" << index <<
+                ",\"uve_type\":\"" << uve_type <<
+                "\",\"suffixes\":[" << suffix << "]}";
+        } else {
+            indent(f_stats_tables_) << "{\"name\":\"" << fname <<
+                "\",\"datatype\":\"" << datatype << "\",\"index\":" << index <<
+                ",\"suffixes\":[" << suffix << "]}";
+        }
         indent_down();
     }
 }
@@ -1199,12 +1229,19 @@ string t_doc_generator::get_datatype_from_tfield(t_type* ttype) {
     return datatype;
 }
 
-void t_doc_generator::generate_table_entry(string name, string datatype, string index) {
+void t_doc_generator::generate_table_entry(string name, string datatype, string index, string uve_type) {
     indent_up();
     if (!first_member_) {
         f_stats_tables_ << "," << endl;
     }
-    indent(f_stats_tables_) << "{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
+    if (uve_type != "") {
+        indent(f_stats_tables_) << "{\"name\":\"" << name << "\",\"datatype\":\""
+            << datatype << "\",\"index\":" << index << ",\"uve_type\":\""
+            << uve_type << "\"}";
+    } else {
+        indent(f_stats_tables_) << "{\"name\":\"" << name << "\",\"datatype\":\""
+            << datatype << "\",\"index\":" << index << "}";
+    }
     first_member_ = false;
     indent_down();
 }
@@ -1234,8 +1271,12 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
     string index = "false";
     bool is_suffixed_field = false;
     is_indexed_or_suffixed_field(string("__key"), member_tags, suffixes, index, is_suffixed_field);
+    jt = tfield->annotations_.find("uve_type");
+    string uve_type = "";
+    if (jt != tfield->annotations_.end())
+        uve_type = jt->second;
     if (!is_suffixed_field) {
-        generate_table_entry(name, datatype, index);
+        generate_table_entry(name, datatype, index, uve_type);
     }
     if(valtype->is_base_type()) {
         name = tname + string(".__value");
@@ -1246,7 +1287,7 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
                 index = "true";
             }
         }
-        generate_table_entry(name, datatype, index);
+        generate_table_entry(name, datatype, index, uve_type);
     }
 
     string empty_prefix;
@@ -1272,7 +1313,12 @@ void t_doc_generator::generate_stat_schema_struct_base_member(string prefix, t_f
         fname = prefix+ "." + fname;
     }
     string datatype = get_datatype_from_tfield(tfield->get_type());
-    generate_table_entry(fname, datatype, index);
+    map<string, string>::iterator jt;
+    jt = tfield->annotations_.find("uve_type");
+    string uve_type = "";
+    if (jt != tfield->annotations_.end())
+        uve_type = jt->second;
+    generate_table_entry(fname, datatype, index, uve_type);
 }
 
 template <typename T>
@@ -1360,8 +1406,12 @@ void t_doc_generator::generate_stat_schema_list(string name, t_type* ttype, t_fi
         string index = "false";
         bool is_suffixed_field = false;
         is_indexed_or_suffixed_field(tname, member_tags, suffixes, index, is_suffixed_field);
+        jt = tfield->annotations_.find("uve_type");
+        string uve_type = "";
+        if (jt != ttype->annotations_.end())
+            uve_type = jt->second;
         if (!is_suffixed_field) {
-            generate_table_entry(tname, datatype, index);
+            generate_table_entry(tname, datatype, index, uve_type);
         }
     }
 }
