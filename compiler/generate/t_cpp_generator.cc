@@ -508,7 +508,11 @@ void t_cpp_generator::init_generator() {
 #endif
     "#include <base/trace.h>" << endl;
   if (program_name_ != "sandesh") {
+    f_types_ << "#include <sandesh/sandesh_types.h>" << endl;
     f_types_ << "#include <sandesh/sandesh_constants.h>" << endl;
+    if(program_name_ != "derived_stats_results" && program_name_ != "vns") {
+      f_types_ << "#include <sandesh/sandesh.h>" << endl;
+    }
   }
   f_types_ <<
     "#include <sandesh/protocol/TProtocol.h>" << endl <<
@@ -549,9 +553,6 @@ void t_cpp_generator::init_generator() {
   f_types_impl_ <<
     "#include <boost/date_time/posix_time/posix_time.hpp>" << endl << endl <<
     "#include <base/logging.h>" << endl << endl <<
-    "#include <sandesh/sandesh_types.h>" << endl <<
-    "#include <sandesh/sandesh_constants.h>" << endl <<
-    "#include <sandesh/sandesh.h>" << endl <<
     "#include <sandesh/sandesh_uve.h>" << endl <<
     "#include <sandesh/sandesh_http.h>" << endl <<
     "#include <sandesh/sandesh_trace.h>" << endl <<
