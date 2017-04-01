@@ -14,6 +14,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/find_iterator.hpp>
 #include <boost/range/iterator_range.hpp>
+#include <boost/bind.hpp>
 
 #include "testing/gunit.h"
 
