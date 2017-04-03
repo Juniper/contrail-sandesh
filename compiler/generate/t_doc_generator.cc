@@ -93,6 +93,7 @@ class t_doc_generator : public t_generator {
   sandesh_level::type string_to_sandesh_level(const string &level);
   string sandesh_level_to_string(const sandesh_level::type &slevel);
   sandesh_level::type get_sandesh_level(t_sandesh *tsandesh);
+  string get_object_type( t_sandesh* tsandesh);
   bool is_sandesh_type(t_sandesh *tsandesh, doc_ftype::type dtype);
   string get_doc_file_suffix(doc_ftype::type dtype);
   string get_doc_file_description(doc_ftype::type dtype);
@@ -110,6 +111,8 @@ class t_doc_generator : public t_generator {
     string fsuffix, doc_ftype::type dtype);
   void generate_sandesh_program_doc_schema(t_program* tprog, ofstream &f_out,
     string fsuffix, doc_ftype::type dtype);
+  void generate_sandesh_program_doc_schema_uve(t_program* tprog, ofstream &f_out,
+    string fsuffix);
 
   /**
    * Program-level generation functions
@@ -193,6 +196,7 @@ class t_doc_generator : public t_generator {
   void generate_consts  (vector<t_const*> consts, ofstream &f_out);
   void generate_struct  (t_struct*   tstruct, ofstream &f_out);
   void generate_sandesh (t_sandesh*  tsandesh, ofstream &f_out);
+  void generate_sandesh_uve (t_sandesh*  tsandesh, ofstream &f_out);
 
   bool stat_table_created_;
   bool first_member_;
@@ -371,8 +375,17 @@ void t_doc_generator::generate_program_toc_row(t_program* tprog, ofstream &f_out
     for (snh_iter = sandeshs.begin(); snh_iter != sandeshs.end(); ++snh_iter) {
       string name = get_sandesh_name(*snh_iter);
       if (is_sandesh_type(*snh_iter, dtype)) {
-        f_out << "<a href=\"" << fname << "#Snh_" << name << "\">" << name
-          << "</a><br/>" << endl;
+        if (dtype == doc_ftype::UVES) {
+          vector<t_field*> members = (*snh_iter)->get_members();
+          BOOST_FOREACH(t_field *tfield, members) {
+            name = tfield->get_type()->get_name();
+            f_out << "<a href=\"" << fname << "#Snh_" << name << "\">" << name
+              << "</a><br/>" << endl;
+          }
+        } else {
+          f_out << "<a href=\"" << fname << "#Snh_" << name << "\">" << name
+            << "</a><br/>" << endl;
+        }
       }
     }
   }
@@ -409,6 +422,8 @@ void t_doc_generator::generate_stats_schema_program() {
 
 void t_doc_generator::generate_sandesh_program_doc_schema(t_program* tprog,
   ofstream &f_out, string fsuffix, doc_ftype::type dtype) {
+  if (dtype == doc_ftype::UVES)
+      return generate_sandesh_program_doc_schema_uve(tprog, f_out, fsuffix);
   bool init = false;
   f_out << "{\"messages\":{" << endl;
   if (!tprog->get_sandeshs().empty()) {
@@ -431,6 +446,8 @@ void t_doc_generator::generate_sandesh_program_doc_schema(t_program* tprog,
       if (dtype == doc_ftype::LOGS) {
         f_out << ", \"severity\":\"" <<
           sandesh_level_to_string(get_sandesh_level(*snh_iter)) << "\"";
+      } else if (dtype == doc_ftype::UVES && get_object_type(*snh_iter) != "") {
+        f_out << ", \"object\":\"" << get_object_type(*snh_iter) << "\"";
       }
       f_out << "}";
     }
@@ -439,6 +456,51 @@ void t_doc_generator::generate_sandesh_program_doc_schema(t_program* tprog,
     for (snh_iter = sandeshs.begin(); snh_iter != sandeshs.end(); ++snh_iter) {
       sandesh_name_ = get_sandesh_name(*snh_iter);
       if (!is_sandesh_type(*snh_iter, doc_ftype::INTROSPECT)) {
+        continue;
+      }
+      generate_introspect_cli(*snh_iter, f_out, first_file);
+    }
+    f_out << endl << "}" << endl << "}" << endl;
+  } else {
+    f_out << "}" << endl << "}" << endl;
+  }
+}
+
+void t_doc_generator::generate_sandesh_program_doc_schema_uve(t_program* tprog,
+  ofstream &f_out, string fsuffix) {
+  bool init = false;
+  f_out << "{\"messages\":{" << endl;
+  if (!tprog->get_sandeshs().empty()) {
+    vector<t_sandesh*> sandeshs = tprog->get_sandeshs();
+    vector<t_sandesh*>::iterator snh_iter;
+    for (snh_iter = sandeshs.begin(); snh_iter != sandeshs.end(); ++snh_iter) {
+      if (!is_sandesh_type(*snh_iter, doc_ftype::UVES)) {
+        continue;
+      }
+      if (!init) {
+        init  = true;
+      } else {
+        f_out << "," << endl;
+      }
+      string sandesh_name(get_sandesh_name(*snh_iter));
+      vector<t_field*> smembers = (*snh_iter)->get_members();
+      if (smembers.size() == 1 && smembers[0]->get_type()->is_struct()) {
+        sandesh_name = smembers[0]->get_type()->get_name();
+      }
+      string fname(tprog->get_name() + fsuffix + ".html");
+      f_out << "\"" << sandesh_name << "\":{\"fingerprint\":\"" <<
+        (*snh_iter)->get_ascii_fingerprint() << "\", \"href\":\"" <<
+        fname << "#Snh_" << sandesh_name << "\"";
+      if (get_object_type(*snh_iter) != "") {
+        f_out << ", \"object\":\"" << get_object_type(*snh_iter) << "\"";
+      }
+      f_out << "}";
+    }
+    f_out << "}," << endl << "\"sandesh_cli\":{" << endl;
+    bool first_file = true;
+    for (snh_iter = sandeshs.begin(); snh_iter != sandeshs.end(); ++snh_iter) {
+      sandesh_name_ = get_sandesh_name(*snh_iter);
+      if (!is_sandesh_type(*snh_iter, doc_ftype::UVES)) {
         continue;
       }
       generate_introspect_cli(*snh_iter, f_out, first_file);
@@ -476,7 +538,11 @@ bool t_doc_generator::generate_sandesh_program_doc(t_program* tprog,
       init = true;
       sandesh_name_ = get_sandesh_name(*snh_iter);
       f_out << "<div class=\"definition\">";
-      generate_sandesh(*snh_iter, f_out);
+      if (dtype == doc_ftype::UVES) {
+        generate_sandesh_uve(*snh_iter, f_out);
+      } else {
+        generate_sandesh(*snh_iter, f_out);
+      }
       f_out << "</div>";
     }
   }
@@ -775,6 +841,39 @@ string t_doc_generator::sandesh_level_to_string(
 }
 
 typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
+string t_doc_generator::get_object_type( t_sandesh* tsandesh) {
+  if (tsandesh->has_doc()) {
+    string doc = tsandesh->get_doc();
+    size_t index;
+    if ((index = doc.find_first_of("@")) != string::npos) {
+      // Skip leading documentation
+      string fdoc(doc.substr(index + 1));
+      // Extract tokens beginning with @
+      boost::char_separator<char> fsep("@");
+      tokenizer ftokens(fdoc, fsep);
+      BOOST_FOREACH(const string &f, ftokens) {
+        // Has 2 parts, the first ending with ':' or ' ' or '\t' is
+        // the type and the next is the content
+        size_t lindex;
+        if ((lindex = f.find_first_of(": \t")) != string::npos) {
+          string type(f.substr(0, lindex));
+          if (lindex + 1 < f.size() && f.at(lindex) != f.at(lindex + 1) &&
+              (f.at(lindex + 1) == ':' || f.at(lindex + 1) == '\t' ||
+               f.at(lindex + 1) == ' ')) {
+            lindex++;
+          }
+          string content(f.substr(lindex + 1));
+          if (type == "object") {
+            boost::algorithm::trim(content);
+            return content;
+          }
+        }
+      }
+    }
+  }
+  return "";
+}
+
 t_doc_generator::sandesh_level::type t_doc_generator::get_sandesh_level(
     t_sandesh* tsandesh) {
   if (tsandesh->has_doc()) {
@@ -1656,6 +1755,44 @@ void t_doc_generator::generate_sandesh(t_sandesh* tsandesh, ofstream &f_out) {
     f_out << "</td></tr>" << endl;
   }
   f_out << "</table><br/>";
+}
+
+/**
+ * Generates the HTML block for a sandesh.
+ *
+ * @param tsandesh The sandesh definition
+ */
+void t_doc_generator::generate_sandesh_uve(t_sandesh* tsandesh, ofstream &f_out) {
+  vector<t_field*> smembers = tsandesh->get_members();
+  if (smembers.size() == 1 && smembers[0]->get_type()->is_struct()) {
+    sandesh_name_ = smembers[0]->get_type()->get_name();
+  f_out << "<h3 id=\"Snh_" << sandesh_name_ << "\"> "
+    << sandesh_name_ << "</h3>" << endl;
+  print_sandesh(tsandesh, f_out);
+  f_out << "<table>";
+  f_out << "<tr><th>Field</th><th>Type</th><th>Description</th></tr>"
+    << endl;
+  t_struct *cstruct = find_struct_with_name(sandesh_name_);
+  if (!cstruct)
+    f_out << "</table><br/>";
+    return;
+  vector<t_field*> members = cstruct->get_members();
+  BOOST_FOREACH(t_field *tfield, members) {
+    if (tfield->get_auto_generated()) {
+      continue;
+    }
+    t_type *type = tfield->get_type();
+    if (type->is_static_const_string()) {
+      continue;
+    }
+    f_out << "<tr><td>" << tfield->get_name() << "</td><td>";
+    print_type(tfield->get_type(), f_out);
+    f_out << "</td><td>";
+    f_out << tfield->get_doc();
+    f_out << "</td></tr>" << endl;
+  }
+  f_out << "</table><br/>";
+  }
 }
 
 THRIFT_REGISTER_GENERATOR(doc, "Documentation", "")
