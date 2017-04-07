@@ -281,7 +281,7 @@ class DerivedStatsPeriodicIf {
             // There were no updates to the DerivedStat
             // since the last flush
             ds_cache_.reset();
-            return ds_cache_;
+            return ds_cache_.get();
         }
         ds_cache_ = boost::make_shared<ResultT>();
         if (ds_->FillResult(ds_cache_->value)) {
@@ -291,7 +291,7 @@ class DerivedStatsPeriodicIf {
         // Clear the DerivedStat
         ds_.reset();
 
-        return ds_cache_;
+        return ds_cache_.get();
     }
 
     // This is the interface to retrieve the current value
@@ -320,7 +320,7 @@ class DerivedStatsPeriodicIf {
             // There were no updates to the DerivedStats
             // since the last flush
             dsm_cache_.reset();
-            return dsm_cache_;
+            return dsm_cache_.get();
         }
         dsm_cache_ = boost::make_shared<std::map<std::string,ResultT> >();
         for (typename result_map::const_iterator dit = dsm_->begin();
@@ -335,7 +335,7 @@ class DerivedStatsPeriodicIf {
 
         // Clear the DerivedStats
         dsm_.reset();
-        return dsm_cache_;
+        return dsm_cache_.get();
     }
 
     // This is the interface to retrieve the current value
