@@ -45,6 +45,7 @@ class SandeshMsgTest(unittest.TestCase):
         sandesh_global.init_generator('sandesh_msg_test', socket.gethostname(), 
                 'Test', 'Test', None, 'sandesh_msg_test_ctxt', http_port,
                 connect_to_collector=False)
+        sandesh_global.disable_sending_system_and_object_logs(False)
 
     def setUp(self):
         self.setUpClass()

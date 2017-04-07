@@ -154,6 +154,13 @@ class SandeshMessageStatistics(object):
                 else:
                     msg_stats.messages_sent_dropped_rate_limited = 1
                     msg_stats.bytes_sent_dropped_rate_limited = nbytes
+            elif drop_reason is SandeshTxDropReason.SendingDisabled:
+                if msg_stats.messages_sent_dropped_sending_disabled:
+                    msg_stats.messages_sent_dropped_sending_disabled+= 1
+                    msg_stats.bytes_sent_dropped_sending_disabled += nbytes
+                else:
+                    msg_stats.messages_sent_dropped_sending_disabled = 1
+                    msg_stats.bytes_sent_dropped_sending_disabled = nbytes
             else:
                 assert 0, 'Unhandled Tx drop reason <%s>' % (str(drop_reason))
     # end _update_tx_stats_internal

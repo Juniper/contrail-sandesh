@@ -71,6 +71,7 @@ enum SandeshTxDropReason {
     WriteFailed,
     SessionNotConnected,
     WrongClientSMState,
+    SendingDisabled,
     MaxDropReason
 }
 
