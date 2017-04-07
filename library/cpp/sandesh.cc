@@ -48,6 +48,9 @@ bool Sandesh::enable_trace_print_ = false;
 bool Sandesh::send_queue_enabled_ = true;
 bool Sandesh::connect_to_collector_ = false;
 bool Sandesh::disable_flow_collection_ = false;
+bool Sandesh::disable_sending_all_ = false;
+bool Sandesh::disable_sending_object_logs_ = false;
+bool Sandesh::disable_sending_flows_ = true;
 SandeshLevel::type Sandesh::sending_level_ = SandeshLevel::INVALID;
 SandeshClient *Sandesh::client_ = NULL;
 SandeshConfig Sandesh::config_;
@@ -148,12 +151,12 @@ bool Sandesh::Initialize(SandeshRole::type role,
     client_context_ = client_context;
     config_         = config;
     event_manager_  = evm;
-    //If Sandesh::sandesh_send_ratelimit_ is not defined by client,
-    // assign a default value to it
-    if (get_send_rate_limit() == 0) {
-        set_send_rate_limit(g_sandesh_constants.DEFAULT_SANDESH_SEND_RATELIMIT);
-    }
 
+    if (get_send_rate_limit() ==
+        g_sandesh_constants.DEFAULT_SANDESH_SEND_RATELIMIT) {
+        set_send_rate_limit(config.system_logs_rate_limit);
+    }
+    DisableSendingObjectLogs(config.disable_object_logs);
     InitReceive(Task::kTaskInstanceAny);
     bool success(SandeshHttp::Init(evm, module, http_port,
         &SandeshHttpCallback, &http_port_, config_));
@@ -457,14 +460,64 @@ void Sandesh::SetFlowLogging(bool enable_flow_log) {
     }
 }
 
-
-
 void Sandesh::DisableFlowCollection(bool disable) {
     if (disable_flow_collection_ != disable) {
         SANDESH_LOG(INFO, "SANDESH: Disable Flow Collection: " <<
             disable_flow_collection_ << " -> " << disable);
         disable_flow_collection_ = disable;
     }
+}
+
+void Sandesh::DisableSendingAllMessages(bool disable) {
+    if (disable_sending_all_ != disable) {
+        SANDESH_LOG(INFO, "SANDESH: Disable Sending ALL Messages: " <<
+            disable_sending_all_ << " -> " << disable);
+        disable_sending_all_ = disable;
+    }
+}
+
+bool Sandesh::IsSendingAllMessagesDisabled() {
+    return disable_sending_all_;
+}
+
+void Sandesh::DisableSendingObjectLogs(bool disable) {
+    if (disable_sending_object_logs_ != disable) {
+        SANDESH_LOG(INFO, "SANDESH: Disable Sending Object Logs: " <<
+            disable_sending_object_logs_ << " -> " << disable);
+        disable_sending_object_logs_ = disable;
+    }
+}
+
+bool Sandesh::IsSendingObjectLogsDisabled() {
+    return disable_sending_object_logs_;
+}
+
+void Sandesh::DisableSendingFlows(bool disable) {
+    if (disable_sending_flows_ != disable) {
+        SANDESH_LOG(INFO, "SANDESH: Disable Sending Flows: " <<
+            disable_sending_flows_ << " -> " << disable);
+        disable_sending_flows_ = disable;
+    }
+}
+
+bool Sandesh::IsSendingFlowsDisabled() {
+    return disable_sending_flows_;
+}
+
+bool Sandesh::IsSendingSystemLogsDisabled() {
+    return sandesh_send_ratelimit_ == 0;
+}
+
+void Sandesh::set_send_rate_limit(int rate_limit) {
+    if (rate_limit >= 0) {
+        SANDESH_LOG(INFO, "SANDESH: System Log Send Rate Limit: " <<
+            sandesh_send_ratelimit_ << " -> " << rate_limit);
+        sandesh_send_ratelimit_ = rate_limit;
+    }
+}
+
+uint32_t Sandesh::get_send_rate_limit() {
+    return sandesh_send_ratelimit_;
 }
 
 bool Sandesh::Enqueue(SandeshQueue *queue) {
@@ -690,6 +743,13 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
         return true;
     }
     if (client_) {
+        if (IsSendingAllMessagesDisabled()) {
+            Log();
+            UpdateTxMsgFailStats(Name(), 0,
+                SandeshTxDropReason::SendingDisabled);
+            Release();
+            return false;
+        }
         if (!client_->SendSandeshUVE(this)) {
             SANDESH_LOG(ERROR, "SandeshUVE : Send FAILED: " << ToString());
             UpdateTxMsgFailStats(Name(), 0,
@@ -825,9 +885,11 @@ void Sandesh::SetSendQueue(bool enable) {
     }
 }
 
+// In sandesh state machine on collector, we can only drop systemlog,
+// objectlog, and flow. UVEs can only be dropped after being dequeued from
+// the state machine and published on redis/kafka
 bool DoDropSandeshMessage(const SandeshHeader &header,
     const SandeshLevel::type drop_level) {
-    // Only systemlog, objectlog, and flow have level
     SandeshType::type stype(header.get_Type());
     if (stype == SandeshType::SYSTEM ||
         stype == SandeshType::OBJECT ||

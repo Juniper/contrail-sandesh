@@ -53,15 +53,15 @@ class t_sandesh : public t_type {
   }
 
   void set_type(t_type* type) {
-	type_ = type;
+    type_ = type;
   }
 
   bool exist_opt_field() {
     members_type::const_iterator m_iter;
     for (m_iter = members_in_id_order_.begin(); m_iter != members_in_id_order_.end(); ++m_iter) {
-       if ((*m_iter)->get_req() == t_field::T_OPTIONAL) {
-           return true;
-       }
+      if ((*m_iter)->get_req() == t_field::T_OPTIONAL) {
+        return true;
+      }
     }
     return false;
   }
@@ -108,7 +108,13 @@ class t_sandesh : public t_type {
   }
 
   const t_type* get_type() {
-      return type_;
+    return type_;
+  }
+
+  bool is_level_category_supported() const {
+    t_base_type *btype = (t_base_type *) type_;
+    return btype->is_sandesh_system() || btype->is_sandesh_object() ||
+      btype->is_sandesh_flow() || btype->is_sandesh_uve();
   }
 
   virtual bool has_key_annotation() const;

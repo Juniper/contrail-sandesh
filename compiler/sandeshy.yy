@@ -835,7 +835,7 @@ Xception:
     }
 
 Sandesh:
-  SandeshType tok_sandesh tok_identifier '{' SFieldList '}'
+  SandeshType tok_sandesh tok_identifier '{' SFieldList '}' TypeAnnotations
     {
       pdebug("Sandesh -> tok_sandesh tok_identifier { SFieldList }");
       $5->set_name($3);
@@ -861,6 +861,10 @@ Sandesh:
           $5->append(new t_field(g_type_i32, "line", SHRT_MIN + 1, true));
       }
       $$ = $5;
+      if ($7 != NULL) {
+        $$->annotations_ = $7->annotations_;
+        delete $7;
+      }
     }
     
 SandeshType:

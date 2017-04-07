@@ -255,7 +255,7 @@ protected:
             EXPECT_EQ(0, header.get_Hints());
             EXPECT_EQ(SandeshLevel::SYS_INFO, header.get_Level());
             EXPECT_EQ("", header.get_Category());
-            const char *expect = "<ObjectLogOptionalTest type=\"sandesh\"><f1 type=\"i32\" identifier=\"1\">200</f1><f3 type=\"i32\" identifier=\"2\">100</f3><file type=\"string\" identifier=\"-32768\">tools/sandesh/library/cpp/test/sandesh_message_test.cc</file><line type=\"i32\" identifier=\"-32767\">319</line></ObjectLogOptionalTest>";
+            const char *expect = "<ObjectLogOptionalTest type=\"sandesh\"><f1 type=\"i32\" identifier=\"1\">200</f1><f3 type=\"i32\" identifier=\"2\">100</f3><file type=\"string\" identifier=\"-32768\">tools/sandesh/library/cpp/test/sandesh_message_test.cc</file><line type=\"i32\" identifier=\"-32767\">320</line></ObjectLogOptionalTest>";
             EXPECT_STREQ(expect, message.c_str());
 	    break;
 	}
@@ -279,15 +279,16 @@ TEST_F(SandeshAsyncTest, Async) {
     int port = server_->GetPort();
     ASSERT_LT(0, port);
     // Connect to the server
+    SandeshConfig sconfig;
+    sconfig.system_logs_rate_limit = 10;
     Sandesh::InitGenerator("SandeshAsyncTest-Client", "localhost", 
                            "Test", "Test", evm_.get(),
-                           0);
+                           0, NULL, Sandesh::DerivedStats(), sconfig);
     EXPECT_FALSE(Sandesh::IsConnectToCollectorEnabled());
     Sandesh::ConnectToCollector("127.0.0.1", port);
     EXPECT_TRUE(Sandesh::IsConnectToCollectorEnabled());
     EXPECT_TRUE(Sandesh::client() != NULL);
     Sandesh::SetLoggingParams(true, "", "UT_DEBUG");
-
     TASK_UTIL_EXPECT_TRUE(Sandesh::client()->state() == SandeshClientSM::ESTABLISHED);
 
     // Set the logging parameters
@@ -342,7 +343,7 @@ TEST_F(SandeshAsyncTest, Async) {
     }
 }
 
-TEST_F(SandeshSendRatelimitTest, Buffer) {
+TEST_F(SandeshSendRatelimitTest, RateLimit) {
     server_->Initialize(0);
     thread_->Start();       // Must be called after initialization
     int port = server_->GetPort();
@@ -385,7 +386,7 @@ TEST_F(SandeshSendRatelimitTest, Buffer) {
     Sandesh::set_send_rate_limit(-10);
     EXPECT_TRUE(Sandesh::get_send_rate_limit() == 10);
     Sandesh::set_send_rate_limit(0);
-    EXPECT_TRUE(Sandesh::get_send_rate_limit() == 10);
+    EXPECT_TRUE(Sandesh::get_send_rate_limit() == 0);
 }
 
 class SandeshUVEAlarmTest : public ::testing::Test {
@@ -964,7 +965,8 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     uve_data3.set_name("uve2");
 
     uve_data3.set_y(1);
-    SandeshUVETest::Send(uve_data3, "ObjectCollectorInfo");
+    SandeshUVETest::Send(uve_data3, SandeshLevel::SYS_INFO,
+        "ObjectCollectorInfo");
 
     // add uve with existing <name>, but different key value
     // case 3
@@ -978,13 +980,15 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     SandeshUVEData uve_data5;
     uve_data5.set_name("uve2");
     uve_data5.set_deleted(true);
-    SandeshUVETest::Send(uve_data5, "ObjectCollectorInfo");
+    SandeshUVETest::Send(uve_data5, SandeshLevel::SYS_INFO,
+        "ObjectCollectorInfo");
 
     // add deleted uve
     // case 5
     SandeshUVEData uve_data6;
     uve_data6.set_name("uve2");
-    SandeshUVETest::Send(uve_data6, "ObjectCollectorInfo");
+    SandeshUVETest::Send(uve_data6, SandeshLevel::SYS_INFO,
+        "ObjectCollectorInfo");
 
     // add alarm
     // case 6
@@ -1005,7 +1009,8 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     SandeshAlarmData alarm_data3;
     alarm_data3.set_name("alarm2");
     alarm_data3.set_description("alarm2 generated");
-    SandeshAlarmTest::Send(alarm_data3, "ObjectCollectorInfo");
+    SandeshAlarmTest::Send(alarm_data3, SandeshLevel::SYS_INFO,
+        "ObjectCollectorInfo");
 
     // add alarm with already existing <name>, but with different key
     // case 9
@@ -1041,7 +1046,8 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
     
         uve_data2.set_jx(75);
 
-        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 2000000);
+        SandeshPeriodicTest::Send(uve_data2, SandeshLevel::SYS_INFO,
+            "ObjectGeneratorInfo", 2000000);
 
     }    
     {
@@ -1049,7 +1055,8 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
         uve_data10.set_name("uve1");
         uve_data10.set_x(98);
 
-        SandeshPeriodicTest::Send(uve_data10, "ObjectGeneratorInfo", 3000000);
+        SandeshPeriodicTest::Send(uve_data10, SandeshLevel::SYS_INFO,
+            "ObjectGeneratorInfo", 3000000);
     }
 
     // verify SyncAllMaps() sends all UVEs/Alarms from the cache
@@ -1143,28 +1150,32 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(11);
-        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 4000000);
+        SandeshPeriodicTest::Send(uve_data2, SandeshLevel::SYS_INFO,
+            "ObjectGeneratorInfo", 4000000);
 
     }    
     {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(95);
-        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 5000000);
+        SandeshPeriodicTest::Send(uve_data2, SandeshLevel::SYS_INFO,
+            "ObjectGeneratorInfo", 5000000);
 
     }    
     {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(90);
-        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 6000000);
+        SandeshPeriodicTest::Send(uve_data2, SandeshLevel::SYS_INFO,
+            "ObjectGeneratorInfo", 6000000);
 
     }    
     {
         SandeshPeriodicData uve_data2;
         uve_data2.set_name("uve1");
         uve_data2.set_x(97);
-        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 7000000);
+        SandeshPeriodicTest::Send(uve_data2, SandeshLevel::SYS_INFO,
+            "ObjectGeneratorInfo", 7000000);
 
     }    
 
@@ -1194,7 +1205,8 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
         uve_data2.set_name("uve3");
         uve_data2.set_x(100);
         uve_data2.set_proxy("ABC");
-        SandeshPeriodicTest::Send(uve_data2, "ObjectGeneratorInfo", 0, 4);
+        SandeshPeriodicTest::Send(uve_data2, SandeshLevel::SYS_INFO,
+            "ObjectGeneratorInfo", 0, 4);
         ASSERT_EQ(SandeshUVETypeMaps::Clear("ABC", 4), 1);
 
     }    
