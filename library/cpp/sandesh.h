@@ -95,6 +95,7 @@
 #include <sandesh/protocol/TProtocol.h>
 #include <sandesh/transport/TBufferTransports.h>
 #include <sandesh/sandesh_trace.h>
+#include <sandesh/sandesh_options.h>
 
 // Forward declaration
 class EventManager;
@@ -123,20 +124,6 @@ class SandeshMessageBasicStats;
 class SandeshConnection;
 class SandeshRequest;
 
-struct SandeshConfig {
-    std::string keyfile;
-    std::string certfile;
-    std::string ca_cert;
-    bool sandesh_ssl_enable;
-    bool introspect_ssl_enable;
-
-    explicit SandeshConfig()
-        : keyfile(), certfile(), ca_cert(), sandesh_ssl_enable(false),
-          introspect_ssl_enable(false) {
-    }
-    ~SandeshConfig() {
-    }
-};
 
 struct SandeshElement;
 
@@ -211,6 +198,14 @@ public:
     static void DisableFlowCollection(bool disable);
     static bool IsFlowCollectionDisabled() { return disable_flow_collection_; }
 
+    // Flags to control sending of sandesh from generators
+    static void DisableSendingAllMessages(bool disable);
+    static bool IsSendingAllMessagesDisabled();
+    static void DisableSendingSystemAndObjectLogs(bool disable);
+    static bool IsSendingSystemAndObjectLogsDisabled();
+    static void DisableSendingFlows(bool disable);
+    static bool IsSendingFlowsDisabled();
+
     // Logging and category APIs
     static void SetLoggingParams(bool enable_local_log, std::string category,
             std::string level, bool enable_trace_print = false,
@@ -230,7 +225,6 @@ public:
     static void SetTracePrint(bool enable);
     static void SetLoggingCategory(std::string category);
     static std::string LoggingCategory() { return logging_category_; }
-    static void SendLoggingResponse(std::string context);
 
     //GetSize method to report the size
     virtual size_t GetSize() const = 0;
@@ -243,10 +237,8 @@ public:
     static inline bool IsConnectToCollectorEnabled() {
         return connect_to_collector_;
     }
-    static void SendQueueResponse(std::string context);
     static void SetSendingLevel(size_t count, SandeshLevel::type level);
     static SandeshLevel::type SendingLevel() { return sending_level_; }
-    static void SendingParamsResponse(std::string context);
 
     static int32_t ReceiveBinaryMsgOne(u_int8_t *buf, u_int32_t buf_len,
             int *error, SandeshContext *client_context);
@@ -423,6 +415,9 @@ private:
     static log4cplus::Logger logger_;
     static bool disable_flow_collection_; // disable flow collection
     static SandeshConfig config_;
+    static bool disable_sending_all_;
+    static bool disable_sending_system_and_object_logs_;
+    static bool disable_sending_flows_;
 
     const uint32_t seqnum_;
     std::string context_;
@@ -648,9 +643,6 @@ private:
 
 #define SANDESH_REGISTER_DEF_TYPE(NAME) \
         SandeshDerivedRegister<NAME> NAME::reg(#NAME)
-
-bool DoDropSandeshMessage(const SandeshHeader &header,
-    SandeshLevel::type drop_level);
 
 log4cplus::LogLevel SandeshLevelTolog4Level(
     SandeshLevel::type slevel);

@@ -666,6 +666,29 @@ void SandeshStateMachine::UpdateRxMsgFailStats(const std::string &msg_name,
     message_stats_.UpdateRecvFailed(msg_name, msg_size, dreason);
 }
 
+// In sandesh state machine on collector, we can only drop systemlog,
+// objectlog, and flow. UVEs can only be dropped after being dequeued from
+// the state machine and published on redis/kafka
+bool DoDropSandeshMessage(const SandeshHeader &header,
+    const SandeshLevel::type drop_level) {
+    SandeshType::type stype(header.get_Type());
+    if (stype == SandeshType::SYSTEM ||
+        stype == SandeshType::OBJECT ||
+        stype == SandeshType::FLOW) {
+        // Is level above drop level?
+        SandeshLevel::type slevel(
+            static_cast<SandeshLevel::type>(header.get_Level()));
+        if (slevel >= drop_level) {
+            return true;
+        }
+    }
+    // Drop flow message if flow collection is disabled
+    if (Sandesh::IsFlowCollectionDisabled() && stype == SandeshType::FLOW) {
+        return true;
+    }
+    return false;
+}
+
 bool SandeshStateMachine::OnSandeshMessage(SandeshSession *session,
                                            const std::string &msg) {
     // Demux based on Sandesh messkage type
