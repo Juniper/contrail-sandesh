@@ -42,19 +42,18 @@ void SandeshMessageStatsReq::HandleRequest() const {
     resp->Response();
 }
 
-void Sandesh::SendLoggingResponse(std::string context) {
+static void SendSandeshLoggingParams(const std::string &context) {
     SandeshLoggingParams *slogger(new SandeshLoggingParams());
-    slogger->set_enable(IsLocalLoggingEnabled());
-    std::string category = LoggingCategory();
+    slogger->set_enable(Sandesh::IsLocalLoggingEnabled());
+    std::string category = Sandesh::LoggingCategory();
     if (category.empty()) {
         category = "*";
     }
     slogger->set_category(category);
-    slogger->set_log_level(LevelToString(LoggingLevel()));
-    slogger->set_trace_print(IsTracePrintEnabled());
-    slogger->set_enable_flow_log(IsFlowLoggingEnabled());
+    slogger->set_log_level(Sandesh::LevelToString(Sandesh::LoggingLevel()));
+    slogger->set_trace_print(Sandesh::IsTracePrintEnabled());
+    slogger->set_enable_flow_log(Sandesh::IsFlowLoggingEnabled());
     slogger->set_context(context);
-    slogger->set_sandesh_throttling_rate(Sandesh::get_send_rate_limit());
     slogger->Response();
 }
 
@@ -79,21 +78,48 @@ void SandeshLoggingParamsSet::HandleRequest() const {
     if (__isset.enable_flow_log) {
         Sandesh::SetFlowLogging(get_enable_flow_log());
     }
-    if (__isset.sandesh_throttling_rate) {
-        Sandesh::set_send_rate_limit(sandesh_throttling_rate);
-    }
     // Send response
-    Sandesh::SendLoggingResponse(context());
+    SendSandeshLoggingParams(context());
 }
 
 void SandeshLoggingParamsStatus::HandleRequest() const {
     // Send response
-    Sandesh::SendLoggingResponse(context());
+    SendSandeshLoggingParams(context());
 }
 
-void Sandesh::SendQueueResponse(std::string context) {
+static void SendSandeshSendingParams(const std::string &context) {
+    SandeshSendingParams *ssparams(new SandeshSendingParams());
+    ssparams->set_throttling_rate(Sandesh::get_send_rate_limit());
+    ssparams->set_enable_system_and_object_logs(
+        !Sandesh::IsSendingSystemAndObjectLogsDisabled());
+    ssparams->set_disable_all_logs(Sandesh::IsSendingAllMessagesDisabled());
+    ssparams->set_context(context);
+    ssparams->Response();
+}
+
+void SandeshSendingParamsSet::HandleRequest() const {
+    if (__isset.throttling_rate) {
+        Sandesh::set_send_rate_limit(throttling_rate);
+    }
+    if (__isset.enable_system_and_object_logs) {
+        Sandesh::DisableSendingSystemAndObjectLogs(
+            !enable_system_and_object_logs);
+    }
+    if (__isset.disable_all_logs) {
+        Sandesh::DisableSendingAllMessages(disable_all_logs);
+    }
+    // Send response
+    SendSandeshSendingParams(context());
+}
+
+void SandeshSendingParamsStatus::HandleRequest() const {
+    // Send response
+    SendSandeshSendingParams(context());
+}
+
+static void SendSandeshSendQueueResponse(std::string context) {
     SandeshSendQueueResponse *ssqr(new SandeshSendQueueResponse);
-    ssqr->set_enable(IsSendQueueEnabled());
+    ssqr->set_enable(Sandesh::IsSendQueueEnabled());
     ssqr->set_context(context);
     ssqr->Response();
 }
@@ -103,12 +129,12 @@ void SandeshSendQueueSet::HandleRequest() const {
         Sandesh::SetSendQueue(get_enable());
     }
     // Send response
-    Sandesh::SendQueueResponse(context());
+    SendSandeshSendQueueResponse(context());
 }
 
 void SandeshSendQueueStatus::HandleRequest() const {
     // Send response
-    Sandesh::SendQueueResponse(context());
+    SendSandeshSendQueueResponse(context());
 }
 
 void CollectorInfoRequest::HandleRequest() const {
@@ -123,15 +149,15 @@ void CollectorInfoRequest::HandleRequest() const {
     resp->Response();
 }
 
-void Sandesh::SendingParamsResponse(std::string context) {
+static void SendSandeshSendQueueParamsResponse(const std::string &context) {
     std::vector<Sandesh::QueueWaterMarkInfo> scwm_info;
-    std::vector<SandeshSendingParams> ssp_info;
+    std::vector<SandeshSendQueueParams> ssp_info;
     SandeshClient *client(Sandesh::client());
     if (client) {
         client->GetSessionWaterMarkInfo(scwm_info);
         for (size_t i = 0; i < scwm_info.size(); i++) {
             Sandesh::QueueWaterMarkInfo &scwm(scwm_info[i]);
-            SandeshSendingParams ssp;
+            SandeshSendQueueParams ssp;
             ssp.set_queue_count(boost::get<0>(scwm));
             SandeshLevel::type level(boost::get<1>(scwm));
             ssp.set_sending_level(Sandesh::LevelToString(level));
@@ -139,16 +165,16 @@ void Sandesh::SendingParamsResponse(std::string context) {
             ssp_info.push_back(ssp);
         }
     }
-    SandeshSendingParamsResponse *sspr(new SandeshSendingParamsResponse);
+    SandeshSendQueueParamsResponse *sspr(new SandeshSendQueueParamsResponse);
     sspr->set_context(context);
     sspr->set_info(ssp_info);
     sspr->Response();
 }
 
-void SandeshSendingParamsSet::HandleRequest() const {
+void SandeshSendQueueParamsSet::HandleRequest() const {
     if (!(__isset.high && __isset.queue_count &&  __isset.sending_level)) {
         // Send response
-        Sandesh::SendingParamsResponse(context());
+        SendSandeshSendQueueParamsResponse(context());
         return;
     }
     SandeshClient *client(Sandesh::client());
@@ -161,19 +187,19 @@ void SandeshSendingParamsSet::HandleRequest() const {
         client->SetSessionWaterMarkInfo(scwm);
     }
     // Send response
-    Sandesh::SendingParamsResponse(context()); 
+    SendSandeshSendQueueParamsResponse(context());
 }
 
-void SandeshSendingParamsReset::HandleRequest() const {
+void SandeshSendQueueParamsReset::HandleRequest() const {
     SandeshClient *client(Sandesh::client());
     if (client) {
         client->ResetSessionWaterMarkInfo();
     }
     // Send response
-    Sandesh::SendingParamsResponse(context());
+    SendSandeshSendQueueParamsResponse(context());
 }
 
-void SandeshSendingParamsStatus::HandleRequest() const {
+void SandeshSendQueueParamsStatus::HandleRequest() const {
     // Send response
-    Sandesh::SendingParamsResponse(context());
+    SendSandeshSendQueueParamsResponse(context());
 }

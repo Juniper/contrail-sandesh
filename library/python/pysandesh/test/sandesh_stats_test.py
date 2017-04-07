@@ -52,6 +52,8 @@ class SandeshMessageStatisticsTest(unittest.TestCase):
         self.assertEqual(nbytes, stats.bytes_sent_dropped_session_not_connected)
         self.assertEqual(nmsg, stats.messages_sent_dropped_wrong_client_sm_state)
         self.assertEqual(nbytes, stats.bytes_sent_dropped_wrong_client_sm_state)
+        self.assertEqual(nmsg, stats.messages_sent_dropped_sending_disabled)
+        self.assertEqual(nbytes, stats.bytes_sent_dropped_sending_disabled)
     # end _verify_tx_drop_stats
 
     def test_update_tx_stats(self):
