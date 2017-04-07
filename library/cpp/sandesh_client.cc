@@ -366,6 +366,8 @@ void SandeshClient::SendUVE(int count,
              magg_stats.get_messages_sent_dropped_validation_failed()));
     csev.insert(make_pair("dropped_rate_limited",
              magg_stats.get_messages_sent_dropped_rate_limited()));
+    csev.insert(make_pair("dropped_sending_disabled",
+             magg_stats.get_messages_sent_dropped_sending_disabled()));
     mcs.set_tx_msg_agg(csev);
 
     map <string,SandeshMessageStats> csevm;
@@ -374,17 +376,30 @@ void SandeshClient::SendUVE(int count,
         SandeshMessageStats res_sms;
         const SandeshMessageStats& src_sms = smit->get_stats();
         res_sms.set_messages_sent(src_sms.get_messages_sent());
-        res_sms.set_messages_sent_dropped_no_queue(src_sms.get_messages_sent_dropped_no_queue());
-        res_sms.set_messages_sent_dropped_no_client(src_sms.get_messages_sent_dropped_no_client());
-        res_sms.set_messages_sent_dropped_no_session(src_sms.get_messages_sent_dropped_no_session());
-        res_sms.set_messages_sent_dropped_queue_level(src_sms.get_messages_sent_dropped_queue_level());
-        res_sms.set_messages_sent_dropped_client_send_failed(src_sms.get_messages_sent_dropped_client_send_failed());
-        res_sms.set_messages_sent_dropped_session_not_connected(src_sms.get_messages_sent_dropped_session_not_connected());
-        res_sms.set_messages_sent_dropped_header_write_failed(src_sms.get_messages_sent_dropped_header_write_failed());
-        res_sms.set_messages_sent_dropped_write_failed(src_sms.get_messages_sent_dropped_write_failed());
-        res_sms.set_messages_sent_dropped_wrong_client_sm_state(src_sms.get_messages_sent_dropped_wrong_client_sm_state());
-        res_sms.set_messages_sent_dropped_validation_failed(src_sms.get_messages_sent_dropped_validation_failed());
-        res_sms.set_messages_sent_dropped_rate_limited(src_sms.get_messages_sent_dropped_rate_limited());
+        res_sms.set_messages_sent_dropped_no_queue(
+            src_sms.get_messages_sent_dropped_no_queue());
+        res_sms.set_messages_sent_dropped_no_client(
+            src_sms.get_messages_sent_dropped_no_client());
+        res_sms.set_messages_sent_dropped_no_session(
+            src_sms.get_messages_sent_dropped_no_session());
+        res_sms.set_messages_sent_dropped_queue_level(
+            src_sms.get_messages_sent_dropped_queue_level());
+        res_sms.set_messages_sent_dropped_client_send_failed(
+            src_sms.get_messages_sent_dropped_client_send_failed());
+        res_sms.set_messages_sent_dropped_session_not_connected(
+            src_sms.get_messages_sent_dropped_session_not_connected());
+        res_sms.set_messages_sent_dropped_header_write_failed(
+            src_sms.get_messages_sent_dropped_header_write_failed());
+        res_sms.set_messages_sent_dropped_write_failed(
+            src_sms.get_messages_sent_dropped_write_failed());
+        res_sms.set_messages_sent_dropped_wrong_client_sm_state(
+            src_sms.get_messages_sent_dropped_wrong_client_sm_state());
+        res_sms.set_messages_sent_dropped_validation_failed(
+            src_sms.get_messages_sent_dropped_validation_failed());
+        res_sms.set_messages_sent_dropped_rate_limited(
+            src_sms.get_messages_sent_dropped_rate_limited());
+        res_sms.set_messages_sent_dropped_sending_disabled(
+            src_sms.get_messages_sent_dropped_sending_disabled());
       
         csevm.insert(make_pair(smit->get_message_type(), res_sms));
     }

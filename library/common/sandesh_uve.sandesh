@@ -33,6 +33,7 @@ struct SandeshMessageStats {
     59: optional u64 messages_sent_dropped_wrong_client_sm_state;
     60: optional u64 messages_sent_dropped_validation_failed;
     61: optional u64 messages_sent_dropped_rate_limited;
+    62: optional u64 messages_sent_dropped_sending_disabled;
     // Bytes
     81: optional u64 bytes_sent_dropped_no_queue;
     82: optional u64 bytes_sent_dropped_no_client;
@@ -45,6 +46,7 @@ struct SandeshMessageStats {
     89: optional u64 bytes_sent_dropped_wrong_client_sm_state;
     90: optional u64 bytes_sent_dropped_validation_failed;
     91: optional u64 bytes_sent_dropped_rate_limited;
+    92: optional u64 bytes_sent_dropped_sending_disabled;
     // Receive
     // Messages
     101: optional u64 messages_received_dropped_no_queue;
@@ -123,8 +125,6 @@ request sandesh SandeshLoggingParamsSet {
     4: optional bool trace_print;
     /** enable or disable flow logging */
     5: optional bool enable_flow_log;
-    /** threshold for throttling sandesh messages */
-    6: optional u32 sandesh_throttling_rate;
 }
 
 /**
@@ -134,11 +134,45 @@ request sandesh SandeshLoggingParamsSet {
 request sandesh SandeshLoggingParamsStatus {
 }
 
+response sandesh SandeshLoggingParams {
+    1: bool enable;
+    2: string category;
+    3: string log_level;
+    4: bool trace_print;
+    5: bool enable_flow_log;
+}
+
 /**
- * @description: sandesh request to set sandesh sending parameters
- * @cli_name: create sandesh sending parameters
+ * @description: Request to set sandesh sending parameters
+ * @cli_name: update sandesh sending parameters
  */
 request sandesh SandeshSendingParamsSet {
+    /** threshold for throttling sending of sandesh messages per message type */
+    1: optional u32 throttling_rate;
+    /** enable sending of system and object logs to collector */
+    2: optional bool enable_system_and_object_logs;
+    /** disable sending of all messages to collector */
+    3: optional bool disable_all_logs;
+}
+
+/**
+ * @description: Request to get sandesh sending parameters
+ * @cli_name: read sandesh sending parameters
+ */
+request sandesh SandeshSendingParamsStatus {
+}
+
+response sandesh SandeshSendingParams {
+    1: u32 throttling_rate;
+    2: bool enable_system_and_object_logs;
+    3: bool disable_all_logs;
+}
+
+/**
+ * @description: sandesh request to set sandesh send queue parameters
+ * @cli_name: create sandesh send queue parameters
+ */
+request sandesh SandeshSendQueueParamsSet {
     /** for high watermark or low watermark */
     1: optional bool high;
     /** queue count for this level */
@@ -148,36 +182,27 @@ request sandesh SandeshSendingParamsSet {
 }
 
 /**
- * @description: sandesh request to reset sandesh sending parameters
- * @cli_name: update sandesh sending parameters
+ * @description: sandesh request to reset sandesh send queue parameters
+ * @cli_name: update sandesh send queue parameters
  */
-request sandesh SandeshSendingParamsReset {
+request sandesh SandeshSendQueueParamsReset {
 }
 
 /**
- * @description: sandesh request to get sandesh sending parameters
- * @cli_name: read sandesh sending parameters
+ * @description: sandesh request to get sandesh send queue parameters
+ * @cli_name: read sandesh send queue parameters
  */
-request sandesh SandeshSendingParamsStatus {
+request sandesh SandeshSendQueueParamsStatus {
 }
 
-struct SandeshSendingParams {
+struct SandeshSendQueueParams {
     1: bool high;
     2: u32 queue_count;
     3: string sending_level;
 }
 
-response sandesh SandeshSendingParamsResponse {
-    1: list<SandeshSendingParams> info;
-}
-
-response sandesh SandeshLoggingParams {
-    1: bool enable;
-    2: string category;
-    3: string log_level;
-    4: bool trace_print;
-    5: bool enable_flow_log;
-    6: u32 sandesh_throttling_rate;
+response sandesh SandeshSendQueueParamsResponse {
+    1: list<SandeshSendQueueParams> info;
 }
 
 /**
