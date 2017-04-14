@@ -94,6 +94,7 @@ class t_doc_generator : public t_generator {
   string sandesh_level_to_string(const sandesh_level::type &slevel);
   sandesh_level::type get_sandesh_level(t_sandesh *tsandesh);
   string get_object_type( t_sandesh* tsandesh);
+  string get_doc_member(t_sandesh* tsandesh, string member);
   bool is_sandesh_type(t_sandesh *tsandesh, doc_ftype::type dtype);
   string get_doc_file_suffix(doc_ftype::type dtype);
   string get_doc_file_description(doc_ftype::type dtype);
@@ -195,6 +196,7 @@ class t_doc_generator : public t_generator {
   void generate_const   (t_const*    tconst, ofstream &f_out);
   void generate_consts  (vector<t_const*> consts, ofstream &f_out);
   void generate_struct  (t_struct*   tstruct, ofstream &f_out);
+  void generate_struct_table (t_struct*   tstruct, ofstream &f_out);
   void generate_sandesh (t_sandesh*  tsandesh, ofstream &f_out);
   void generate_sandesh_uve (t_sandesh*  tsandesh, ofstream &f_out);
 
@@ -446,7 +448,7 @@ void t_doc_generator::generate_sandesh_program_doc_schema(t_program* tprog,
       if (dtype == doc_ftype::LOGS) {
         f_out << ", \"severity\":\"" <<
           sandesh_level_to_string(get_sandesh_level(*snh_iter)) << "\"";
-      } else if (dtype == doc_ftype::UVES && get_object_type(*snh_iter) != "") {
+      } else if (dtype == doc_ftype::UVES) {
         f_out << ", \"object\":\"" << get_object_type(*snh_iter) << "\"";
       }
       f_out << "}";
@@ -841,7 +843,7 @@ string t_doc_generator::sandesh_level_to_string(
 }
 
 typedef boost::tokenizer<boost::char_separator<char> > tokenizer;
-string t_doc_generator::get_object_type( t_sandesh* tsandesh) {
+string t_doc_generator::get_doc_member(t_sandesh* tsandesh, string member) {
   if (tsandesh->has_doc()) {
     string doc = tsandesh->get_doc();
     size_t index;
@@ -863,8 +865,7 @@ string t_doc_generator::get_object_type( t_sandesh* tsandesh) {
             lindex++;
           }
           string content(f.substr(lindex + 1));
-          if (type == "object") {
-            boost::algorithm::trim(content);
+          if (type == member) {
             return content;
           }
         }
@@ -874,37 +875,21 @@ string t_doc_generator::get_object_type( t_sandesh* tsandesh) {
   return "";
 }
 
+string t_doc_generator::get_object_type(t_sandesh* tsandesh) {
+    string content = get_doc_member(tsandesh, "object");
+    if (content != "") {
+        boost::algorithm::trim(content);
+        return content;
+    }
+    return " ";
+}
+
 t_doc_generator::sandesh_level::type t_doc_generator::get_sandesh_level(
     t_sandesh* tsandesh) {
-  if (tsandesh->has_doc()) {
-    string doc = tsandesh->get_doc();
-    size_t index;
-    if ((index = doc.find_first_of("@")) != string::npos) {
-      // Skip leading documentation
-      string fdoc(doc.substr(index + 1));
-      // Extract tokens beginning with @
-      boost::char_separator<char> fsep("@");
-      tokenizer ftokens(fdoc, fsep);
-      BOOST_FOREACH(const string &f, ftokens) {
-        // Has 2 parts, the first ending with ':' or ' ' or '\t' is
-        // the type and the next is the content
-        size_t lindex;
-        if ((lindex = f.find_first_of(": \t")) != string::npos) {
-          string type(f.substr(0, lindex));
-          if (lindex + 1 < f.size() && f.at(lindex) != f.at(lindex + 1) &&
-              (f.at(lindex + 1) == ':' || f.at(lindex + 1) == '\t' ||
-               f.at(lindex + 1) == ' ')) {
-            lindex++;
-          }
-          string content(f.substr(lindex + 1));
-          if (type == "severity") {
-            return string_to_sandesh_level(content);
-          }
-        }
-      }
-    }
-  }
-  return sandesh_level::INVALID;
+    string content = get_doc_member(tsandesh, "severity");
+    if (content != "")
+	return string_to_sandesh_level(content);
+    return sandesh_level::INVALID;
 }
 
 /**
@@ -1620,12 +1605,7 @@ void t_doc_generator::generate_stat_tables_schema(t_sandesh* tsandesh) {
  *
  * @param tstruct The struct definition
  */
-void t_doc_generator::generate_struct(t_struct* tstruct, ofstream &f_out) {
-  string name = tstruct->get_name();
-  f_out << "<div class=\"definition\">";
-  f_out << "<h3 id=\"Struct_" << name << "\">";
-  f_out << "Struct: ";
-  f_out << name << "</h3>" << endl;
+void t_doc_generator::generate_struct_table(t_struct* tstruct, ofstream &f_out) {
   vector<t_field*> members = tstruct->get_members();
   vector<t_field*>::iterator mem_iter = members.begin();
   f_out << "<table>";
@@ -1654,6 +1634,20 @@ void t_doc_generator::generate_struct(t_struct* tstruct, ofstream &f_out) {
     f_out << "</td></tr>" << endl;
   }
   f_out << "</table><br/>";
+}
+
+/**
+ * Generates a struct definition for a thrift data type.
+ *
+ * @param tstruct The struct definition
+ */
+void t_doc_generator::generate_struct(t_struct* tstruct, ofstream &f_out) {
+  string name = tstruct->get_name();
+  f_out << "<div class=\"definition\">";
+  f_out << "<h3 id=\"Struct_" << name << "\">";
+  f_out << "Struct: ";
+  f_out << name << "</h3>" << endl;
+  generate_struct_table(tstruct, f_out);
   print_doc(tstruct, f_out);
   f_out << "</div>";
 }
@@ -1766,32 +1760,16 @@ void t_doc_generator::generate_sandesh_uve(t_sandesh* tsandesh, ofstream &f_out)
   vector<t_field*> smembers = tsandesh->get_members();
   if (smembers.size() == 1 && smembers[0]->get_type()->is_struct()) {
     sandesh_name_ = smembers[0]->get_type()->get_name();
-  f_out << "<h3 id=\"Snh_" << sandesh_name_ << "\"> "
-    << sandesh_name_ << "</h3>" << endl;
-  print_sandesh(tsandesh, f_out);
-  f_out << "<table>";
-  f_out << "<tr><th>Field</th><th>Type</th><th>Description</th></tr>"
-    << endl;
-  t_struct *cstruct = find_struct_with_name(sandesh_name_);
-  if (!cstruct)
-    f_out << "</table><br/>";
-    return;
-  vector<t_field*> members = cstruct->get_members();
-  BOOST_FOREACH(t_field *tfield, members) {
-    if (tfield->get_auto_generated()) {
-      continue;
+    boost::trim(sandesh_name_);
+    f_out << "<h3 id=\"Snh_" << sandesh_name_ << "\"> "
+      << sandesh_name_ << "</h3>" << endl;
+    print_sandesh(tsandesh, f_out);
+    t_struct *cstruct = find_struct_with_name(sandesh_name_);
+    if (!cstruct) {
+      f_out << "</table><br/>";
+      return;
     }
-    t_type *type = tfield->get_type();
-    if (type->is_static_const_string()) {
-      continue;
-    }
-    f_out << "<tr><td>" << tfield->get_name() << "</td><td>";
-    print_type(tfield->get_type(), f_out);
-    f_out << "</td><td>";
-    f_out << tfield->get_doc();
-    f_out << "</td></tr>" << endl;
-  }
-  f_out << "</table><br/>";
+    generate_struct_table(cstruct, f_out);
   }
 }
 

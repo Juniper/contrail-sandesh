@@ -319,6 +319,10 @@ struct ModuleClientState {
     14: optional u64                       max_sm_queue_count
 }
 
+/**
+* @description: This uve is used for statistics data related to sandesh client
+* @object: generator
+*/
 uve sandesh SandeshModuleClientTrace {
     1: ModuleClientState                   data
 }
