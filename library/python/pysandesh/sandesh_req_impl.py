@@ -11,7 +11,8 @@ from pysandesh.sandesh_trace import SandeshTraceRequestRunner
 from pysandesh.gen_py.sandesh_uve.ttypes import SandeshUVECacheReq, \
     SandeshUVECacheResp, SandeshUVETypesReq, SandeshUVETypesResp, \
     SandeshUVETypeInfo, CollectorInfoRequest, CollectorInfoResponse, \
-    SandeshLoggingParamsSet, SandeshLoggingParamsStatus, SandeshLoggingParams
+    SandeshLoggingParamsSet, SandeshLoggingParamsStatus, SandeshLoggingParams, \
+    SandeshSendingParamsSet, SandeshSendingParamsStatus, SandeshSendingParams
 from pysandesh.gen_py.sandesh_uve.ttypes import SandeshMessageStats, \
     SandeshMessageTypeStats, SandeshGeneratorStats, SandeshMessageStatsReq, \
     SandeshMessageStatsResp, SandeshSendQueueSet, SandeshSendQueueStatus, \
@@ -47,6 +48,10 @@ class SandeshReqImpl(object):
             self.sandesh_logging_params_set_handle_request
         SandeshLoggingParamsStatus.handle_request = \
             self.sandesh_logging_params_status_handle_request
+        SandeshSendingParamsSet.handle_request = \
+            self.sandesh_sending_params_set_handle_request
+        SandeshSendingParamsStatus.handle_request = \
+            self.sandesh_sending_params_status_handle_request
         SandeshMessageStatsReq.handle_request = \
             self.sandesh_msg_stats_handle_request
         SandeshTraceBufferListRequest.handle_request = \
@@ -98,15 +103,11 @@ class SandeshReqImpl(object):
             self._sandesh.set_logging_category(sandesh_req.category)
         if sandesh_req.log_level is not None:
             self._sandesh.set_logging_level(sandesh_req.log_level)
-        if sandesh_req.sandesh_throttling_rate is not None:
-            SandeshSystem.set_sandesh_send_rate_limit(sandesh_req.sandesh_throttling_rate)
         # Return the logging params
         sandesh_logging_resp = SandeshLoggingParams(
             enable=self._sandesh.is_local_logging_enabled(),
-            category=self._sandesh.logging_category(
-            ),
-            log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()],
-            sandesh_throttling_rate=SandeshSystem.get_sandesh_send_rate_limit())
+            category=self._sandesh.logging_category(),
+            log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()])
         sandesh_logging_resp.response(sandesh_req.context(),
                                       sandesh=self._sandesh)
     # end sandesh_logging_params_set_handle_request
@@ -115,13 +116,43 @@ class SandeshReqImpl(object):
         # Return the logging params
         sandesh_logging_resp = SandeshLoggingParams(
             enable=self._sandesh.is_local_logging_enabled(),
-            category=self._sandesh.logging_category(
-            ),
-            log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()],
-            sandesh_throttling_rate=SandeshSystem.get_sandesh_send_rate_limit())
+            category=self._sandesh.logging_category(),
+            log_level=SandeshLevel._VALUES_TO_NAMES[self._sandesh.logging_level()])
         sandesh_logging_resp.response(sandesh_req.context(),
                                       sandesh=self._sandesh)
     # end sandesh_logging_params_status_handle_request
+
+    def sandesh_sending_params_set_handle_request(self, sandesh_req):
+        # Set the sending params
+        if sandesh_req.system_logs_rate_limit is not None:
+            SandeshSystem.set_sandesh_send_rate_limit(
+                sandesh_req.system_logs_rate_limit)
+        if sandesh_req.disable_object_logs is not None:
+            self._sandesh.disable_sending_object_logs(
+                sandesh_req.disable_object_logs)
+        if sandesh_req.disable_all_logs is not None:
+            self._sandesh.disable_sending_all_messages(
+                sandesh_req.disable_all_logs)
+        # Return the sending params
+        sandesh_sending_resp = SandeshSendingParams(
+            system_logs_rate_limit=SandeshSystem.get_sandesh_send_rate_limit(),
+            disable_object_logs= \
+                self._sandesh.is_sending_object_logs_disabled(),
+            disable_all_logs=self._sandesh.is_sending_all_messages_disabled())
+        sandesh_sending_resp.response(sandesh_req.context(),
+                                      sandesh=self._sandesh)
+    # end sandesh_sending_params_set_handle_request
+
+    def sandesh_sending_params_status_handle_request(self, sandesh_req):
+        # Return the sending params
+        sandesh_sending_resp = SandeshSendingParams(
+            system_logs_rate_limit=SandeshSystem.get_sandesh_send_rate_limit(),
+            disable_object_logs= \
+                self._sandesh.is_sending_object_logs_disabled(),
+            disable_all_logs=self._sandesh.is_sending_all_messages_disabled())
+        sandesh_sending_resp.response(sandesh_req.context(),
+                                      sandesh=self._sandesh)
+    # end sandesh_sending_params_status_handle_request
 
     def sandesh_uve_cache_req_handle_request(self, sandesh_req):
         count = 0

@@ -117,11 +117,13 @@ public:
     }; 
 
     struct UVEMapEntry {
-        UVEMapEntry(std::string table, uint32_t seqnum):
-                data(table), seqno(seqnum) {
+        UVEMapEntry(const std::string &table, uint32_t seqnum,
+                    SandeshLevel::type level):
+                data(table), seqno(seqnum), level(level) {
         }
         U data;
         uint32_t seqno;
+        SandeshLevel::type level;
     };
 
     // The key is the table name
@@ -136,7 +138,8 @@ public:
     // This function is called whenever a SandeshUVE is sent from
     // the generator to the collector.
     // It updates the cache.
-    bool UpdateUVE(U& data, uint32_t seqnum, uint64_t mono_usec) {
+    bool UpdateUVE(U& data, uint32_t seqnum, uint64_t mono_usec,
+                   SandeshLevel::type level) {
         bool send = false;
         tbb::mutex::scoped_lock lock;
         const std::string &table = data.table_;
@@ -168,12 +171,13 @@ public:
         typename uve_table_map::iterator imapentry = a->second.find(table); 
         if (imapentry == a->second.end()) {
             std::auto_ptr<UVEMapEntry> ume(new
-                    UVEMapEntry(data.table_, seqnum));
+                    UVEMapEntry(data.table_, seqnum, level));
             T::_InitDerivedStats(ume->data, dsconf);
-            send = T::UpdateUVE(data, ume->data, mono_usec);
+            send = T::UpdateUVE(data, ume->data, mono_usec, level);
             imapentry = a->second.insert(table, ume).first;
         } else {
-            send = T::UpdateUVE(data, imapentry->second->data, mono_usec);
+            send = T::UpdateUVE(data, imapentry->second->data, mono_usec,
+                                level);
             imapentry->second->seqno = seqnum;
         }
         if (TM != 0) {
@@ -210,8 +214,8 @@ public:
                     SandeshStructProxyTrait<U>::get(uit->second->data) << 
                     " seq " << uit->second->seqno);
                 uit->second->data.set_deleted(true);
-                T::Send(uit->second->data, SandeshUVE::ST_SYNC,
-                        uit->second->seqno, 0, "");
+                T::Send(uit->second->data, uit->second->level,
+                        SandeshUVE::ST_SYNC, uit->second->seqno, 0, "");
                 count++;
                 ++uit;
             }
@@ -288,7 +292,7 @@ public:
                             SandeshStructProxyTrait<U>::get(uit->second->data) << 
                             " seq " << uit->second->seqno);
                     }
-                    T::Send(uit->second->data, st,
+                    T::Send(uit->second->data, uit->second->level, st,
                             uit->second->seqno, cycle, ctx);
                     if ((TM != 0) && (st == SandeshUVE::ST_PERIODIC)) {
                         if ((cycle % TM) == 0) {
@@ -324,7 +328,7 @@ public:
                     uve_entry != a->second.end(); uve_entry++) {
                 if (!table.empty() && uve_entry->first != table) continue;
                 sent = true;
-                T::Send(uve_entry->second->data,
+                T::Send(uve_entry->second->data, uve_entry->second->level,
                     (ctx.empty() ? SandeshUVE::ST_INTROSPECT : SandeshUVE::ST_SYNC),
                     uve_entry->second->seqno, 0, ctx);
             }
@@ -442,14 +446,14 @@ public:
     }
 
     bool UpdateUVE(U& data, uint32_t seqnum,
-            uint64_t mono_usec, int partition) {
+            uint64_t mono_usec, int partition, SandeshLevel::type level) {
         if (partition == -1) {
-            return native_map_.UpdateUVE(data, seqnum, mono_usec);
+            return native_map_.UpdateUVE(data, seqnum, mono_usec, level);
         } else {
             std::string proxy = SandeshStructProxyTrait<U>::get(data);
             assert(partition < SandeshUVETypeMaps::kProxyPartitions);
             uve_pmap * pp = GetGMap(proxy);
-            return pp->at(partition).UpdateUVE(data, seqnum, mono_usec);
+            return pp->at(partition).UpdateUVE(data, seqnum, mono_usec, level);
         }
     }
 

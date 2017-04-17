@@ -137,6 +137,13 @@ static void UpdateDetailStatsDrops(SandeshMessageStats *smstats,
                 smstats->get_bytes_sent_dropped_session_not_connected() +
                 bytes);
             break;
+          case SandeshTxDropReason::SendingDisabled:
+            smstats->set_messages_sent_dropped_sending_disabled(
+                smstats->get_messages_sent_dropped_sending_disabled() + 1);
+            smstats->set_bytes_sent_dropped_sending_disabled(
+                smstats->get_bytes_sent_dropped_sending_disabled() +
+                bytes);
+            break;
           default:
             assert(0);
         }

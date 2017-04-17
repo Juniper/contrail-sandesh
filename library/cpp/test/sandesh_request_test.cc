@@ -68,26 +68,54 @@ class SandeshRequestTest : public ::testing::Test {
         return true;
     }
 
+    static SandeshSendingParamsSet* PrepareSendingParamsSetReq(
+        uint32_t system_logs_rate_limit, bool disable_object_logs,
+        bool disable_all_logs, int called_from_line) {
+        SandeshSendingParamsSet *req(new SandeshSendingParamsSet);
+        req->set_system_logs_rate_limit(system_logs_rate_limit);
+        req->set_disable_object_logs(disable_object_logs);
+        req->set_disable_all_logs(disable_all_logs);
+        Sandesh::set_response_callback(
+            boost::bind(ValidateSendingParamsResponse, _1,
+            system_logs_rate_limit, disable_object_logs,
+            disable_all_logs, called_from_line));
+        return req;
+    }
+
+    static void ValidateSendingParamsResponse(Sandesh *response,
+        uint32_t system_logs_rate_limit, bool disable_object_logs,
+        bool disable_all_logs, int called_from_line) {
+        cout << "From line number: " << called_from_line << endl;
+        cout << "*****************************************************" << endl;
+        SandeshSendingParams *sresponse(
+            dynamic_cast<SandeshSendingParams *>(response));
+        EXPECT_TRUE(sresponse != NULL);
+        EXPECT_EQ(system_logs_rate_limit,
+            sresponse->get_system_logs_rate_limit());
+        EXPECT_EQ(disable_object_logs, sresponse->get_disable_object_logs());
+        EXPECT_EQ(disable_all_logs, sresponse->get_disable_all_logs());
+        validate_done_ = true;
+        cout << "*****************************************************" << endl;
+    }
+
     static SandeshLoggingParamsSet* PrepareLoggingParamsSetReq(bool enable,
         std::string category, std::string log_level, bool enable_trace_print,
-        bool enable_flow_log, uint32_t sandesh_send_throttling_rate, int called_from_line) {
+        bool enable_flow_log, int called_from_line) {
         SandeshLoggingParamsSet *req(new SandeshLoggingParamsSet);
         req->set_enable(enable);
         req->set_category(category);
         req->set_log_level(log_level);
         req->set_trace_print(enable_trace_print);
         req->set_enable_flow_log(enable_flow_log);
-        req->set_sandesh_throttling_rate(sandesh_send_throttling_rate);
         Sandesh::set_response_callback(
             boost::bind(ValidateLoggingParamsResponse, _1, enable, category,
-            log_level, enable_trace_print, enable_flow_log, sandesh_send_throttling_rate,
-            called_from_line));
+            log_level, enable_trace_print, enable_flow_log, called_from_line));
         return req;
     }
 
     static void ValidateLoggingParamsResponse(Sandesh *response,
         bool enable_local_log, std::string category, std::string level,
-        bool enable_trace_print, bool enable_flow_log, uint32_t sandesh_send_throttling_rate,
+        bool enable_trace_print, bool enable_flow_log,
         int called_from_line) {
         cout << "From line number: " << called_from_line << endl;
         cout << "*****************************************************" << endl;
@@ -99,8 +127,6 @@ class SandeshRequestTest : public ::testing::Test {
         EXPECT_EQ(level, lresponse->get_log_level());
         EXPECT_EQ(enable_trace_print, lresponse->get_trace_print());
         EXPECT_EQ(enable_flow_log, lresponse->get_enable_flow_log());
-        EXPECT_EQ(sandesh_send_throttling_rate,
-                  lresponse->get_sandesh_throttling_rate());
         validate_done_ = true;
         cout << "*****************************************************" << endl;
     }
@@ -117,28 +143,28 @@ class SandeshRequestTest : public ::testing::Test {
         cout << "*****************************************************" << endl;
     }
 
-    static SandeshSendingParamsSet* PopulateSendingParamsSetReq(
-        const SandeshSendingParams &e_ssp,
-        const std::vector<SandeshSendingParams> &v_e_ssp,
+    static SandeshSendQueueParamsSet* PopulateSendQueueParamsSetReq(
+        const SandeshSendQueueParams &e_ssp,
+        const std::vector<SandeshSendQueueParams> &v_e_ssp,
         int called_from_line, int sending_params_count) {
-        SandeshSendingParamsSet *req(new SandeshSendingParamsSet);
+        SandeshSendQueueParamsSet *req(new SandeshSendQueueParamsSet);
         req->set_high(e_ssp.get_high());
         req->set_queue_count(e_ssp.get_queue_count());
         req->set_sending_level(e_ssp.get_sending_level());
         Sandesh::set_response_callback(
-            boost::bind(ValidateSendingParamsResponse, _1, v_e_ssp,
+            boost::bind(ValidateSendQueueParamsResponse, _1, v_e_ssp,
             called_from_line, sending_params_count));
         return req;
     }
 
-    static void ValidateSendingParamsResponse(Sandesh *response,
-        const std::vector<SandeshSendingParams> &v_ssp, int called_from_line,
+    static void ValidateSendQueueParamsResponse(Sandesh *response,
+        const std::vector<SandeshSendQueueParams> &v_ssp, int called_from_line,
         int sending_params_count) {
         cout << "From line number: " << called_from_line << endl;
         cout << "Sending params count: " << sending_params_count << endl;
         cout << "*****************************************************" << endl;
-        SandeshSendingParamsResponse *sspr(
-            dynamic_cast<SandeshSendingParamsResponse *>(response));
+        SandeshSendQueueParamsResponse *sspr(
+            dynamic_cast<SandeshSendQueueParamsResponse *>(response));
         EXPECT_TRUE(sspr != NULL);
         EXPECT_THAT(v_ssp, ::testing::ContainerEq(sspr->get_info()));
         validate_done_ = true;
@@ -198,7 +224,6 @@ TEST_F(SandeshRequestTest, LoggingParams) {
     std::string o_log_level(Sandesh::LevelToString(Sandesh::LoggingLevel()));
     bool o_enable_trace_print(Sandesh::IsTracePrintEnabled());
     bool o_enable_flow_log(Sandesh::IsFlowLoggingEnabled());
-    uint32_t o_sandesh_send_rate_limit(Sandesh::get_send_rate_limit());
     // Set
     bool enable(false);
     std::string category("SandeshRequest");
@@ -207,7 +232,7 @@ TEST_F(SandeshRequestTest, LoggingParams) {
     bool enable_flow_log(true);
     uint32_t sandesh_send_rate_limit(25);
     SandeshLoggingParamsSet *req(PrepareLoggingParamsSetReq(enable, category,
-        log_level, enable_trace_print, enable_flow_log, sandesh_send_rate_limit,  __LINE__));
+        log_level, enable_trace_print, enable_flow_log, __LINE__));
     validate_done_ = false;
     req->HandleRequest();
     req->Release();
@@ -217,7 +242,7 @@ TEST_F(SandeshRequestTest, LoggingParams) {
     SandeshLoggingParamsStatus *req1(new SandeshLoggingParamsStatus);
     Sandesh::set_response_callback(boost::bind(ValidateLoggingParamsResponse,
         _1, enable, category, log_level, enable_trace_print, enable_flow_log,
-        sandesh_send_rate_limit, __LINE__));
+        __LINE__));
     validate_done_ = false;
     req1->HandleRequest();
     req1->Release();
@@ -226,7 +251,7 @@ TEST_F(SandeshRequestTest, LoggingParams) {
     // Set to original
     SandeshLoggingParamsSet *req2(PrepareLoggingParamsSetReq(o_enable,
         o_category, o_log_level, o_enable_trace_print, o_enable_flow_log,
-        o_sandesh_send_rate_limit, __LINE__));
+        __LINE__));
     validate_done_ = false;
     req2->HandleRequest();
     req2->Release();
@@ -235,36 +260,74 @@ TEST_F(SandeshRequestTest, LoggingParams) {
 }
 
 TEST_F(SandeshRequestTest, SendingParams) {
-    // Reset sending params
-    SandeshSendingParamsReset *req(new SandeshSendingParamsReset);
+    // Get sending params
+    uint32_t o_system_logs_rate_limit(Sandesh::get_send_rate_limit());
+    bool o_disable_object_logs(Sandesh::IsSendingObjectLogsDisabled());
+    bool o_disable_all_logs(Sandesh::IsSendingAllMessagesDisabled());
+    // Set
+    uint32_t system_logs_rate_limit(o_system_logs_rate_limit + 25);
+    bool disable_object_logs(!o_disable_object_logs);
+    bool disable_all_logs(!o_disable_all_logs);
+    SandeshSendingParamsSet *req(PrepareSendingParamsSetReq(
+        system_logs_rate_limit, disable_object_logs,
+        disable_all_logs, __LINE__));
+    validate_done_ = false;
+    req->HandleRequest();
+    req->Release();
+    task_util::WaitForIdle();
+    TASK_UTIL_EXPECT_EQ(true, validate_done_);
+    // Status
+    SandeshSendingParamsStatus *req1(new SandeshSendingParamsStatus);
     Sandesh::set_response_callback(boost::bind(ValidateSendingParamsResponse,
-        _1, std::vector<SandeshSendingParams>(), __LINE__, 0));
+        _1, system_logs_rate_limit, disable_object_logs, disable_all_logs,
+        __LINE__));
+    validate_done_ = false;
+    req1->HandleRequest();
+    req1->Release();
+    task_util::WaitForIdle();
+    TASK_UTIL_EXPECT_EQ(true, validate_done_);
+    // Set to original
+    SandeshSendingParamsSet *req2(PrepareSendingParamsSetReq(
+        o_system_logs_rate_limit, o_disable_object_logs,
+        o_disable_all_logs, __LINE__));
+    validate_done_ = false;
+    req2->HandleRequest();
+    req2->Release();
+    task_util::WaitForIdle();
+    TASK_UTIL_EXPECT_EQ(true, validate_done_);
+}
+
+TEST_F(SandeshRequestTest, SendQueueParams) {
+    // Reset sending params
+    SandeshSendQueueParamsReset *req(new SandeshSendQueueParamsReset);
+    Sandesh::set_response_callback(boost::bind(ValidateSendQueueParamsResponse,
+        _1, std::vector<SandeshSendQueueParams>(), __LINE__, 0));
     validate_done_ = false;
     req->HandleRequest();
     req->Release();
     task_util::WaitForIdle();
     TASK_UTIL_EXPECT_EQ(true, validate_done_);
     // Set sending params
-    typedef boost::tuple<bool, uint32_t, std::string> SendingParams;
-    std::vector<SendingParams> v_sp = boost::assign::tuple_list_of
+    typedef boost::tuple<bool, uint32_t, std::string> SendQueueParams;
+    std::vector<SendQueueParams> v_sp = boost::assign::tuple_list_of
         (true, 10000, "SYS_EMERG")
         (true, 5000, "SYS_ERR")
         (true, 2500, "SYS_DEBUG")
         (false, 8000, "SYS_ERR")
         (false, 3000, "SYS_DEBUG")
         (false, 500, "INVALID");
-    std::vector<SandeshSendingParams> v_ssp;
+    std::vector<SandeshSendQueueParams> v_ssp;
     for (int count = 0; count < v_sp.size(); count++) {
-        const SendingParams &sp(v_sp[count]);
-        SandeshSendingParams ssp;
+        const SendQueueParams &sp(v_sp[count]);
+        SandeshSendQueueParams ssp;
         ssp.set_high(boost::get<0>(sp));
         ssp.set_queue_count(boost::get<1>(sp));
         ssp.set_sending_level(boost::get<2>(sp));
         v_ssp.push_back(ssp);
     }
     for (int count = 0; count < v_ssp.size(); count++) {
-        SandeshSendingParamsSet *req1(PopulateSendingParamsSetReq(v_ssp[count],
-            std::vector<SandeshSendingParams>(
+        SandeshSendQueueParamsSet *req1(PopulateSendQueueParamsSetReq(v_ssp[count],
+            std::vector<SandeshSendQueueParams>(
                 v_ssp.begin(), v_ssp.begin() + count + 1), __LINE__, count));
         validate_done_ = false;
         req1->HandleRequest();
@@ -273,8 +336,8 @@ TEST_F(SandeshRequestTest, SendingParams) {
         TASK_UTIL_EXPECT_EQ(true, validate_done_);
     }
     // Status
-    SandeshSendingParamsStatus *req2(new SandeshSendingParamsStatus);
-    Sandesh::set_response_callback(boost::bind(ValidateSendingParamsResponse,
+    SandeshSendQueueParamsStatus *req2(new SandeshSendQueueParamsStatus);
+    Sandesh::set_response_callback(boost::bind(ValidateSendQueueParamsResponse,
         _1, v_ssp, __LINE__, 0));
     validate_done_ = false;
     req2->HandleRequest();

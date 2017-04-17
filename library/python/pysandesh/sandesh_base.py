@@ -34,6 +34,117 @@ from sandesh_uve import SandeshUVETypeMaps, SandeshUVEPerTypeMap
 from work_queue import WorkQueue
 
 
+class SandeshConfig(object):
+
+    def __init__(self, keyfile=None, certfile=None, ca_cert=None,
+                 sandesh_ssl_enable=False, introspect_ssl_enable=False,
+                 dscp_value=0, disable_object_logs=False,
+                 system_logs_rate_limit=DEFAULT_SANDESH_SEND_RATELIMIT):
+        self.keyfile = keyfile
+        self.certfile = certfile
+        self.ca_cert = ca_cert
+        self.sandesh_ssl_enable = sandesh_ssl_enable
+        self.introspect_ssl_enable = introspect_ssl_enable
+        self.dscp_value = dscp_value
+        self.disable_object_logs = disable_object_logs
+        self.system_logs_rate_limit = system_logs_rate_limit
+    # end __init__
+
+    @staticmethod
+    def get_default_options():
+        sandeshopts = {
+            'sandesh_keyfile': '/etc/contrail/ssl/private/server-privkey.pem',
+            'sandesh_certfile': '/etc/contrail/ssl/certs/server.pem',
+            'sandesh_ca_cert': '/etc/contrail/ssl/certs/ca-cert.pem',
+            'sandesh_ssl_enable': False,
+            'introspect_ssl_enable': False,
+            'sandesh_dscp_value': 0,
+            'disable_object_logs': False,
+            'sandesh_send_rate_limit': DEFAULT_SANDESH_SEND_RATELIMIT,
+        }
+        return sandeshopts
+    # end get_default_sandesh_opts
+
+    @classmethod
+    def from_parser_arguments(cls, parser_args=None):
+        default_opts = SandeshConfig.get_default_options()
+        sandesh_config = cls(
+            keyfile = parser_args.sandesh_keyfile if parser_args and \
+                parser_args.sandesh_keyfile else \
+                default_opts['sandesh_keyfile'],
+            certfile = parser_args.sandesh_certfile if parser_args and \
+                parser_args.sandesh_certfile else \
+                default_opts['sandesh_certfile'],
+            ca_cert = parser_args.sandesh_ca_cert if parser_args and \
+                parser_args.sandesh_ca_cert else \
+                default_opts['sandesh_ca_cert'],
+            sandesh_ssl_enable = \
+                parser_args.sandesh_ssl_enable if parser_args and \
+                parser_args.sandesh_ssl_enable is not None else \
+                default_opts['sandesh_ssl_enable'],
+            introspect_ssl_enable = \
+                parser_args.introspect_ssl_enable if parser_args and \
+                parser_args.introspect_ssl_enable is not None else \
+                default_opts['introspect_ssl_enable'],
+            dscp_value = parser_args.sandesh_dscp_value if parser_args and \
+                parser_args.sandesh_dscp_value is not None else \
+                default_opts['sandesh_dscp_value'],
+            disable_object_logs =
+                parser_args.disable_object_logs if parser_args and \
+                parser_args.disable_object_logs is not None else \
+                default_opts['disable_object_logs'],
+            system_logs_rate_limit =
+                parser_args.sandesh_send_rate_limit if parser_args and \
+                parser_args.sandesh_send_rate_limit is not None else \
+                default_opts['sandesh_send_rate_limit'])
+
+        return sandesh_config
+    # end get_sandesh_config
+
+    @staticmethod
+    def add_parser_arguments(parser, add_dscp=False):
+        parser.add_argument("--sandesh_keyfile",
+            help="Sandesh SSL private key")
+        parser.add_argument("--sandesh_certfile",
+            help="Sandesh SSL certificate")
+        parser.add_argument("--sandesh_ca_cert",
+            help="Sandesh CA SSL certificate")
+        parser.add_argument("--sandesh_ssl_enable", action="store_true",
+            help="Enable SSL for sandesh connection")
+        parser.add_argument("--introspect_ssl_enable", action="store_true",
+            help="Enable SSL for introspect connection")
+        if add_dscp:
+            parser.add_argument("--sandesh_dscp_value", type=int,
+                help="DSCP bits for IP header of Sandesh messages")
+        parser.add_argument("--disable_object_logs", action="store_true",
+            help="Disable sending of object logs to the oollector")
+        parser.add_argument("--sandesh_send_rate_limit", type=int,
+            help="System logs send rate limit in messages per second per message type")
+    # end add_parser_arguments
+
+    @staticmethod
+    def update_options(sandeshopts, config):
+        if 'SANDESH' in config.sections():
+            sandeshopts.update(dict(config.items('SANDESH')))
+            if 'sandesh_ssl_enable' in config.options('SANDESH'):
+                sandeshopts['sandesh_ssl_enable'] = config.getboolean(
+                    'SANDESH', 'sandesh_ssl_enable')
+            if 'introspect_ssl_enable' in config.options('SANDESH'):
+                sandeshopts['introspect_ssl_enable'] = config.getboolean(
+                    'SANDESH', 'introspect_ssl_enable')
+            if 'disable_object_logs' in config.options('SANDESH'):
+                sandeshopts['disable_object_logs'] = config.getboolean(
+                    'SANDESH', 'disable_object_logs')
+            if 'sandesh_dscp_value' in config.options('SANDESH'):
+                try:
+                    sandeshopts['sandesh_dscp_value'] = config.getint(
+                        'SANDESH', 'sandesh_dscp_value')
+                except:
+                    pass
+    # end update_options
+
+# end class SandeshConfig
+
 class Sandesh(object):
     _DEFAULT_LOG_FILE = sand_logger.SandeshLogger._DEFAULT_LOG_FILE
     _DEFAULT_SYSLOG_FACILITY = (
@@ -65,6 +176,8 @@ class Sandesh(object):
         self._send_queue_enabled = True
         self._http_server = None
         self._connect_to_collector = True
+        self._disable_sending_object_logs = False
+        self._disable_sending_all_messages = False
     # end __init__
 
     # Public functions
@@ -95,7 +208,7 @@ class Sandesh(object):
         self._trace = trace.Trace()
         self._sandesh_request_map = {}
         self._alarm_ack_callback = alarm_ack_callback
-        self._config = config or SandeshConfig()
+        self._config = config or SandeshConfig.from_parser_arguments()
         self._uve_type_maps = SandeshUVETypeMaps(self._logger)
         if sandesh_req_uve_pkg_list is None:
             sandesh_req_uve_pkg_list = []
@@ -106,6 +219,11 @@ class Sandesh(object):
         sandesh_req_uve_pkg_list.append('pysandesh.gen_py')
         for pkg_name in sandesh_req_uve_pkg_list:
             self._create_sandesh_request_and_uve_lists(pkg_name)
+        if self._config.disable_object_logs is not None:
+            self.disable_sending_object_logs(self._config.disable_object_logs)
+        if self._config.system_logs_rate_limit is not None:
+            SandeshSystem.set_sandesh_send_rate_limit(
+                self._config.system_logs_rate_limit)
         self._gev_httpd = None
         if http_port != -1:
             self._http_server = SandeshHttp(
@@ -115,6 +233,7 @@ class Sandesh(object):
             self._client = SandeshClient(self)
             self._client.initiate(collectors)
     # end init_generator
+
 
     def uninit(self):
         self.kill_httpd()
@@ -205,6 +324,29 @@ class Sandesh(object):
     def is_connect_to_collector_enabled(self):
         return self._connect_to_collector
     # end is_connect_to_collector_enabled
+
+    def is_sending_object_logs_disabled(self):
+        return self._disable_sending_object_logs
+    # end is_sending_object_logs_disabled
+
+    def disable_sending_object_logs(self, disable):
+        if self._disable_sending_object_logs != disable:
+            self._logger.info("SANDESH: Disable Sending Object "
+                "Logs: %s -> %s", self._disable_sending_object_logs,
+                disable)
+            self._disable_sending_object_logs = disable
+    # end disable_sending_object_logs
+
+    def is_sending_all_messages_disabled(self):
+        return self._disable_sending_all_messages
+    # end is_sending_all_messages_disabled
+
+    def disable_sending_all_messages(self, disable):
+        if self._disable_sending_all_messages != disable:
+            self._logger.info("SANDESH: Disable Sending ALL Messages: "
+                "%s -> %s", self._disable_sending_all_messages, disable)
+            self._disable_sending_all_messagess = disable
+    # end disable_sending_all_messages
 
     def set_send_queue(self, enable):
         if self._send_queue_enabled != enable:
@@ -664,21 +806,6 @@ class Sandesh(object):
 sandesh_global = Sandesh()
 
 
-class SandeshConfig(object):
-
-    def __init__(self, keyfile=None, certfile=None, ca_cert=None,
-                 sandesh_ssl_enable=False, introspect_ssl_enable=False,
-                 dscp_value=0):
-        self.keyfile = keyfile
-        self.certfile = certfile
-        self.ca_cert = ca_cert
-        self.sandesh_ssl_enable = sandesh_ssl_enable
-        self.introspect_ssl_enable = introspect_ssl_enable
-        self.dscp_value = dscp_value
-    # end __init__
-
-# end class SandeshConfig
-
 
 class SandeshAsync(Sandesh):
 
@@ -694,9 +821,24 @@ class SandeshAsync(Sandesh):
             return -1
         if self.handle_test(sandesh):
             return 0
-        # For systemlog message, first check if the transmit side buffer
-        # has space
+        # Check if sending is disabled
+        if sandesh.is_sending_all_messages_disabled():
+            sandesh.drop_tx_sandesh(self,
+                SandeshTxDropReason.SendingDisabled, self.level())
+            return -1
+        # For objectlog message, check if sending message is disabled
+        if self._type == SandeshType.OBJECT and \
+                sandesh.is_sending_object_logs_disabled():
+            sandesh.drop_tx_sandesh(self,
+                SandeshTxDropReason.SendingDisabled, self.level())
+            return -1
+        # For systemlog message, first check if sending message is disabled,
+        # then check rate limit
         if self._type == SandeshType.SYSTEM:
+            if SandeshSystem.get_sandesh_send_rate_limit() == 0:
+                sandesh.drop_tx_sandesh(self,
+                    SandeshTxDropReason.SendingDisabled, self.level())
+                return -1
             if (not self.is_rate_limit_pass(sandesh)):
                 sandesh.drop_tx_sandesh(self,
                     SandeshTxDropReason.RatelimitDrop)
@@ -709,9 +851,6 @@ class SandeshAsync(Sandesh):
         return 0
 
     def is_rate_limit_pass(self,sandesh):
-        #If buffer size 0 return
-        if self.__class__.rate_limit_buffer.maxlen == 0:
-            return False
         #Check if buffer resize is reqd
         if (self.__class__.rate_limit_buffer.maxlen != \
                 SandeshSystem.get_sandesh_send_rate_limit()):
@@ -719,6 +858,9 @@ class SandeshAsync(Sandesh):
             self.__class__.rate_limit_buffer = util.deque(temp_buffer, \
                 maxlen=SandeshSystem.get_sandesh_send_rate_limit())
             del temp_buffer
+        #If buffer size 0 return
+        if self.__class__.rate_limit_buffer.maxlen == 0:
+            return False
         cur_time=int(time.time())
         #Check if circular buffer is full
         if len(self.__class__.rate_limit_buffer) == \
@@ -751,7 +893,7 @@ class SandeshSystem(SandeshAsync):
 
     @classmethod
     def set_sandesh_send_rate_limit(cls, sandesh_send_rate_limit_val):
-        if (sandesh_send_rate_limit_val > 0):
+        if (sandesh_send_rate_limit_val >= 0):
             cls._DEFAULT_SEND_RATELIMIT = sandesh_send_rate_limit_val
     # end set_sandesh_send_rate_limit
 
@@ -853,12 +995,16 @@ class SandeshUVE(Sandesh):
     # end __init__
 
     def send(self, isseq=False, seqno=0, context='',
-             more=False, sandesh=sandesh_global):
+             more=False, sandesh=sandesh_global,
+             level=SandeshLevel.SYS_NOTICE):
         try:
             self.validate()
         except e:
             sandesh.drop_tx_sandesh(self, SandeshTxDropReason.ValidationFailed)
             return -1
+        if self._type == SandeshType.UVE and \
+                self._level == SandeshLevel.INVALID:
+            self._level = level
         if isseq is True:
             self._seqnum = seqno
             self._hints |= SANDESH_SYNC_HINT
@@ -886,6 +1032,10 @@ class SandeshUVE(Sandesh):
             if self.handle_test(sandesh):
                 return 0
             if sandesh._client:
+                if sandesh.is_sending_all_messages_disabled():
+                    sandesh.drop_tx_sandesh(self,
+                        SandeshTxDropReason.SendingDisabled, self.level())
+                    return -1
                 sandesh._client.send_uve_sandesh(self)
             else:
                 sandesh._logger.debug(self.log())
