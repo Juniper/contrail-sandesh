@@ -51,23 +51,32 @@ class SandeshConfig(object):
     # end __init__
 
     @staticmethod
-    def get_default_options():
-        sandeshopts = {
-            'sandesh_keyfile': '/etc/contrail/ssl/private/server-privkey.pem',
-            'sandesh_certfile': '/etc/contrail/ssl/certs/server.pem',
-            'sandesh_ca_cert': '/etc/contrail/ssl/certs/ca-cert.pem',
-            'sandesh_ssl_enable': False,
-            'introspect_ssl_enable': False,
-            'sandesh_dscp_value': 0,
-            'disable_object_logs': False,
-            'sandesh_send_rate_limit': DEFAULT_SANDESH_SEND_RATELIMIT,
-        }
+    def get_default_options(sections=['SANDESH']):
+        sandeshopts = {}
+        for section in sections:
+            if section == 'SANDESH':
+                sandeshopts.update({
+                    'sandesh_keyfile': \
+                        '/etc/contrail/ssl/private/server-privkey.pem',
+                    'sandesh_certfile': \
+                        '/etc/contrail/ssl/certs/server.pem',
+                    'sandesh_ca_cert': \
+                        '/etc/contrail/ssl/certs/ca-cert.pem',
+                    'sandesh_ssl_enable': False,
+                    'introspect_ssl_enable': False,
+                    'sandesh_dscp_value': 0,
+                    'disable_object_logs': False,
+                    })
+            if section == 'DEFAULTS':
+                sandeshopts.update({'sandesh_send_rate_limit': \
+                    DEFAULT_SANDESH_SEND_RATELIMIT})
         return sandeshopts
-    # end get_default_sandesh_opts
+    # end get_default_options
 
     @classmethod
     def from_parser_arguments(cls, parser_args=None):
-        default_opts = SandeshConfig.get_default_options()
+        default_opts = SandeshConfig.get_default_options(
+                sections=['SANDESH', 'DEFAULTS'])
         sandesh_config = cls(
             keyfile = parser_args.sandesh_keyfile if parser_args and \
                 parser_args.sandesh_keyfile else \
