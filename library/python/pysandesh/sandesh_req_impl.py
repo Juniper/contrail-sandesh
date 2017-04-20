@@ -138,10 +138,22 @@ class SandeshReqImpl(object):
             system_logs_rate_limit=SandeshSystem.get_sandesh_send_rate_limit(),
             disable_object_logs= \
                 self._sandesh.is_sending_object_logs_disabled(),
-            disable_all_logs=self._sandesh.is_sending_all_messages_disabled())
+            disable_all_logs=self._sandesh.is_sending_all_messages_disabled(),
+            dscp=self.sandesh_get_dscp())
         sandesh_sending_resp.response(sandesh_req.context(),
                                       sandesh=self._sandesh)
     # end sandesh_sending_params_set_handle_request
+
+    def sandesh_get_dscp(self):
+        dscp = 0
+        client = self._sandesh.client()
+        if client is not None:
+            if client.connection() is not None:
+                sess = client.connection().session()
+                if sess is not None:
+                    dscp = sess.dscp_value()
+        return dscp
+    # end sandesh_get_dscp
 
     def sandesh_sending_params_status_handle_request(self, sandesh_req):
         # Return the sending params
@@ -149,7 +161,8 @@ class SandeshReqImpl(object):
             system_logs_rate_limit=SandeshSystem.get_sandesh_send_rate_limit(),
             disable_object_logs= \
                 self._sandesh.is_sending_object_logs_disabled(),
-            disable_all_logs=self._sandesh.is_sending_all_messages_disabled())
+            disable_all_logs=self._sandesh.is_sending_all_messages_disabled(),
+            dscp=self.sandesh_get_dscp())
         sandesh_sending_resp.response(sandesh_req.context(),
                                       sandesh=self._sandesh)
     # end sandesh_sending_params_status_handle_request

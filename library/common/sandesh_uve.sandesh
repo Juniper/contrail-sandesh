@@ -166,6 +166,7 @@ response sandesh SandeshSendingParams {
     1: u32 system_logs_rate_limit;
     2: bool disable_object_logs;
     3: bool disable_all_logs;
+    4: optional u16 dscp;
 }
 
 /**

@@ -325,6 +325,15 @@ class SandeshSession(SslSession):
         return self._send_queue
     # end send_queue
 
+    def dscp_value(self):
+        dscp = 0
+        try:
+            dscp = self._socket.getsockopt(socket.IPPROTO_IP, socket.IP_TOS)
+        except :
+            self._logger.error('Error fetching DSCP value from Sandesh session')
+        return dscp
+    # end dscp_value
+
     # Overloaded functions from SslSession
 
     def connect(self):
