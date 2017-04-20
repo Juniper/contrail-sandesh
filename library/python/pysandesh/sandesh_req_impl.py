@@ -87,6 +87,10 @@ class SandeshReqImpl(object):
                     collector = collector.split(':')
                     resp.ip = collector[0]
                     resp.port = int(collector[1])
+                    sess = client.connection().session()
+                    if sess is not None:
+                        resp.dscp = sess.dscp_value()
+
                 resp.status = client.connection().state()
         resp.response(sandesh_req.context(), sandesh=self._sandesh)
     # end collector_info_handle_request

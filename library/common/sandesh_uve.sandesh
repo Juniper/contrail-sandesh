@@ -236,6 +236,7 @@ response sandesh CollectorInfoResponse {
     1: string ip;
     2: i32 port;
     3: string status;
+    4: optional u16 dscp;
 }
 
 /**

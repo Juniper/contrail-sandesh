@@ -88,6 +88,7 @@ public:
     }
 
     void SetDscpValue(uint8_t value);
+    uint8_t dscp_value() const { return dscp_value_; }
 
     void SetSessionWaterMarkInfo(Sandesh::QueueWaterMarkInfo &scwm);
     void ResetSessionWaterMarkInfo();

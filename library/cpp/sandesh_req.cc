@@ -142,6 +142,10 @@ void CollectorInfoRequest::HandleRequest() const {
         resp->set_ip(client->sm_->server().address().to_string());
         resp->set_port(client->sm_->server().port());
         resp->set_status(client->sm_->StateName());
+        SandeshSession *sess = client->sm_->session();
+        if (sess) {
+            resp->set_dscp(sess->GetDscpValue());
+        }
     }
     resp->set_context(context());
     resp->Response();
