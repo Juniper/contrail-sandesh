@@ -144,6 +144,13 @@ static void UpdateDetailStatsDrops(SandeshMessageStats *smstats,
                 smstats->get_bytes_sent_dropped_sending_disabled() +
                 bytes);
             break;
+          case SandeshTxDropReason::SendingToSysLog:
+            smstats->set_messages_sent_dropped_sending_to_syslog(
+                smstats->get_messages_sent_dropped_sending_to_syslog() + 1);
+            smstats->set_bytes_sent_dropped_sending_to_syslog(
+                smstats->get_bytes_sent_dropped_sending_to_syslog() +
+                bytes);
+            break;
           default:
             assert(0);
         }
