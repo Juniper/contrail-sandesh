@@ -389,6 +389,36 @@ TEST_F(SandeshSendRatelimitTest, RateLimit) {
     EXPECT_TRUE(Sandesh::get_send_rate_limit() == 0);
 }
 
+TEST_F(SandeshSendRatelimitTest, SendToSysLogTest) {
+    server_->Initialize(0);
+    thread_->Start();       // Must be called after initialization
+    int port = server_->GetPort();
+    ASSERT_LT(0, port);
+    // Connect to the server
+    Sandesh::InitGenerator("FlowLogTest-client", "localhost",
+                           "Test", "Test", evm_.get(),0);
+
+    Sandesh::ConnectToCollector("127.0.0.1", port);
+    EXPECT_TRUE(Sandesh::IsConnectToCollectorEnabled());
+    EXPECT_TRUE(Sandesh::client() != NULL);
+    TASK_UTIL_EXPECT_TRUE(Sandesh::client()->state() == SandeshClientSM::ESTABLISHED);
+    Sandesh::SetLoggingParams(true, "FlowLogTest", SandeshLevel::SYS_INFO);
+    boost::ptr_map<std::string, SandeshMessageTypeStats> type_stats;
+    SandeshMessageStats agg_stats;
+    boost::ptr_map<std::string, SandeshMessageTypeStats>::iterator it;
+    Sandesh::SetFlowLogging(true);
+    SetUseSysLog(true);
+    for (int cnt = 0; cnt < 10; cnt++) {
+        FlowLogTest::Send("FlowLogTest", SandeshLevel::SYS_INFO, 0);
+    }
+    SetUseSysLog(false);
+    //Allow all messages to be recieved
+    sleep(1);
+    Sandesh::GetMsgStats(&type_stats, &agg_stats);
+    it = type_stats.find("FlowLogTest");
+    EXPECT_EQ(it->second->stats.messages_sent_dropped_sending_to_syslog, 10);
+}
+
 class SandeshUVEAlarmTest : public ::testing::Test {
 protected:
     SandeshUVEAlarmTest() {

@@ -368,6 +368,8 @@ void SandeshClient::SendUVE(int count,
              magg_stats.get_messages_sent_dropped_rate_limited()));
     csev.insert(make_pair("dropped_sending_disabled",
              magg_stats.get_messages_sent_dropped_sending_disabled()));
+    csev.insert(make_pair("dropped_sending_to_syslog",
+             magg_stats.get_messages_sent_dropped_sending_to_syslog()));
     mcs.set_tx_msg_agg(csev);
 
     map <string,SandeshMessageStats> csevm;
@@ -400,7 +402,8 @@ void SandeshClient::SendUVE(int count,
             src_sms.get_messages_sent_dropped_rate_limited());
         res_sms.set_messages_sent_dropped_sending_disabled(
             src_sms.get_messages_sent_dropped_sending_disabled());
-      
+        res_sms.set_messages_sent_dropped_sending_to_syslog(
+            src_sms.get_messages_sent_dropped_sending_to_syslog());
         csevm.insert(make_pair(smit->get_message_type(), res_sms));
     }
     mcs.set_msg_type_agg(csevm);
