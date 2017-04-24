@@ -91,6 +91,7 @@ TEST_F(SandeshStatisticsTest, DetailMsgStats) {
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_header_write_failed);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_write_failed);
     EXPECT_EQ(1, test1_sms->messages_sent_dropped_wrong_client_sm_state);
+    EXPECT_EQ(1, test1_sms->messages_sent_dropped_sending_to_syslog);
     EXPECT_EQ(64, test1_sms->bytes_sent_dropped_no_queue);
     EXPECT_EQ(64, test1_sms->bytes_sent_dropped_no_client);
     EXPECT_EQ(64, test1_sms->bytes_sent_dropped_no_session);
@@ -100,6 +101,7 @@ TEST_F(SandeshStatisticsTest, DetailMsgStats) {
     EXPECT_EQ(64, test1_sms->bytes_sent_dropped_header_write_failed);
     EXPECT_EQ(64, test1_sms->bytes_sent_dropped_write_failed);
     EXPECT_EQ(64, test1_sms->bytes_sent_dropped_wrong_client_sm_state);
+    EXPECT_EQ(64, test1_sms->bytes_sent_dropped_sending_to_syslog);
     int expected_recv_msg_dropped(
         static_cast<int>(SandeshRxDropReason::MaxDropReason) -
         static_cast<int>(SandeshRxDropReason::MinDropReason) - 2);
