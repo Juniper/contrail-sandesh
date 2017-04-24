@@ -135,7 +135,6 @@ class SandeshConnection;
 
 class SandeshSession : public TcpSession {
 public:
-    typedef boost::tuple<size_t, SandeshLevel::type, bool> SessionWaterMarkInfo;
     typedef boost::function<void(const std::string&, SandeshSession *)> ReceiveMsgCb;
     SandeshSession(TcpServer *client, Socket *socket, int task_instance, 
         int writer_task_id, int reader_task_id);
@@ -210,7 +209,7 @@ public:
     const SandeshSessionStats& GetStats() const {
         return sstats_;
     }
-    void SetSendQueueWaterMark(SessionWaterMarkInfo &wm_info);
+    void SetSendQueueWaterMark(Sandesh::QueueWaterMarkInfo &wm_info);
     void ResetSendQueueWaterMark();
 
 protected:

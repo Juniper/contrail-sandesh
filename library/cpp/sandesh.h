@@ -82,6 +82,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/ptr_container/ptr_map.hpp>
 #include <boost/enable_shared_from_this.hpp>
+#include <boost/tuple/tuple.hpp>
 #include <base/queue_task.h>
 #include <base/contrail_ports.h>
 #include <sandesh/sandesh_types.h>
@@ -146,13 +147,16 @@ public:
             SandeshBufferQueue;
     typedef boost::asio::ip::tcp::endpoint Endpoint;
     typedef boost::function<void (Sandesh *)> SandeshCallback;
-    typedef enum {
-        Invalid,
-        SandeshGenerator,
-        Collector,
-        Test,
-    } SandeshRole;
+    struct SandeshRole {
+        enum type {
+            Invalid,
+            Generator,
+            Collector,
+            Test,
+        };
+    };
 
+    typedef boost::tuple<size_t, SandeshLevel::type, bool> QueueWaterMarkInfo;
     typedef boost::function<void (std::string serviceName, uint8_t numbOfInstances,
             DiscoveryServiceClient::ServiceHandler)> CollectorSubFn;
     // Initialization APIs
@@ -233,7 +237,7 @@ public:
     static void GetSandeshStats(
         boost::ptr_map<std::string, SandeshMessageTypeStats> &mtype_stats,
         SandeshMessageStats &magg_stats);
-    static const char *  SandeshRoleToString(SandeshRole role);
+    static const char *  SandeshRoleToString(SandeshRole::type role);
 
     virtual void Release() { delete this; }
     virtual void Log() const = 0;
@@ -261,7 +265,7 @@ public:
     static std::string instance_id() { return instance_id_; }
     static void set_node_type(std::string &node_type) { node_type_ = node_type; }
     static std::string node_type() { return node_type_; }
-    static SandeshRole role() { return role_; }
+    static SandeshRole::type role() { return role_; }
     static uint32_t http_port() { return http_port_; }
     static SandeshRxQueue* recv_queue() { return recv_queue_.get(); }
     static SandeshContext* client_context() { return client_context_; }
@@ -318,8 +322,9 @@ protected:
 
     bool HandleTest();
 
-    static bool IsUnitTest() { return role_ == Invalid || role_ == Test; }
-
+    static bool IsUnitTest() {
+        return role_ == SandeshRole::Invalid || role_ == SandeshRole::Test;
+    }
     static SandeshCallback response_callback_;
     static SandeshClient *client_;
 
@@ -332,7 +337,7 @@ private:
                            const std::vector<std::string> &collectors,
                            CollectorSubFn csf);
     static bool ProcessRecv(SandeshRequest *);
-    static void Initialize(SandeshRole role, const std::string &module,
+    static void Initialize(SandeshRole::type role, const std::string &module,
             const std::string &source, 
             const std::string &node_type,
             const std::string &instance_id,
@@ -342,7 +347,7 @@ private:
 
     bool IsLevelUT();
 
-    static SandeshRole role_;
+    static SandeshRole::type role_;
     static std::string module_;
     static std::string source_;
     static std::string node_type_;
@@ -521,5 +526,8 @@ private:
 
 #define SANDESH_REGISTER_DEF_TYPE(NAME) \
         SandeshDerivedRegister<NAME> NAME::reg(#NAME)
+
+bool DoDropSandeshMessage(const SandeshHeader &header,
+    SandeshLevel::type drop_level);
 
 #endif // __SANDESH_H__

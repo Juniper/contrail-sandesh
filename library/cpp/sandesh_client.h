@@ -82,10 +82,10 @@ public:
         return sm_->session();
     }
 
-    void SetSessionWaterMarkInfo(SandeshSession::SessionWaterMarkInfo &scwm);
+    void SetSessionWaterMarkInfo(Sandesh::QueueWaterMarkInfo &scwm);
     void ResetSessionWaterMarkInfo();
     void GetSessionWaterMarkInfo(
-        std::vector<SandeshSession::SessionWaterMarkInfo> &scwm_info) const;
+        std::vector<Sandesh::QueueWaterMarkInfo> &scwm_info) const;
 
     friend class CollectorInfoRequest;
 protected:
@@ -97,7 +97,7 @@ private:
     static const int kSessionTaskInstance = Task::kTaskInstanceAny;
     static const std::string kSessionWriterTask;
     static const std::string kSessionReaderTask;
-    static const std::vector<SandeshSession::SessionWaterMarkInfo> kSessionWaterMarkInfo;
+    static const std::vector<Sandesh::QueueWaterMarkInfo> kSessionWaterMarkInfo;
 
     int sm_task_instance_;
     int sm_task_id_;
@@ -107,7 +107,7 @@ private:
     Endpoint primary_, secondary_;
     Sandesh::CollectorSubFn csf_;
     boost::scoped_ptr<SandeshClientSM> sm_;
-    std::vector<SandeshSession::SessionWaterMarkInfo> session_wm_info_;
+    std::vector<Sandesh::QueueWaterMarkInfo> session_wm_info_;
     static bool task_policy_set_;
 
     void CollectorHandler(std::vector<DSResponse> resp);
