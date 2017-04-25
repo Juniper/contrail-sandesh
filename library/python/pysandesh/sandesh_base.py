@@ -80,13 +80,15 @@ class Sandesh(object):
         self._source = source
         self._node_type = node_type
         self._instance_id = instance_id
+        self._http_port = http_port
+        self._sandesh_req_uve_pkg_list = sandesh_req_uve_pkg_list or []
         self._host_ip = host_ip
         self._client_context = client_context
         self._collectors = collectors
         self._connect_to_collector = connect_to_collector
         self._rcv_queue = WorkQueue(self._process_rx_sandesh)
         self._send_level = SandeshLevel.INVALID
-        self._init_logger(module, logger_class=logger_class,
+        self._init_logger(self._module, logger_class=logger_class,
                           logger_config_file=logger_config_file)
         self._logger.info('SANDESH: CONNECT TO COLLECTOR: %s',
                           connect_to_collector)
@@ -96,20 +98,16 @@ class Sandesh(object):
         self._sandesh_request_map = {}
         self._alarm_ack_callback = alarm_ack_callback
         self._uve_type_maps = SandeshUVETypeMaps(self._logger)
-        if sandesh_req_uve_pkg_list is None:
-            sandesh_req_uve_pkg_list = []
         # Initialize the request handling
         # Import here to break the cyclic import dependency
         import sandesh_req_impl
         sandesh_req_impl = sandesh_req_impl.SandeshReqImpl(self)
-        sandesh_req_uve_pkg_list.append('pysandesh.gen_py')
-        for pkg_name in sandesh_req_uve_pkg_list:
+        self._sandesh_req_uve_pkg_list.append('pysandesh.gen_py')
+        for pkg_name in self._sandesh_req_uve_pkg_list:
             self._create_sandesh_request_and_uve_lists(pkg_name)
         self._gev_httpd = None
-        if http_port != -1:
-            self._http_server = SandeshHttp(
-                self, module, http_port, sandesh_req_uve_pkg_list)
-            self._gev_httpd = gevent.spawn(self._http_server.start_http_server)
+        if self._http_port != -1:
+            self.run_introspect_server()
         primary_collector = None
         secondary_collector = None
         if self._collectors is not None:
@@ -123,6 +121,13 @@ class Sandesh(object):
                 discovery_client)
             self._client.initiate()
     # end init_generator
+
+    def run_introspect_server(self):
+        self._http_server = SandeshHttp(
+            self, self._module, self._http_port,
+            self._sandesh_req_uve_pkg_list)
+        self._gev_httpd = gevent.spawn(self._http_server.start_http_server)
+    # end run_introspect_server
 
     def uninit(self):
         self.kill_httpd()
