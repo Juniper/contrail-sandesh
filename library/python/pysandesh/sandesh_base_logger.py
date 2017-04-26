@@ -42,7 +42,8 @@ class SandeshBaseLogger(object):
 
     @staticmethod
     def get_py_logger_level(sandesh_level):
-        return SandeshBaseLogger._SANDESH_LEVEL_TO_LOGGER_LEVEL[sandesh_level]
+        return SandeshBaseLogger._SANDESH_LEVEL_TO_LOGGER_LEVEL.get(
+                sandesh_level, logging.NOTSET)
     # end get_py_logger_level
 
     def logger(self):
