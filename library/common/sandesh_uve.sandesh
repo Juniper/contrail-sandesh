@@ -34,6 +34,7 @@ struct SandeshMessageStats {
     60: optional u64 messages_sent_dropped_validation_failed;
     61: optional u64 messages_sent_dropped_rate_limited;
     62: optional u64 messages_sent_dropped_sending_disabled;
+    63: optional u64 messages_sent_dropped_sending_to_syslog;
     // Bytes
     81: optional u64 bytes_sent_dropped_no_queue;
     82: optional u64 bytes_sent_dropped_no_client;
@@ -47,6 +48,7 @@ struct SandeshMessageStats {
     90: optional u64 bytes_sent_dropped_validation_failed;
     91: optional u64 bytes_sent_dropped_rate_limited;
     92: optional u64 bytes_sent_dropped_sending_disabled;
+    93: optional u64 bytes_sent_dropped_sending_to_syslog;
     // Receive
     // Messages
     101: optional u64 messages_received_dropped_no_queue;
