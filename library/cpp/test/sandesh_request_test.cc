@@ -70,21 +70,22 @@ class SandeshRequestTest : public ::testing::Test {
 
     static SandeshSendingParamsSet* PrepareSendingParamsSetReq(
         uint32_t system_logs_rate_limit, bool disable_object_logs,
-        bool disable_all_logs, int called_from_line) {
+        bool disable_all_logs, bool disable_flows, int called_from_line) {
         SandeshSendingParamsSet *req(new SandeshSendingParamsSet);
         req->set_system_logs_rate_limit(system_logs_rate_limit);
         req->set_disable_object_logs(disable_object_logs);
         req->set_disable_all_logs(disable_all_logs);
+        req->set_disable_flows(disable_flows);
         Sandesh::set_response_callback(
             boost::bind(ValidateSendingParamsResponse, _1,
             system_logs_rate_limit, disable_object_logs,
-            disable_all_logs, called_from_line));
+            disable_all_logs, disable_flows, called_from_line));
         return req;
     }
 
     static void ValidateSendingParamsResponse(Sandesh *response,
         uint32_t system_logs_rate_limit, bool disable_object_logs,
-        bool disable_all_logs, int called_from_line) {
+        bool disable_all_logs, bool disable_flows, int called_from_line) {
         cout << "From line number: " << called_from_line << endl;
         cout << "*****************************************************" << endl;
         SandeshSendingParams *sresponse(
@@ -94,6 +95,7 @@ class SandeshRequestTest : public ::testing::Test {
             sresponse->get_system_logs_rate_limit());
         EXPECT_EQ(disable_object_logs, sresponse->get_disable_object_logs());
         EXPECT_EQ(disable_all_logs, sresponse->get_disable_all_logs());
+        EXPECT_EQ(disable_flows, sresponse->get_disable_flows());
         validate_done_ = true;
         cout << "*****************************************************" << endl;
     }
@@ -264,13 +266,15 @@ TEST_F(SandeshRequestTest, SendingParams) {
     uint32_t o_system_logs_rate_limit(Sandesh::get_send_rate_limit());
     bool o_disable_object_logs(Sandesh::IsSendingObjectLogsDisabled());
     bool o_disable_all_logs(Sandesh::IsSendingAllMessagesDisabled());
+    bool o_disable_flows(Sandesh::IsSendingFlowsDisabled());
     // Set
     uint32_t system_logs_rate_limit(o_system_logs_rate_limit + 25);
     bool disable_object_logs(!o_disable_object_logs);
     bool disable_all_logs(!o_disable_all_logs);
+    bool disable_flows(!o_disable_flows);
     SandeshSendingParamsSet *req(PrepareSendingParamsSetReq(
         system_logs_rate_limit, disable_object_logs,
-        disable_all_logs, __LINE__));
+        disable_all_logs, disable_flows, __LINE__));
     validate_done_ = false;
     req->HandleRequest();
     req->Release();
@@ -280,7 +284,7 @@ TEST_F(SandeshRequestTest, SendingParams) {
     SandeshSendingParamsStatus *req1(new SandeshSendingParamsStatus);
     Sandesh::set_response_callback(boost::bind(ValidateSendingParamsResponse,
         _1, system_logs_rate_limit, disable_object_logs, disable_all_logs,
-        __LINE__));
+        disable_flows, __LINE__));
     validate_done_ = false;
     req1->HandleRequest();
     req1->Release();
@@ -289,7 +293,7 @@ TEST_F(SandeshRequestTest, SendingParams) {
     // Set to original
     SandeshSendingParamsSet *req2(PrepareSendingParamsSetReq(
         o_system_logs_rate_limit, o_disable_object_logs,
-        o_disable_all_logs, __LINE__));
+        o_disable_all_logs, o_disable_flows, __LINE__));
     validate_done_ = false;
     req2->HandleRequest();
     req2->Release();

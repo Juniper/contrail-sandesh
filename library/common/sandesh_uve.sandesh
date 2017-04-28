@@ -155,6 +155,8 @@ request sandesh SandeshSendingParamsSet {
     2: optional bool disable_object_logs;
     /** disable sending of all messages to collector */
     3: optional bool disable_all_logs;
+    /** disable sending of all flows to collector */
+    4: optional bool disable_flows;
 }
 
 /**
@@ -169,6 +171,7 @@ response sandesh SandeshSendingParams {
     2: bool disable_object_logs;
     3: bool disable_all_logs;
     4: optional u16 dscp;
+    5: optional bool disable_flows;
 }
 
 /**
