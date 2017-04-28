@@ -50,7 +50,7 @@ bool Sandesh::connect_to_collector_ = false;
 bool Sandesh::disable_flow_collection_ = false;
 bool Sandesh::disable_sending_all_ = false;
 bool Sandesh::disable_sending_object_logs_ = false;
-bool Sandesh::disable_sending_flows_ = true;
+bool Sandesh::disable_sending_flows_ = false;
 SandeshLevel::type Sandesh::sending_level_ = SandeshLevel::INVALID;
 SandeshClient *Sandesh::client_ = NULL;
 SandeshConfig Sandesh::config_;
@@ -152,10 +152,7 @@ bool Sandesh::Initialize(SandeshRole::type role,
     config_         = config;
     event_manager_  = evm;
 
-    if (get_send_rate_limit() ==
-        g_sandesh_constants.DEFAULT_SANDESH_SEND_RATELIMIT) {
-        set_send_rate_limit(config.system_logs_rate_limit);
-    }
+    set_send_rate_limit(config.system_logs_rate_limit);
     DisableSendingObjectLogs(config.disable_object_logs);
     InitReceive(Task::kTaskInstanceAny);
     bool success(SandeshHttp::Init(evm, module, http_port,
