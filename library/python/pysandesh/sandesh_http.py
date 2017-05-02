@@ -28,6 +28,13 @@ import os
 import socket
 from gevent import ssl
 
+class SandeshStdLog(object):
+    def __init__(self, server_name, http_port):
+        self._server_name = server_name
+        self._port = http_port
+
+    def write(self, text):
+        sys.stderr.write('[' + self._server_name + ':' + str(self._port) + ']' + text)
 
 class SandeshHttp(object):
 
@@ -72,6 +79,8 @@ class SandeshHttp(object):
         self._jquery_1_8_1_js_path = None
         self._http_server = None
         self._sandesh_config = sandesh_config
+        self._std_log = SandeshStdLog("Sandesh Server", self._http_port)
+
         try:
             imp_pysandesh = __import__('pysandesh')
         except ImportError:
@@ -117,9 +126,9 @@ class SandeshHttp(object):
                 self._http_server = WSGIServer(sock, self._http_app,
                     ca_certs=ca_certs, keyfile=keyfile,
                     certfile=certfile, ssl_version=ssl.PROTOCOL_TLSv1,
-                    cert_reqs=ssl.CERT_REQUIRED)
+                    cert_reqs=ssl.CERT_REQUIREDi, log=self._std_log)
             else:
-                self._http_server = WSGIServer(sock, self._http_app)
+                self._http_server = WSGIServer(sock, self._http_app, log=self._std_log)
             self._http_server.serve_forever()
     # end start_http_server
 
