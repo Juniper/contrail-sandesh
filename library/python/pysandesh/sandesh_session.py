@@ -365,8 +365,12 @@ class SandeshSession(SslSession):
                 socket.IPPROTO_TCP, socket.TCP_KEEPINTVL,
                 self._KEEPALIVE_INTERVAL)
         if hasattr(socket, 'IP_TOS') and (self._dscp_value != 0):
-            self._socket.setsockopt(
-                socket.IPPROTO_IP, socket.IP_TOS, self._dscp_value)
+            #The 'value' argument is expected to have DSCP value between 0 and
+            #63 ie., in the lower order 6 bits of a byte. However, setsockopt
+            #expects DSCP value in upper 6 bits of a byte. Hence left shift the
+            #value by 2 digits before passing it to setsockopt
+            value = self._dscp_value << 2
+            self._socket.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, value)
         if hasattr(socket, 'TCP_KEEPCNT'):
             self._socket.setsockopt(
                 socket.IPPROTO_TCP, socket.TCP_KEEPCNT, self._KEEPALIVE_PROBES)
