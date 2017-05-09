@@ -90,7 +90,7 @@ enum SandeshRxDropReason {
 const i32 SANDESH_KEY_HINT = 0x1
 const i32 SANDESH_CONTROL_HINT = 0x2
 const i32 SANDESH_SYNC_HINT = 0x4
-const u32 DEFAULT_SANDESH_SEND_RATELIMIT = 10
+const u32 DEFAULT_SANDESH_SEND_RATELIMIT = 0
 
 // Update ParseHeader function in sandesh_message_builder.cc
 // when modifying SandeshHeader below 

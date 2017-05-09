@@ -349,10 +349,11 @@ TEST_F(SandeshSendRatelimitTest, RateLimit) {
     int port = server_->GetPort();
     ASSERT_LT(0, port);
     // Connect to the server
-    Sandesh::set_send_rate_limit(10);
+    SandeshConfig sconfig;
+    sconfig.system_logs_rate_limit = 10;
     Sandesh::InitGenerator("SandeshSendRatelimitTest-Client", "localhost",
-                           "Test", "Test", evm_.get(),0);
-
+                           "Test", "Test", evm_.get(), 0, NULL,
+                           Sandesh::DerivedStats(), sconfig);
     Sandesh::ConnectToCollector("127.0.0.1", port);
     EXPECT_TRUE(Sandesh::IsConnectToCollectorEnabled());
     EXPECT_TRUE(Sandesh::client() != NULL);

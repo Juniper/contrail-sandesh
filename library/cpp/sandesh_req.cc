@@ -92,6 +92,7 @@ static void SendSandeshSendingParams(const std::string &context) {
     ssparams->set_system_logs_rate_limit(Sandesh::get_send_rate_limit());
     ssparams->set_disable_object_logs(Sandesh::IsSendingObjectLogsDisabled());
     ssparams->set_disable_all_logs(Sandesh::IsSendingAllMessagesDisabled());
+    ssparams->set_disable_flows(Sandesh::IsSendingFlowsDisabled());
     SandeshClient *client = Sandesh::client();
     if (client && client->IsSession()) {
         SandeshSession *sess = client->session();
@@ -110,6 +111,9 @@ void SandeshSendingParamsSet::HandleRequest() const {
     }
     if (__isset.disable_all_logs) {
         Sandesh::DisableSendingAllMessages(disable_all_logs);
+    }
+    if (__isset.disable_flows) {
+        Sandesh::DisableSendingFlows(disable_flows);
     }
     // Send response
     SendSandeshSendingParams(context());
