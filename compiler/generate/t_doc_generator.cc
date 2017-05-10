@@ -120,42 +120,42 @@ class t_doc_generator : public t_generator {
    */
 
   template <typename T>
-  void generate_stat_table_schema(string, t_field*, T*, string);
+  void generate_stat_table_schema(string, t_field*, T*, string, vector<string>&);
   template <typename T>
-  void generate_stat_schema_map(string, t_type*, t_type*, t_field*, T*, bool);
+  void generate_stat_schema_map(string, t_type*, t_type*, t_field*, T*, bool, vector<string>&);
   template <typename T>
-  void generate_stat_schema_list(string, t_type*, t_field*, T*, bool);
+  void generate_stat_schema_list(string, t_type*, t_field*, T*, bool, vector<string>&);
   t_struct* find_struct_with_name(string sname);
   template <typename T>
-  void generate_stat_schema_struct(string, t_field*, t_struct*, T*, bool);
+  void generate_stat_schema_struct(string, t_field*, t_struct*, T*, bool, vector<string>&);
   template <typename T>
   void extract_tags(T*, map<string, vector<string> >&, vector<string>&, vector<string>&);
-  void generate_stat_schema_struct_base_member(string, t_field*, string);
+  string generate_stat_schema_struct_base_member(string, t_field*, string);
   void generate_stat_table_schema_header(string, string, string, string);
   string get_datatype_from_tfield(t_type* tfield);
-  void generate_table_entry(string name, string datatype, string index);
+  string generate_table_entry(string name, string datatype, string index);
   template <typename T>
   string get_type_of_member(string, t_field*, t_struct*, T*);
   template <typename T>
   void populate_stat_schema_map_key_value(t_field* tfield, t_type*, t_type*, T*);
-  void generate_stat_schema_struct_members(string name, t_field*, t_struct*, vector<string>, map<string, vector<string> >);
-  void is_indexed_or_suffixed_field(string, vector<string>, map<string, vector<string> >, string&, bool&);
+  void generate_stat_schema_struct_members(string name, t_field*, t_struct*, vector<string>, map<string, vector<string> >, vector<string>&);
+  void is_indexed_or_suffixed_field(string, vector<string>, map<string, vector<string> >, string&, bool&, bool&);
   template <typename T>
-  void generate_stat_schema_suffixes(string, t_field*, t_struct*, T*, map<string, vector<string> >&);
+  void generate_stat_schema_suffixes(string, t_field*, t_struct*, T*, map<string, vector<string> >&, vector<string>&);
   template <typename T>
-  void generate_stat_schema_toplevel_tags(T*, vector<string>&);
+  void generate_stat_schema_toplevel_tags(T*, vector<string>&, vector<string>&);
   void generate_stat_tables_schema(t_sandesh*);
   template <typename T>
-  void generate_stat_tables_schema(T*, const vector<t_field*>, string, string);
+  void generate_stat_tables_schema(T*, const vector<t_field*>, string, string, vector<string>&);
   string get_display_name_from_comments(t_field*);
   template <typename T>
-  void find_recursive_tags(T*, t_field*, string, string);
+  void find_recursive_tags(T*, t_field*, string, string, vector<string>&);
   template <typename T>
-  void find_recursive_tags_struct(T*, t_field*, string, string, string);
+  void find_recursive_tags_struct(T*, t_field*, string, string, string, vector<string>&);
   template <typename T>
-  void find_recursive_tags_list(T*, t_field*, string, t_type*, string);
+  void find_recursive_tags_list(T*, t_field*, string, t_type*, string, vector<string>&);
   template <typename T>
-  void find_recursive_tags_map(T*, t_field*, string, t_type*, t_type*, string);
+  void find_recursive_tags_map(T*, t_field*, string, t_type*, t_type*, string, vector<string>&);
   string find_obj_table_name(const vector<t_field*>);
   void generate_typedef (t_typedef*  ttypedef) {}
   void generate_enum    (t_enum*     tenum) {}
@@ -1159,7 +1159,7 @@ string t_doc_generator::get_type_of_member(string name, t_field* tfield, t_struc
 }
 
 template <typename T>
-void t_doc_generator::generate_stat_schema_toplevel_tags(T* tstruct, vector<string>& top_level_tags) {
+void t_doc_generator::generate_stat_schema_toplevel_tags(T* tstruct, vector<string>& top_level_tags, vector<string>& schema) {
     BOOST_FOREACH(const string &tag, top_level_tags) {
         //find the member in top level structure
         const vector<t_field*>& tmembers = tstruct->get_members();
@@ -1168,7 +1168,7 @@ void t_doc_generator::generate_stat_schema_toplevel_tags(T* tstruct, vector<stri
             map<string, string>::iterator jt;
             if (tag == (*m_iter)->get_name()) {
                 string fname;
-                generate_stat_schema_struct_base_member(fname, *m_iter, "true");
+                schema.push_back(generate_stat_schema_struct_base_member(fname, *m_iter, "true"));
                 break;
             }
         }
@@ -1178,7 +1178,7 @@ void t_doc_generator::generate_stat_schema_toplevel_tags(T* tstruct, vector<stri
 template <typename T>
 void t_doc_generator::generate_stat_schema_suffixes(string prefix,
     t_field* tfield, t_struct* cstruct, T* tstruct, map<string,
-    vector<string> >& suffixes) {
+    vector<string> >& suffixes, vector<string>& schemas) {
     map<string, vector<string> >::iterator it;
     for (it=suffixes.begin(); it!=suffixes.end(); ++it) {
         string fname = it->first;
@@ -1208,16 +1208,19 @@ void t_doc_generator::generate_stat_schema_suffixes(string prefix,
         }
         indent_up();
         f_stats_tables_ << "," << endl;
-        indent(f_stats_tables_) << "{\"name\":\"" << fname <<
+        std::ostringstream oss;
+        oss << "{\"name\":\"" << fname <<
             "\",\"datatype\":\"" << datatype << "\",\"index\":" << index <<
             ",\"suffixes\":[" << suffix << "]}";
+        schemas.push_back(oss.str());
+        indent(f_stats_tables_) << oss.str();
         indent_down();
     }
 }
 
 void t_doc_generator::is_indexed_or_suffixed_field(string fname,
     vector<string> tags, map<string, vector<string> > suffixes,
-    string& index, bool& is_suffixed_field) {
+    string& index, bool& is_suffixed_field, bool& is_tag) {
     BOOST_FOREACH(const string &tag, tags) {
         string field_name = string(".") + fname;
         string trimmed_tag = tag;
@@ -1236,11 +1239,21 @@ void t_doc_generator::is_indexed_or_suffixed_field(string fname,
             return;
         }
     }
+    for(map<string, vector<string> >::iterator it = suffixes.begin(); it != suffixes.end(); ++it) {
+        string field_name = string(".") + fname;
+        vector<string> values = it->second;
+        BOOST_FOREACH(string value, values) {
+            if (value == field_name) {
+                is_tag = true;
+                return;
+            }
+	}
+    }
 }
 
 void t_doc_generator::generate_stat_schema_struct_members(string prefix,
     t_field* tfield, t_struct* tstruct, vector<string> tags,
-    map<string, vector<string> > suffixes) {
+    map<string, vector<string> > suffixes, vector<string>& schemas) {
     const vector<t_field*> members = tstruct->get_members();
     vector<t_field*>::const_iterator m_iter;
     string name = tfield->get_name();
@@ -1251,27 +1264,30 @@ void t_doc_generator::generate_stat_schema_struct_members(string prefix,
     }
     for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
         string index = "false";
-        bool is_suffixed_field = false;
-        is_indexed_or_suffixed_field((*m_iter)->get_name(), tags, suffixes, index, is_suffixed_field);
+        bool is_suffixed_field = false, is_tag = false;
+        is_indexed_or_suffixed_field((*m_iter)->get_name(), tags, suffixes, index, is_suffixed_field, is_tag);
         if (is_suffixed_field) {
             continue;
         }
         t_type* mtype = (*m_iter)->get_type();
         if(mtype->is_base_type()) {
-            generate_stat_schema_struct_base_member(prefix, *m_iter, index);
+            string schema = generate_stat_schema_struct_base_member(prefix,
+                    *m_iter, index);
+            if (index == "true" || is_tag)
+                schemas.push_back(schema);
         } else if (mtype->is_struct()) {
             string mtype_name = mtype->get_name();
             t_struct *cstruct = find_struct_with_name(mtype_name);
             if (cstruct) {
-                generate_stat_schema_struct(prefix, (*m_iter), cstruct, tstruct, false);
+                generate_stat_schema_struct(prefix, (*m_iter), cstruct, tstruct, false, schemas);
             }
         } else if (mtype->is_list()) {
             t_type* etype= ((t_list*)mtype)->get_elem_type();
-            generate_stat_schema_list(prefix, etype, (*m_iter), tstruct, false);
+            generate_stat_schema_list(prefix, etype, (*m_iter), tstruct, false, schemas);
         } else if (mtype->is_map()) {
             t_type* valtype= ((t_map*)((*m_iter)->get_type()))->get_val_type();
             t_type* keytype= ((t_map*)((*m_iter)->get_type()))->get_key_type();
-            generate_stat_schema_map(prefix, keytype, valtype, (*m_iter), tstruct, false);
+            generate_stat_schema_map(prefix, keytype, valtype, (*m_iter), tstruct, false, schemas);
         }
     }
 }
@@ -1283,18 +1299,22 @@ string t_doc_generator::get_datatype_from_tfield(t_type* ttype) {
     return datatype;
 }
 
-void t_doc_generator::generate_table_entry(string name, string datatype, string index) {
+string t_doc_generator::generate_table_entry(string name, string datatype, string index) {
     indent_up();
     if (!first_member_) {
         f_stats_tables_ << "," << endl;
     }
-    indent(f_stats_tables_) << "{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
+    std::ostringstream oss;
+    oss << "{\"name\":\"" << name << "\",\"datatype\":\"" << datatype << "\",\"index\":" << index << "}";
+    string schema = oss.str();
+    indent(f_stats_tables_) << schema;
     first_member_ = false;
     indent_down();
+    return schema;
 }
 
 template <typename T>
-void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t_type* valtype, t_field* tfield, T* tstruct, bool is_top_level) {
+void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t_type* valtype, t_field* tfield, T* tstruct, bool is_top_level, vector<string>& schemas) {
     map<string, vector<string> > suffixes;
     vector<string> top_level_tags;
     vector<string> member_tags;
@@ -1316,10 +1336,12 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
     string name = tname + string(".__key");
     string datatype = get_datatype_from_tfield(keytype);
     string index = "false";
-    bool is_suffixed_field = false;
-    is_indexed_or_suffixed_field(string("__key"), member_tags, suffixes, index, is_suffixed_field);
+    bool is_suffixed_field = false, is_tag = false;
+    is_indexed_or_suffixed_field(string("__key"), member_tags, suffixes, index, is_suffixed_field, is_tag);
     if (!is_suffixed_field) {
-        generate_table_entry(name, datatype, index);
+        string schema = generate_table_entry(name, datatype, index);
+        if (index == "true" || is_tag)
+            schemas.push_back(schema);
     }
     if(valtype->is_base_type()) {
         name = tname + string(".__value");
@@ -1339,28 +1361,28 @@ void t_doc_generator::generate_stat_schema_map(string prefix, t_type* keytype, t
         t_struct *cstruct = find_struct_with_name(sname);
         if (cstruct) {
             if(!is_empty_tag) {
-                generate_stat_schema_struct_members(empty_prefix, tfield, cstruct, member_tags, suffixes);
+                generate_stat_schema_struct_members(empty_prefix, tfield, cstruct, member_tags, suffixes, schemas);
             }
-            generate_stat_schema_toplevel_tags(tstruct, top_level_tags);
-            generate_stat_schema_suffixes(empty_prefix, tfield, cstruct, tstruct, suffixes);
+            generate_stat_schema_toplevel_tags(tstruct, top_level_tags, schemas);
+            generate_stat_schema_suffixes(empty_prefix, tfield, cstruct, tstruct, suffixes, schemas);
         }
     } else {
-        generate_stat_schema_toplevel_tags(tstruct, top_level_tags);
-        generate_stat_schema_suffixes(empty_prefix, tfield, NULL, tstruct, suffixes);
+        generate_stat_schema_toplevel_tags(tstruct, top_level_tags, schemas);
+        generate_stat_schema_suffixes(empty_prefix, tfield, NULL, tstruct, suffixes, schemas);
     }
 }
 
-void t_doc_generator::generate_stat_schema_struct_base_member(string prefix, t_field* tfield, string index) {
+string t_doc_generator::generate_stat_schema_struct_base_member(string prefix, t_field* tfield, string index) {
     string fname = tfield->get_name();
     if (!prefix.empty()) {
         fname = prefix+ "." + fname;
     }
     string datatype = get_datatype_from_tfield(tfield->get_type());
-    generate_table_entry(fname, datatype, index);
+    return generate_table_entry(fname, datatype, index);
 }
 
 template <typename T>
-void t_doc_generator::extract_tags(T* tfield, map<string, vector<string> > &suffixes, vector<string> &top_level_tags, vector<string> &member_tags) {
+void t_doc_generator::extract_tags(T* tfield, map<string, vector<string> > &suffixes, vector<string> &top_level_tags, vector<string>& member_tags) {
     boost::char_separator<char> fsep(",");
     tokenizer tags(tfield->annotations_["tags"], fsep);
     BOOST_FOREACH(const string &tag, tags) {
@@ -1392,15 +1414,15 @@ void t_doc_generator::extract_tags(T* tfield, map<string, vector<string> > &suff
 }
 
 template <typename T>
-void t_doc_generator::generate_stat_schema_struct(string prefix, t_field* tfield, t_struct* cstruct, T* tstruct, bool is_top_level) {
+void t_doc_generator::generate_stat_schema_struct(string prefix, t_field* tfield, t_struct* cstruct, T* tstruct, bool is_top_level, vector<string>& schemas) {
     map<string, vector<string> > suffixes;
     vector<string> top_level_tags;
     vector<string> member_tags;
     bool is_empty_tag = false;
-    if(is_top_level) {
+    if (is_top_level) {
         extract_tags(tfield, suffixes, top_level_tags, member_tags);
     } else {
-        map<string, string>::iterator jt = cstruct->annotations_.find("tags");
+        map<string, string>::iterator jt = tfield->annotations_.find("tags");
         if (jt == tfield->annotations_.end()) {
             is_empty_tag = true;
         } else {
@@ -1408,18 +1430,19 @@ void t_doc_generator::generate_stat_schema_struct(string prefix, t_field* tfield
         }
     }
     if(is_empty_tag || is_top_level)
-        generate_stat_schema_struct_members(prefix, tfield, cstruct, member_tags, suffixes);
-    generate_stat_schema_toplevel_tags(tstruct, top_level_tags);
-    generate_stat_schema_suffixes(prefix, tfield, cstruct, tstruct, suffixes);
+        generate_stat_schema_struct_members(prefix, tfield, cstruct, member_tags, suffixes, schemas);
+    generate_stat_schema_toplevel_tags(tstruct, top_level_tags, schemas);
+    generate_stat_schema_suffixes(prefix, tfield, cstruct, tstruct, suffixes, schemas);
+    return;
 }
 
 template <typename T>
-void t_doc_generator::generate_stat_schema_list(string name, t_type* ttype, t_field* tfield, T* tstruct, bool is_top_level) {
+void t_doc_generator::generate_stat_schema_list(string name, t_type* ttype, t_field* tfield, T* tstruct, bool is_top_level, vector<string>& schemas) {
     if (ttype->is_struct()) {
         string sname = ttype->get_name();
         t_struct *cstruct = find_struct_with_name(sname);
         if (cstruct) {
-            generate_stat_schema_struct(name, tfield, cstruct, tstruct, is_top_level);
+            generate_stat_schema_struct(name, tfield, cstruct, tstruct, is_top_level, schemas);
         }
     } else if (ttype->is_base_type()) {
         map<string, vector<string> > suffixes;
@@ -1442,10 +1465,12 @@ void t_doc_generator::generate_stat_schema_list(string name, t_type* ttype, t_fi
         }
         string datatype = get_datatype_from_tfield(ttype);
         string index = "false";
-        bool is_suffixed_field = false;
-        is_indexed_or_suffixed_field(tname, member_tags, suffixes, index, is_suffixed_field);
+        bool is_suffixed_field = false, is_tag = false;
+        is_indexed_or_suffixed_field(tname, member_tags, suffixes, index, is_suffixed_field, is_tag);
         if (!is_suffixed_field) {
-            generate_table_entry(tname, datatype, index);
+            string schema = generate_table_entry(tname, datatype, index);
+            if (is_tag || index == "true")
+                schemas.push_back(schema);
         }
     }
 }
@@ -1468,19 +1493,19 @@ t_struct* t_doc_generator::find_struct_with_name(string sname) {
 }
 
 template <typename T>
-void t_doc_generator::generate_stat_table_schema(string oname, t_field* tfield, T* tsandesh, string prefix) {
+void t_doc_generator::generate_stat_table_schema(string oname, t_field* tfield, T* tsandesh, string prefix, vector<string>& tags) {
     if (tfield->get_type()->is_list()) {
         t_type* ltype= ((t_list*)((tfield)->get_type()))->get_elem_type();
-        generate_stat_schema_list(prefix, ltype, tfield, tsandesh, true);
+        generate_stat_schema_list(prefix, ltype, tfield, tsandesh, true, tags);
     } else if (tfield->get_type()->is_map()) { 
         t_type* valtype= ((t_map*)(tfield->get_type()))->get_val_type();
         t_type* keytype= ((t_map*)(tfield->get_type()))->get_key_type();
-        generate_stat_schema_map(prefix, keytype, valtype, tfield, tsandesh, true);
+        generate_stat_schema_map(prefix, keytype, valtype, tfield, tsandesh, true, tags);
     } else if (tfield->get_type()->is_struct()) {
         string sname = (tfield->get_type())->get_name();
         t_struct *cstruct = find_struct_with_name(sname);
         if (cstruct) {
-            generate_stat_schema_struct(prefix, tfield, cstruct, tsandesh, true);
+            generate_stat_schema_struct(prefix, tfield, cstruct, tsandesh, true, tags);
         }
     }
 }
@@ -1501,42 +1526,43 @@ string t_doc_generator::find_obj_table_name(const vector<t_field*> members) {
 }
 
 template <typename T>
-void t_doc_generator::find_recursive_tags_map(T* tsandesh, t_field* tfield, string table, t_type* keytype, t_type* valtype, string prefix) {
+void t_doc_generator::find_recursive_tags_map(T* tsandesh, t_field* tfield, string table, t_type* keytype, t_type* valtype, string prefix, vector<string>& schemas) {
     if (valtype->is_struct()) {
         string sname = valtype->get_name();
-        find_recursive_tags_struct(tsandesh, tfield, table, sname, prefix);
+        find_recursive_tags_struct(tsandesh, tfield, table, sname, prefix, schemas);
     }
 }
 
 template <typename T>
-void t_doc_generator::find_recursive_tags_list(T* tsandesh, t_field* tfield, string table, t_type* ttype, string prefix) {
+void t_doc_generator::find_recursive_tags_list(T* tsandesh, t_field* tfield, string table, t_type* ttype, string prefix, vector<string>& schemas) {
     if (ttype->is_struct()) {
         string sname = ttype->get_name();
-        find_recursive_tags_struct(tsandesh, tfield, table, sname, prefix);
+        find_recursive_tags_struct(tsandesh, tfield, table, sname, prefix, schemas);
     }
 }
 
 template <typename T>
-void t_doc_generator::find_recursive_tags_struct(T* tsandesh, t_field* tfield, string table, string sname, string prefix) {
+void t_doc_generator::find_recursive_tags_struct(T* tsandesh, t_field* tfield, string table, string sname, string prefix, vector<string>& schemas) {
     t_struct *cstruct = find_struct_with_name(sname);
     if(cstruct) {
         const vector<t_field*> members = cstruct->get_members();
-        generate_stat_tables_schema(tsandesh, members, table, prefix);
+        generate_stat_tables_schema(tsandesh, members, table, prefix, schemas);
     }
 }
 
 template <typename T>
-void t_doc_generator::find_recursive_tags(T* tsandesh, t_field* tfield, string table, string fname) {
+void t_doc_generator::find_recursive_tags(T* tsandesh, t_field* tfield, string table, string fname, vector<string>& index_schemas) {
+    string tags;
     if (tfield->get_type()->is_list()) {
         t_type* ltype= ((t_list*)((tfield)->get_type()))->get_elem_type();
-        find_recursive_tags_list(tsandesh, tfield, table, ltype, fname);
+        find_recursive_tags_list(tsandesh, tfield, table, ltype, fname, index_schemas);
     } else if (tfield->get_type()->is_map()) { 
         t_type* keytype= ((t_map*)(tfield->get_type()))->get_key_type();
         t_type* valtype= ((t_map*)(tfield->get_type()))->get_val_type();
-        find_recursive_tags_map(tsandesh, tfield, table, keytype, valtype, fname);
+        find_recursive_tags_map(tsandesh, tfield, table, keytype, valtype, fname, index_schemas);
     } else if (tfield->get_type()->is_struct()) {
         string sname = (tfield->get_type())->get_name();
-        find_recursive_tags_struct(tsandesh, tfield, table, sname, fname);
+        find_recursive_tags_struct(tsandesh, tfield, table, sname, fname, index_schemas);
     }
 
 }
@@ -1566,7 +1592,7 @@ string t_doc_generator::get_display_name_from_comments(t_field* tfield){
 }
 
 template <typename T>
-void t_doc_generator::generate_stat_tables_schema(T* tsandesh, const vector<t_field*> members, string table, string prefix) {
+void t_doc_generator::generate_stat_tables_schema(T* tsandesh, const vector<t_field*> members, string table, string prefix, vector<string>& tags) {
     vector<t_field*>::const_iterator m_iter;
     string oname = tsandesh->get_name();
     for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
@@ -1578,9 +1604,17 @@ void t_doc_generator::generate_stat_tables_schema(T* tsandesh, const vector<t_fi
                 fname = prefix + "." + fname;
             string display_name = get_display_name_from_comments(*m_iter);
             generate_stat_table_schema_header(oname, fname, table, display_name);
-            generate_stat_table_schema(oname, *m_iter, tsandesh, prefix);
+            vector<string> new_tags;
+            generate_stat_table_schema(oname, *m_iter, tsandesh, prefix, new_tags);
+            for (int i = 0; i < tags.size(); i++) {
+                if (tags[i][0] != ',')
+                    f_stats_tables_ << "," << endl;
+                indent_up();
+                indent(f_stats_tables_) << tags[i];
+                indent_down();
+            }
             f_stats_tables_ << "\n]\n}";
-            find_recursive_tags(tsandesh, *m_iter, table, fname);
+            find_recursive_tags(tsandesh, *m_iter, table, fname, new_tags);
         }
     }
 }
@@ -1589,14 +1623,15 @@ void t_doc_generator::generate_stat_tables_schema(t_sandesh* tsandesh) {
     bool is_uve = ((t_base_type *)tsandesh->get_type())->is_sandesh_uve();
     const vector<t_field*> members = tsandesh->get_members();
     string empty_prefix;
+    vector<string> empty_tag;
     if (is_uve) {
         t_struct* data = program_->get_struct(members.front()->get_type()->get_name().c_str());
         const vector<t_field*> tmembers = data->get_members();
         string obj_table_name = find_obj_table_name(tmembers);
-        generate_stat_tables_schema(data, tmembers, obj_table_name, empty_prefix);
+        generate_stat_tables_schema(data, tmembers, obj_table_name, empty_prefix, empty_tag);
     } else {
         string obj_table_name = "NONE";
-        generate_stat_tables_schema(tsandesh, members, obj_table_name, empty_prefix);
+        generate_stat_tables_schema(tsandesh, members, obj_table_name, empty_prefix, empty_tag);
     }
 }
 
