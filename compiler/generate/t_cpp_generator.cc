@@ -1174,7 +1174,8 @@ std::string t_cpp_generator::generate_sandesh_no_static_const_string_function(t_
                         result += declare_field(*m_iter, true, false, false, false, true);
 		    } else {
                         bool use_const = !(t->is_base_type() || t->is_enum());
-			result += declare_field(*m_iter, false, false, use_const,!t->is_base_type(), true);
+                        bool is_trace_str = trace &&  (*m_iter)->get_name().compare("std::string");
+                        result += declare_field(*m_iter, false, false, use_const || is_trace_str, !t->is_base_type() || is_trace_str, true);
 		    }
 		} else {
 			result += (*m_iter)->get_name();
@@ -1683,8 +1684,9 @@ std::string t_cpp_generator::generate_sandesh_trace_creator(t_sandesh *tsandesh,
         if (signature) {
             result += temp;
             bool use_const = !(t->is_base_type() || t->is_enum());
-            result += declare_field(*m_iter, false, false, use_const,
-                                    !t->is_base_type(), true);
+            bool is_trace_str = (*m_iter)->get_name().compare("std::string");
+            result += declare_field(*m_iter, false, false, use_const || is_trace_str,
+                                    !t->is_base_type() || is_trace_str, true);
         } else {
             result += temp;
             result += prefix + (*m_iter)->get_name() + suffix;
