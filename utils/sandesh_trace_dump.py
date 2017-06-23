@@ -70,9 +70,7 @@ def _get_trace_string(data, typ):
 def _print_trace_sandesh(tb, min_index, max_index):
     for i in range(int(min_index), int(max_index)):
         typ = gdb.lookup_type('SandeshTrace').pointer()
-        type_name = tb['c_']['m_buff'][i].cast(typ).dereference()['name_']
-        # convert type_name (c++ string) to python string
-        type_name = type_name.cast(gdb.lookup_type('char').pointer()).string()
+        type_name = str(tb['c_']['m_buff'][i].cast(typ).dereference().dynamic_type)
         msg_type = gdb.lookup_type(type_name).pointer()
         trace_sandesh = tb['c_']['m_buff'][i].cast(msg_type).dereference()
         typ = gdb.lookup_type('Sandesh')
