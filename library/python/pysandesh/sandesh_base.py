@@ -530,7 +530,13 @@ class Sandesh(object):
             return False
 
         logging_level = sandesh_init.logging_level()
-        level_allowed = logging_level >= self._level
+        # Do not log UVEs unless explicitly configured
+        # to do so via setting log_level to INVALID. This
+        # is to avoid flooding the log files with UVEs
+        level = self._level
+        if self._type == SandeshType.UVE:
+            level = SandeshLevel.INVALID
+        level_allowed = logging_level >= level
 
         logging_category = sandesh_init.logging_category()
         if logging_category is None or len(logging_category) == 0:

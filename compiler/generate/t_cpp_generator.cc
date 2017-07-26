@@ -1765,6 +1765,67 @@ void t_cpp_generator::generate_sandesh_seqnum(ofstream& out,
     }
 }
 
+
+string generate_sandesh_base_name(t_sandesh* tsandesh, bool type) {
+    const t_type *t = tsandesh->get_type();
+    if (((t_base_type *)t)->is_sandesh_request()) {
+        if (type) {
+            return "SandeshType::REQUEST";
+        } else {
+            return "SandeshRequest";
+        }
+    } else if (((t_base_type *)t)->is_sandesh_response()) {
+        if (type) {
+            return "SandeshType::RESPONSE";
+        } else {
+            return "SandeshResponse";
+        }
+    } else if (((t_base_type *)t)->is_sandesh_uve()) {
+        if (type) {
+            return "SandeshType::UVE";
+        } else {
+            return "SandeshUVE";
+        }
+    } else if (((t_base_type *)t)->is_sandesh_alarm()) {
+        if (type) {
+            return "SandeshType::ALARM";
+        } else {
+            return "SandeshAlarm";
+        }
+    } else if (((t_base_type *)t)->is_sandesh_system()) {
+        if (type) {
+            return "SandeshType::SYSTEM";
+        } else {
+            return "SandeshSystem";
+        }
+    } else if (((t_base_type *)t)->is_sandesh_buffer()) {
+        if (type) {
+            return "SandeshType::BUFFER";
+        } else {
+            return "SandeshBuffer";
+        }
+    } else if (((t_base_type *)t)->is_sandesh_trace() ||
+            ((t_base_type *)t)->is_sandesh_trace_object()) {
+        if (type) {
+            return "SandeshType::TRACE";
+        } else {
+            return "SandeshTrace";
+        }
+    } else if (((t_base_type *)t)->is_sandesh_object()) {
+        if (type) {
+            return "SandeshType::OBJECT";
+        } else {
+            return "SandeshObject";
+        }
+    } else if (((t_base_type *)t)->is_sandesh_flow()) {
+        if (type) {
+            return "SandeshType::FLOW";
+        } else {
+            return "SandeshFlow";
+        }
+    }
+}
+
 /**
  * Generate sandesh version signature
  *
@@ -1778,30 +1839,7 @@ void t_cpp_generator::generate_sandesh_versionsig(ofstream& out,
 
 void t_cpp_generator::generate_sandesh_base_init(
         ofstream& out, t_sandesh* tsandesh, bool init_dval) {
-    const t_type *t = tsandesh->get_type();
-
-    string init;
-
-    if (((t_base_type *)t)->is_sandesh_request()) {
-        out << "SandeshRequest";     
-    } else if (((t_base_type *)t)->is_sandesh_response()) {
-        out << "SandeshResponse";     
-    } else if (((t_base_type *)t)->is_sandesh_uve()) {
-        out << "SandeshUVE";     
-    } else if (((t_base_type *)t)->is_sandesh_alarm()) {
-        out << "SandeshAlarm";
-    } else if (((t_base_type *)t)->is_sandesh_system()) {
-        out << "SandeshSystem";
-    } else if (((t_base_type *)t)->is_sandesh_buffer()) {
-        out << "SandeshBuffer";     
-    } else if (((t_base_type *)t)->is_sandesh_trace() ||
-            ((t_base_type *)t)->is_sandesh_trace_object()) {
-        out << "SandeshTrace";     
-    } else if (((t_base_type *)t)->is_sandesh_object()) {
-        out << "SandeshObject";
-    } else if (((t_base_type *)t)->is_sandesh_flow()) {
-        out << "SandeshFlow";
-    }
+    out << generate_sandesh_base_name(tsandesh, false);
 
     if (init_dval) {
         out << "(\"" << tsandesh->get_name() << "\",lseqnum_++)";
@@ -4847,7 +4885,9 @@ void t_cpp_generator::generate_sandesh_static_logger(ofstream &out,
     }
     indent_up();
     out << indent() <<
-        "if (!IsLevelCategoryLoggingAllowed(level, category)) {" << endl;
+        "if (!IsLevelCategoryLoggingAllowed(" <<
+        generate_sandesh_base_name(tsandesh, true) <<
+        ", level, category)) {" << endl;
     indent_up();
     out << indent() << "return;" << endl;
     scope_down(out);
@@ -4943,6 +4983,7 @@ void t_cpp_generator::generate_sandesh_logger(ofstream &out,
             string level_str = "Sandesh::level()";
             if (ltype == sandesh_logger::LOG) {
                 out << indent() << "if (!IsLevelCategoryLoggingAllowed(" <<
+                    generate_sandesh_base_name(tsandesh, true) << ", " <<
                     level_str << ", " << category_str << ")) {" << endl;
                 indent_up();
                 out << indent() << "return;" << endl;

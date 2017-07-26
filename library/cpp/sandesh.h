@@ -361,7 +361,8 @@ protected:
     static SandeshCallback response_callback_;
     static SandeshClient *client_;
     static bool IsLevelUT(SandeshLevel::type level);
-    static bool IsLevelCategoryLoggingAllowed(SandeshLevel::type level,
+    static bool IsLevelCategoryLoggingAllowed(SandeshType::type type,
+                                              SandeshLevel::type level,
                                               const std::string& category);
 
 private:
