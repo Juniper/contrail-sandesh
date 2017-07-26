@@ -785,8 +785,14 @@ bool Sandesh::IsLevelUT(SandeshLevel::type level) {
             level <= SandeshLevel::UT_END;
 }
 
-bool Sandesh::IsLevelCategoryLoggingAllowed(SandeshLevel::type level,
-                                                   const std::string& category) {
+bool Sandesh::IsLevelCategoryLoggingAllowed(SandeshType::type type,
+                                            SandeshLevel::type level,
+                                            const std::string& category) {
+    // Do not log UVEs unless explicitly configured via setting log_level
+    // to INVALID. This is to avoid flooding the log files with UVEs
+    if (type == SandeshType::UVE) {
+        level = SandeshLevel::INVALID;
+    }
     bool level_allowed = logging_level_ >= level;
     bool category_allowed = !logging_category_.empty() ?
             logging_category_ == category : true;
@@ -798,7 +804,7 @@ bool Sandesh::IsLoggingAllowed() const {
         return enable_flow_log_;
     } else {
         return IsLocalLoggingEnabled() &&
-                IsLevelCategoryLoggingAllowed(level_, category_);
+                IsLevelCategoryLoggingAllowed(type_, level_, category_);
     }
 }
 
