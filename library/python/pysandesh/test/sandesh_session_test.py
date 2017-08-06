@@ -309,7 +309,7 @@ class SandeshSessionTest(unittest.TestCase):
         pass
     # end tearDown
 
-    def verify_watermarks(self, expected_wms, actual_wms):
+    def verify_watermarks(self, session, expected_wms, actual_wms):
         expected_wms.sort()
         actual_wms.sort()
         print '== verify watermarks =='
@@ -321,7 +321,7 @@ class SandeshSessionTest(unittest.TestCase):
             # send_level is set correctly
             actual_wms[i].callback(expected_wms[i][0])
             self.assertEqual(expected_wms[i][1],
-                             self.sandesh_instance.send_level())
+                             session.send_level())
     # end verify_watermarks
 
     def test_send_queue_watermarks(self):
@@ -330,12 +330,12 @@ class SandeshSessionTest(unittest.TestCase):
         # verify high watermarks are set properly in sandesh send queue
         high_wms = [wm for wm in wms if wm[2] is True]
         sendq_hwms = session.send_queue().high_watermarks()
-        self.verify_watermarks(high_wms, sendq_hwms)
+        self.verify_watermarks(session, high_wms, sendq_hwms)
 
         # verify low watermarks are set properly in sandesh send queue
         low_wms = [wm for wm in wms if wm[2] is False]
         sendq_lwms = session.send_queue().low_watermarks()
-        self.verify_watermarks(low_wms, sendq_lwms)
+        self.verify_watermarks(session, low_wms, sendq_lwms)
     # end test_send_queue_watermarks
 
 # end class SandeshSessionTest

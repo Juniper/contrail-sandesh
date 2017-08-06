@@ -81,7 +81,6 @@ class Sandesh(object):
         self._collectors = collectors
         self._connect_to_collector = connect_to_collector
         self._rcv_queue = WorkQueue(self._process_rx_sandesh)
-        self._send_level = SandeshLevel.INVALID
         self._init_logger(module, logger_class=logger_class,
                           logger_config_file=logger_config_file)
         self._logger.info('SANDESH: CONNECT TO COLLECTOR: %s',
@@ -221,16 +220,11 @@ class Sandesh(object):
                     connection.session().send_queue().may_be_start_runner()
     # end set_send_queue
 
-    def set_send_level(self, count, sandesh_level):
-        if self._send_level != sandesh_level:
-            self._logger.info('Sandesh Send Level [%s] -> [%s]' % \
-                              (SandeshLevel._VALUES_TO_NAMES[self._send_level],
-                               SandeshLevel._VALUES_TO_NAMES[sandesh_level]))
-            self._send_level = sandesh_level
-    # end set_send_level
-
     def send_level(self):
-        return self._send_level
+       session = self._get_client_session()
+       if session:
+           return session.send_level()
+       return SandeshLevel.INVALID
     # end send_level
 
     def init_collector(self):
@@ -522,6 +516,12 @@ class Sandesh(object):
     # end send_sandesh_trace_buffer
 
     # Private functions
+
+    def _get_client_session(self):
+        if self._client and self._client.connection():
+            return self._client.connection().session()
+        return None
+    # end _get_client_session
 
     def _is_level_ut(self):
         return (self._level >= SandeshLevel.UT_START and
@@ -865,6 +865,14 @@ class SandeshUVE(Sandesh):
             if self.handle_test(sandesh):
                 return 0
             if sandesh._client:
+                # SandeshUVE has an implicit send level of SandeshLevel.SYS_UVE
+                # which is irrespective of the level set by the user in the
+                # send. This is needed so that the send queue does not grow
+                # unbounded. Once the send queue's sending level reaches
+                # SandeshLevel.SYS_UVE we will reset the connection to the
+                # collector to initiate resync of the UVE cache
+                if SandeshLevel.SYS_UVE >= sandesh.send_level():
+                    sandesh._client.close_sm_session()
                 sandesh._client.send_uve_sandesh(self)
             else:
                 sandesh._logger.debug(self.log())

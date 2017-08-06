@@ -225,8 +225,7 @@ public:
         return connect_to_collector_;
     }
     static void SendQueueResponse(std::string context);
-    static void SetSendingLevel(size_t count, SandeshLevel::type level);
-    static SandeshLevel::type SendingLevel() { return sending_level_; }
+    static SandeshLevel::type SendingLevel();
     static void SendingParamsResponse(std::string context);
 
     static int32_t ReceiveBinaryMsgOne(u_int8_t *buf, u_int32_t buf_len,
@@ -393,7 +392,6 @@ private:
     static bool connect_to_collector_; // whether to connect to collector
     static EventManager *event_manager_;
     static bool send_queue_enabled_;
-    static SandeshLevel::type sending_level_;
     static SandeshMessageStatistics msg_stats_;
     static tbb::mutex stats_mutex_;
     static log4cplus::Logger logger_;
