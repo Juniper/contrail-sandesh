@@ -13,6 +13,7 @@
 #include <boost/foreach.hpp>
 
 #include <base/task_annotations.h>
+#include <base/time_util.h>
 #include <io/event_manager.h>
 #include <io/tcp_session.h>
 #include <io/tcp_server.h>
@@ -48,12 +49,14 @@ const std::string SandeshClient::kSessionReaderTask = "sandesh::SandeshClientRea
 bool SandeshClient::task_policy_set_ = false;
 const std::vector<Sandesh::QueueWaterMarkInfo> 
     SandeshClient::kSessionWaterMarkInfo = boost::assign::tuple_list_of
-                                               (100000, SandeshLevel::SYS_EMERG, true, false)
-                                               (50000, SandeshLevel::SYS_ERR, true, false)
-                                               (10000, SandeshLevel::SYS_DEBUG, true, false)
-                                               (75000, SandeshLevel::SYS_ERR, false, false)
-                                               (30000, SandeshLevel::SYS_DEBUG, false, false)
-                                               (2500, SandeshLevel::INVALID, false, false);
+                                               (15*1024*1024, SandeshLevel::SYS_UVE, true, false)
+                                               (100*1024, SandeshLevel::SYS_EMERG, true, false)
+                                               (50*1024, SandeshLevel::SYS_ERR, true, false)
+                                               (10*1024, SandeshLevel::SYS_DEBUG, true, false)
+                                               (5*1024*1024, SandeshLevel::SYS_EMERG, false, false)
+                                               (75*1024, SandeshLevel::SYS_ERR, false, false)
+                                               (30*1024, SandeshLevel::SYS_DEBUG, false, false)
+                                               (2*1024, SandeshLevel::INVALID, false, false);
 
 SandeshClient::SandeshClient(EventManager *evm,
         const std::vector<Endpoint> &collectors,
@@ -69,7 +72,9 @@ SandeshClient::SandeshClient(EventManager *evm,
         dscp_value_(0),
         collectors_(collectors),
         sm_(SandeshClientSM::CreateClientSM(evm, this, sm_task_instance_, sm_task_id_, periodicuve)),
-        session_wm_info_(kSessionWaterMarkInfo) {
+        session_wm_info_(kSessionWaterMarkInfo),
+        session_close_interval_msec_(0),
+        session_close_time_usec_(0) {
     // Set task policy for exclusion between state machine and session tasks since
     // session delete happens in state machine task
     if (!task_policy_set_) {
@@ -295,6 +300,70 @@ void SandeshClient::InitializeSMSession(int count) {
             count, stv, getpid(), Sandesh::http_port(),
             Sandesh::node_type(), Sandesh::instance_id(), "ctrl");
 
+}
+
+bool SandeshClient::CloseSMSessionInternal() {
+    SandeshSession *session(sm_->session());
+    if (session) {
+        session->EnqueueClose();
+        return true;
+    }
+    return false;
+}
+
+bool DoCloseSMSession(uint64_t now_usec, uint64_t last_close_usec,
+    uint64_t last_close_interval_usec, int *close_interval_msec) {
+    // If this is the first time, we will accept the next close
+    // only after the initial close interval time
+    if (last_close_interval_usec == 0 || last_close_usec == 0) {
+        *close_interval_msec =
+            SandeshClient::kInitialSMSessionCloseIntervalMSec;
+        return true;
+    }
+    assert(now_usec >= last_close_usec);
+    uint64_t time_since_close_usec(now_usec - last_close_usec);
+    // We will ignore close events receive before the last close
+    // interval is finished
+    if (time_since_close_usec <= last_close_interval_usec) {
+        *close_interval_msec = 0;
+        return false;
+    }
+    // We will double the close interval time if we get a close
+    // event between last close interval and 2 * last close interval.
+    // If the close event is between 2 * last close interval and
+    // 4 * last close interval, then the close interval will be
+    // same as the current close interval. If the close event is
+    // after 4 * last close interval, then we will reset the close
+    // interval to the initial close interval
+    if (time_since_close_usec > last_close_interval_usec &&
+        time_since_close_usec <= 2 * last_close_interval_usec) {
+        uint64_t nclose_interval_msec((2 * last_close_interval_usec)/1000);
+        *close_interval_msec = std::min(nclose_interval_msec,
+            static_cast<uint64_t>(
+            SandeshClient::kMaxSMSessionCloseIntervalMSec));
+        return true;
+    } else if ((2 * last_close_interval_usec <= time_since_close_usec) &&
+        (time_since_close_usec <= 4 * last_close_interval_usec)) {
+        *close_interval_msec = last_close_interval_usec/1000;
+        return true;
+    } else {
+        *close_interval_msec =
+            SandeshClient::kInitialSMSessionCloseIntervalMSec;
+        return true;
+    }
+}
+
+bool SandeshClient::CloseSMSession() {
+    uint64_t now_usec(UTCTimestampUsec());
+    int close_interval_msec(0);
+    bool close(DoCloseSMSession(now_usec, session_close_time_usec_,
+        session_close_interval_msec_ * 1000, &close_interval_msec));
+    if (close) {
+        session_close_time_usec_ = now_usec;
+        session_close_interval_msec_ = close_interval_msec;
+        return CloseSMSessionInternal();
+    }
+    return false;
 }
 
 static bool client_start = false;

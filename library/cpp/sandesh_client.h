@@ -35,9 +35,13 @@ class Sandesh;
 class SandeshUVE;
 class SandeshHeader;
 
+bool DoCloseSMSession(uint64_t now_usec, uint64_t last_close_usec,
+    uint64_t last_close_interval_usec, int *close_interval_msec);
 
 class SandeshClient : public SslServer, public SandeshClientSM::Mgr {
 public:
+    static const int kInitialSMSessionCloseIntervalMSec = 10 * 1000;
+    static const int kMaxSMSessionCloseIntervalMSec = 60 * 1000;
     
     SandeshClient(EventManager *evm, const std::vector<Endpoint> &collectors,
              const SandeshConfig &config,
@@ -57,6 +61,7 @@ public:
     void DeleteSMSession(SandeshSession * session) {
         DeleteSession(session);
     } 
+    bool CloseSMSession();
     bool ReceiveMsg(const std::string& msg,
         const SandeshHeader &header, const std::string &sandesh_name,
         const uint32_t header_offset);
@@ -95,9 +100,17 @@ public:
         std::vector<Sandesh::QueueWaterMarkInfo> &scwm_info) const;
     void ReConfigCollectors(const std::vector<std::string>&);
 
+    int session_close_interval_msec() const {
+        return session_close_interval_msec_;
+    }
+    uint64_t session_close_time_usec() const {
+        return session_close_time_usec_;
+    }
+
     friend class CollectorInfoRequest;
 protected:
     virtual SslSession *AllocSession(SslSocket *socket);
+    bool CloseSMSessionInternal();
 
 private:
     static const int kSMTaskInstance = 0;
@@ -117,6 +130,8 @@ private:
     boost::scoped_ptr<SandeshClientSM> sm_;
     std::vector<Sandesh::QueueWaterMarkInfo> session_wm_info_;
     static bool task_policy_set_;
+    int session_close_interval_msec_;
+    uint64_t session_close_time_usec_;
 
     bool ReceiveCtrlMsg(const std::string &msg,
         const SandeshHeader &header, const std::string &sandesh_name,

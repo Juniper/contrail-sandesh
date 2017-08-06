@@ -45,7 +45,7 @@ public:
 
     SandeshConnection *FindConnection(const Endpoint &peer_addr);
     void RemoveConnection(SandeshConnection *connection);
-    virtual bool DisableSandeshLogMessages() { return true; }
+    virtual bool DisableSandeshLogMessages() const { return true; }
    
     virtual bool ReceiveResourceUpdate(SandeshSession *session,
             bool rsc) { return true; } 

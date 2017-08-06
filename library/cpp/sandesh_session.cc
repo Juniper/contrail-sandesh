@@ -291,7 +291,8 @@ SandeshSession::SandeshSession(SslServer *client, SslSocket *socket,
     keepalive_interval_(kSessionKeepaliveInterval),
     keepalive_probes_(kSessionKeepaliveProbes),
     tcp_user_timeout_(kSessionTcpUserTimeout),
-    reader_task_id_(reader_task_id) {
+    reader_task_id_(reader_task_id),
+    sending_level_(SandeshLevel::INVALID) {
     if (Sandesh::role() == Sandesh::SandeshRole::Collector) {
         send_buffer_queue_.reset(new Sandesh::SandeshBufferQueue(writer_task_id,
                 task_instance,
@@ -312,7 +313,8 @@ bool SandeshSession::SessionSendReady() {
 void SandeshSession::SetSendQueueWaterMark(
     Sandesh::QueueWaterMarkInfo &swmi) {
     WaterMarkInfo wm(boost::get<0>(swmi),
-        boost::bind(&Sandesh::SetSendingLevel, _1, boost::get<1>(swmi)));
+        boost::bind(&SandeshSession::SetSendingLevel, this, _1,
+            boost::get<1>(swmi)));
     if (boost::get<2>(swmi)) {
         send_queue_->SetHighWaterMark(wm);
     } else {
@@ -323,6 +325,19 @@ void SandeshSession::SetSendQueueWaterMark(
 void SandeshSession::ResetSendQueueWaterMark() {
     send_queue_->ResetHighWaterMark();
     send_queue_->ResetLowWaterMark();
+}
+
+void SandeshSession::SetSendingLevel(size_t count, SandeshLevel::type level) {
+    if (sending_level_ != level) {
+        SANDESH_LOG(INFO, "SANDESH: Sending: LEVEL: " << "[ " <<
+            Sandesh::LevelToString(sending_level_) << " ] -> [ " <<
+            Sandesh::LevelToString(level) << " ] : " << count);
+        sending_level_ = level;
+    }
+}
+
+SandeshLevel::type SandeshSession::SendingLevel() const {
+    return sending_level_;
 }
 
 void SandeshSession::Shutdown() {
@@ -430,6 +445,11 @@ void SandeshSession::EnqueueClose() {
     if (connection_) {
         connection_->state_machine()->OnSessionEvent(this,
             TcpSession::CLOSE);
+    } else {
+        TcpSession::EventObserver eobs(observer());
+        if (eobs) {
+            eobs(this, TcpSession::CLOSE);
+        }
     }
 }
 

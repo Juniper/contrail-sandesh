@@ -237,12 +237,14 @@ class SandeshSendQueue(WorkQueue):
 
     _SENDQ_WATERMARKS = [
         # (size, sandesh_level, is_high_watermark)
-        (150*1024*1024, SandeshLevel.SYS_EMERG, True),
-        (100*1024*1024, SandeshLevel.SYS_ERR, True),
-        (50*1024*1024, SandeshLevel.SYS_DEBUG, True),
-        (125*1024*1024, SandeshLevel.SYS_ERR, False),
-        (75*1024*1024, SandeshLevel.SYS_DEBUG, False),
-        (25*1024*1024, SandeshLevel.INVALID, False)]
+        (15*1024*1024, SandeshLevel.SYS_UVE,True),
+        (100*1024, SandeshLevel.SYS_EMERG, True),
+        (50*1024, SandeshLevel.SYS_ERR, True),
+        (10*1024, SandeshLevel.SYS_DEBUG, True),
+        (5*1024*1024, SandeshLevel.SYS_EMERG, False),
+        (75*1024, SandeshLevel.SYS_ERR, False),
+        (30*1024, SandeshLevel.SYS_DEBUG, False),
+        (2*1024, SandeshLevel.INVALID, False)]
 
     class Element(object):
         def __init__(self, sandesh):
@@ -283,15 +285,28 @@ class SandeshSession(SslSession):
         self._writer = SandeshWriter(self)
         self._send_queue = SandeshSendQueue(self._send_sandesh,
                                             self._is_ready_to_send_sandesh)
+        self._send_level = SandeshLevel.INVALID
         self.set_send_queue_watermarks(SandeshSendQueue._SENDQ_WATERMARKS)
     # end __init__
 
+    def _set_send_level(self, count, sandesh_level):
+        if self._send_level != sandesh_level:
+            self._logger.info('Sandesh Send Level [%s] -> [%s]' % \
+                              (SandeshLevel._VALUES_TO_NAMES[self._send_level],
+                               SandeshLevel._VALUES_TO_NAMES[sandesh_level]))
+            self._send_level = sandesh_level
+    # end _set_send_level
+
     # Public functions
+
+    def send_level(self):
+        return self._send_level
+    # end send_level
 
     def set_send_queue_watermarks(self, watermarks):
         # watermarks is a list of tuples
         # (size, sandesh_level, is_high_watermark)
-        wm_callback = self._sandesh_instance.set_send_level
+        wm_callback = self._set_send_level
         high_wm = []
         low_wm = []
         for wm in watermarks:
