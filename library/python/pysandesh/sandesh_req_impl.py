@@ -211,7 +211,12 @@ class SandeshReqImpl(object):
         gen_stats = SandeshGeneratorStats()
         gen_stats.type_stats = msg_stats_list
         gen_stats.aggregate_stats = sandesh_msg_stats.aggregate_stats()
-        connection = self._sandesh.client().connection()
+        client = self._sandesh.client()
+        session_close_interval_msec = client.session_close_interval_msec()
+        session_close_timestamp = client.session_close_time_usec()
+        connection = client.connection()
+        sending_level = None
+        send_queue_stats = None
         if connection and connection.session():
             session = connection.session()
             squeue = session.send_queue()
@@ -221,8 +226,13 @@ class SandeshReqImpl(object):
             send_queue_stats.count = \
                 squeue.num_enqueues() - squeue.num_dequeues()
             send_queue_stats.max_count = squeue.max_qlen()
-            gen_stats.send_queue_stats = send_queue_stats
-        stats_resp = SandeshMessageStatsResp(gen_stats)
+            sending_level = SandeshLevel._VALUES_TO_NAMES[\
+                    session.send_level()]
+        stats_resp = SandeshMessageStatsResp(stats=gen_stats,
+            sending_level=sending_level,
+            send_queue_stats=send_queue_stats,
+            session_close_interval_msec=session_close_interval_msec,
+            session_close_timestamp=session_close_timestamp)
         stats_resp.response(sandesh_req.context(), sandesh=self._sandesh)
     # end sandesh_msg_stats_handle_request
 

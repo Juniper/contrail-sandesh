@@ -161,7 +161,8 @@ class SandeshRequestTest : public ::testing::Test {
     }
 
     static void ValidateMessageStatsResponse(Sandesh *response,
-        const SandeshGeneratorStats &e_stats, int called_from_line) {
+        const SandeshGeneratorStats &e_stats, const SandeshQueueStats &e_qstats,
+        int called_from_line) {
         cout << "From line number: " << called_from_line << endl;
         cout << "*****************************************************" << endl;
         SandeshMessageStatsResp *resp(
@@ -175,6 +176,8 @@ class SandeshRequestTest : public ::testing::Test {
         EXPECT_THAT(e_mtype_stats,
             ::testing::ContainerEq(a_stats.get_type_stats()));
         EXPECT_EQ(e_stats, a_stats);
+        const SandeshQueueStats &a_qstats(resp->get_send_queue_stats());
+        EXPECT_EQ(e_qstats, a_qstats);
         validate_done_ = true;
         cout << "*****************************************************" << endl;
     }
@@ -347,11 +350,10 @@ TEST_F(SandeshRequestTest, MessageStats) {
     qstats.set_enqueues(client->session()->send_queue()->NumEnqueues());
     qstats.set_count(client->session()->send_queue()->Length());
     qstats.set_max_count(client->session()->send_queue()->max_queue_len());
-    sandesh_stats.set_send_queue_stats(qstats);
     // Send request
     SandeshMessageStatsReq *req(new SandeshMessageStatsReq);
     Sandesh::set_response_callback(boost::bind(ValidateMessageStatsResponse,
-        _1, sandesh_stats, __LINE__));
+        _1, sandesh_stats, qstats, __LINE__));
     validate_done_ = false;
     req->HandleRequest();
     req->Release();
