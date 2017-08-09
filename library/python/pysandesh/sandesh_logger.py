@@ -67,6 +67,23 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
 
     # end __init__
 
+    @staticmethod
+    def _get_sandesh_and_logging_levels(level):
+        if isinstance(level, str):
+            if level in SandeshLevel._NAMES_TO_VALUES:
+                level = SandeshLevel._NAMES_TO_VALUES[level]
+            else:
+                level = SandeshLevel.SYS_INFO
+        # get logging level corresponding to sandesh level
+        try:
+            logger_level = sandesh_base_logger.SandeshBaseLogger.\
+                   get_py_logger_level(level)
+        except KeyError:
+            logger_level = logging.INFO
+            level = SandeshLevel.SYS_INFO
+        return (level, logger_level)
+    # end _get_sandesh_and_logging_levels
+
     def set_logging_params(self, enable_local_log=False, category='',
                            level=SandeshLevel.SYS_INFO, file=_DEFAULT_LOG_FILE,
                            enable_syslog=False, syslog_facility='LOG_LOCAL0',
@@ -80,6 +97,39 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
         self.set_trace_print(enable_trace_print)
         self.set_flow_logging(enable_flow_log)
     # end set_logging_params
+
+    @staticmethod
+    def set_logger_params(logger, enable_local_log, level, file,
+                          enable_syslog, syslog_facility,
+                          maxBytes=5000000, backupCount=10):
+        (_, logger_level) = \
+                SandeshLogger._get_sandesh_and_logging_levels(level)
+        logger.setLevel(logger_level)
+        if enable_local_log:
+            if file == SandeshLogger._DEFAULT_LOG_FILE:
+                logging_file_handler = logging.StreamHandler()
+            else:
+                logging_file_handler = (
+                    logging.handlers.RotatingFileHandler(
+                        filename=file, maxBytes=maxBytes,
+                        backupCount=backupCount))
+            log_format = logging.Formatter(
+                '%(asctime)s [%(name)s]: %(message)s',
+                datefmt='%m/%d/%Y %I:%M:%S %p')
+            logging_file_handler.setFormatter(log_format)
+            logger.addHandler(logging_file_handler)
+        if enable_syslog:
+            logging_syslog_handler = logging.handlers.SysLogHandler(
+                address="/dev/log",
+                facility=getattr(logging.handlers.SysLogHandler,
+                                 syslog_facility,
+                                 logging.handlers.SysLogHandler.LOG_LOCAL0)
+            )
+            log_format = logging.Formatter(
+                '%(name)s[%(process)d]: %(message)s')
+            logging_syslog_handler.setFormatter(log_format)
+            logger.addHandler(logging_syslog_handler)
+    # end set_logger_params
 
     def set_trace_print(self, enable_trace_print):
         if self.is_trace_print_enabled() != enable_trace_print:
@@ -98,18 +148,8 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
     # end set_flow_logging
 
     def set_logging_level(self, level):
-        if isinstance(level, str):
-            if level in SandeshLevel._NAMES_TO_VALUES:
-                level = SandeshLevel._NAMES_TO_VALUES[level]
-            else:
-                level = SandeshLevel.SYS_INFO
-        # get logging level corresponding to sandesh level
-        try:
-            logger_level = self._SANDESH_LEVEL_TO_LOGGER_LEVEL[level]
-        except KeyError:
-            logger_level = logging.INFO
-            level = SandeshLevel.SYS_INFO
-
+        (level, logger_level) = \
+            SandeshLogger._get_sandesh_and_logging_levels(level)
         self._logger.info('SANDESH: Logging: LEVEL: [%s] -> [%s]',
                           SandeshLevel._VALUES_TO_NAMES[self.logging_level()],
                           SandeshLevel._VALUES_TO_NAMES[level])
