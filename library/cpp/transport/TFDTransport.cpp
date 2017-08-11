@@ -28,6 +28,7 @@
 
 #ifdef _WIN32
 #include <io.h>
+#include <winutils.h>
 #endif
 
 #include <base/logging.h>

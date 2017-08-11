@@ -51,17 +51,53 @@ MALLOC_DECLARE(M_VROUTER);
 #define os_realloc(ptr, size)         realloc(ptr, size, M_VROUTER, M_NOWAIT)
 #define os_free(ptr)                  free(ptr, M_VROUTER)
 #define os_log(level, format, arg...) printf(level format, ##arg)
-#endif /* __FreeBSD__ */
+
+#elif defined(_WIN32)
+#include "windows/win_kernel_mem.h"
+
+#define OS_LOG_ERR      DPFLTR_ERROR_LEVEL
+#define OS_LOG_DEBUG    DPFLTR_TRACE_LEVEL
+
+#define os_malloc(size)                 win_kmalloc(size)
+#define os_zalloc(size)                 win_kzalloc(size)
+#define os_free(ptr)                    win_kfree(ptr)
+#define os_realloc(ptr, size)           win_krealloc(ptr, size)
+#define os_log(level, format, ...)      DbgPrintEx(DPFLTR_IHVDRIVER_ID, level, format, __VA_ARGS__)
+
+#define htons(a) RtlUshortByteSwap(a)
+#define ntohs(a) RtlUshortByteSwap(a)
+#define htonl(a) RtlUlongByteSwap(a)
+#define ntohl(a) RtlUlongByteSwap(a)
+
+#endif /* _WIN32 */
 
 extern int vrouter_dbg;
 #else /* __KERNEL__ */
 
 #include <stdlib.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/types.h>
-#include <sys/errno.h>
 #include <arpa/inet.h>
+
+#ifdef _WIN32
+#include <stdint.h>
+#include <WinSock2.h>
+#include <in6addr.h>
+
+#define OS_LOG_ERR "LOG_ERR "
+#define OS_LOG_DEBUG "LOG_DEBUG "
+
+#define os_malloc(size)                  malloc(size)
+#define os_zalloc(size)                  calloc(1, size)
+#define os_realloc(ptr, size)            realloc(ptr, size)
+#define os_free(ptr)                     free(ptr)
+#define os_log(level, format, ...)       printf(level format, __VA_ARGS__)
+
+#undef uuid_t
+
+#else
+#include <syslog.h>
+#include <sys/errno.h>
 
 #define OS_LOG_ERR LOG_ERR
 #define OS_LOG_DEBUG LOG_DEBUG
@@ -71,7 +107,23 @@ extern int vrouter_dbg;
 #define os_realloc(ptr, size)            realloc(ptr, size)
 #define os_free(ptr)                     free(ptr)
 #define os_log(level, format, arg...)    syslog(level, format, ##arg)
+
+#endif
+
 #endif /* __KERNEL__ */
+
+#ifdef _WIN32
+#include <errno.h>
+
+typedef INT8    int8_t;
+typedef INT16   int16_t;
+typedef INT32   int32_t;
+typedef INT64   int64_t;
+typedef UINT8   uint8_t, u_int8_t;
+typedef UINT16  uint16_t, u_int16_t;
+typedef UINT32  uint32_t, u_int32_t;
+typedef UINT64  uint64_t, u_int64_t;
+#endif
 
 typedef unsigned char uuid_t[16];
 

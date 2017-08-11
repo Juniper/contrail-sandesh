@@ -8,6 +8,10 @@
 // File to handle all sandesh requests..
 //
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
 #include <sandesh/sandesh_uve_types.h>
