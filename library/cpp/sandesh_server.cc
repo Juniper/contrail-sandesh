@@ -19,6 +19,10 @@
 #include "sandesh_session.h"
 #include "sandesh_server.h"
 
+#ifdef _WIN32
+#include <winutils.h>
+#endif
+
 using namespace std;
 using namespace boost::asio;
 

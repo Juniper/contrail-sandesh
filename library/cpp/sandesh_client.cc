@@ -8,6 +8,10 @@
 // Sandesh Client
 //
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include <boost/bind.hpp>
 #include <boost/assign.hpp>
 #include <boost/foreach.hpp>
