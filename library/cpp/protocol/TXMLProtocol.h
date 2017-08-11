@@ -75,10 +75,10 @@ class TXMLProtocol : public TVirtualProtocol<TXMLProtocol> {
   }
 
   static void unescapeXMLControlChars(std::string& str) {
-      boost::replace_all(str, "&amp;", "&");
-      boost::replace_all(str, "&apos;", "\'");
-      boost::replace_all(str, "&lt;", "<");
-      boost::replace_all(str, "&gt;", ">");
+      boost::algorithm::replace_all(str, "&amp;", "&");
+      boost::algorithm::replace_all(str, "&apos;", "\'");
+      boost::algorithm::replace_all(str, "&lt;", "<");
+      boost::algorithm::replace_all(str, "&gt;", ">");
   }
 
   /**

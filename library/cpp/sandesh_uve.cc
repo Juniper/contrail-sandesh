@@ -8,6 +8,10 @@
 // file to handle requests for Sending Sandesh UVEs
 //
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include "sandesh_uve.h"
 #include "../common/sandesh_uve_types.h"
 #include "sandesh_session.h"

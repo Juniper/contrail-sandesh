@@ -564,6 +564,9 @@ void t_cpp_generator::init_generator() {
   // Include the types file
 #ifdef SANDESH
   f_types_impl_ <<
+#ifdef _WIN32
+    "#define WIN32_LEAN_AND_MEAN" << endl << endl <<
+#endif
     "#include <boost/date_time/posix_time/posix_time.hpp>" << endl << endl <<
     "#include <base/logging.h>" << endl << endl <<
     "#include <sandesh/sandesh_uve.h>" << endl <<
@@ -807,6 +810,9 @@ void t_cpp_generator::generate_consts(std::vector<t_const*> consts) {
 
 #ifdef SANDESH
   f_consts_impl <<
+#ifdef _WIN32
+    "#define WIN32_LEAN_AND_MEAN" << endl << endl <<
+#endif
     "#include <base/trace.h>" << endl <<
     "#include <sandesh/sandesh_types.h>" << endl <<
     "#include <sandesh/sandesh_constants.h>" << endl <<
