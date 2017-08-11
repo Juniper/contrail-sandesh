@@ -4,6 +4,8 @@
 # Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
 #
 Import('SandeshEnv')
+import os
+import subprocess
 
 env = SandeshEnv.Clone();
 
@@ -51,15 +53,17 @@ def WebServerBuild(wenv, abs_pth, loc, inp):
   mname = hfile.replace(".","_").replace('-',"_")
   mval = mname + "_len"
 
-  wenv.Command(ofile , ('#/%s/%s/' % (loc,hpath)) + hfile,\
-    '%s ; (%s ; %s); %s ; %s ; %s ; %s' %
-    ('echo "namespace {" > ' + abs_pth + "/" + ofile,
-      'cd ' + loc + "/" + hpath,
-      'xxd -i ' + hfile + ' >> ' + abs_pth + "/" + ofile,
-      'echo "}" >> ' + abs_pth + "/" + ofile,
-      'echo "#include \\"sandesh/sandesh_http.h\\"" >> ' + abs_pth + "/" + ofile,
-      'echo "static SandeshHttp::HtmlInfo h_info' + mname + '(' + mname + ", " + mval + ');" >> ' + abs_pth + "/" + ofile,
-      'echo "static SandeshHttp sr' + mname + '(\\"' + inp + '\\", h_info' + mname + ');" >> ' + abs_pth + "/" + ofile))
+  def cmd(target, source, env):
+    with open(os.path.join(abs_pth, ofile), 'w') as f:
+      f.write('namespace {\n')
+    subprocess.call('xxd -i ' + hfile + ' >> ' + os.path.join(abs_pth, ofile), shell=True, cwd=os.path.join(loc, hpath))
+    with open(os.path.join(abs_pth, ofile), 'a') as f:
+      f.write('}\n')
+      f.write('#include "sandesh/sandesh_http.h"\n')
+      f.write('static SandeshHttp::HtmlInfo h_info' + mname + '(' + mname + ", " + mval + ');\n')
+      f.write('static SandeshHttp sr' + mname + '("' + inp + '", h_info' + mname + ');\n')
+
+  wenv.Command(ofile , ('#/%s/%s/' % (loc,hpath)) + hfile, cmd)
   wenv.Depends('sandesh_http.cc', ofile)
   return 
 

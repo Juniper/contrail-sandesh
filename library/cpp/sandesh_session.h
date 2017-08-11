@@ -11,6 +11,10 @@
 #ifndef __SANDESH_SESSION_H__
 #define __SANDESH_SESSION_H__
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#endif
+
 #include <tbb/mutex.h>
 
 #include <boost/system/error_code.hpp>
