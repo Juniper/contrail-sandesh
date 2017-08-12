@@ -457,6 +457,68 @@ TEST_F(SandeshClientStateMachineEstablishedTest, TcpClose) {
     EXPECT_TRUE(sm_->session() == NULL);
 }
 
+class SandeshClientCloseSMSessionTest : public ::testing::Test {
+};
+
+// Test for DoCloseSMSession
+TEST_F(SandeshClientCloseSMSessionTest, Backoff) {
+    int initial_close_interval_msec(
+        SandeshClient::kInitialSMSessionCloseIntervalMSec);
+    uint64_t close_time_usec(UTCTimestampUsec());
+    // First time close event
+    int close_interval_msec;
+    bool close(DoCloseSMSession(close_time_usec, 0, 0, &close_interval_msec));
+    EXPECT_TRUE(close);
+    EXPECT_EQ(initial_close_interval_msec, close_interval_msec);
+    // Close event time same as last close time
+    int last_close_interval_usec(initial_close_interval_msec * 1000);
+    close = DoCloseSMSession(close_time_usec, close_time_usec,
+        last_close_interval_usec, &close_interval_msec);
+    EXPECT_FALSE(close);
+    EXPECT_EQ(0, close_interval_msec);
+    close = DoCloseSMSession(close_time_usec, close_time_usec,
+        last_close_interval_usec, &close_interval_msec);
+    EXPECT_FALSE(close);
+    EXPECT_EQ(0, close_interval_msec);
+    // Close event time is less than last close interval
+    close = DoCloseSMSession(close_time_usec,
+        close_time_usec - last_close_interval_usec, last_close_interval_usec,
+        &close_interval_msec);
+    EXPECT_FALSE(close);
+    EXPECT_EQ(0, close_interval_msec);
+    // Close event time is between close interval and 2 * last close interval
+    last_close_interval_usec = (initial_close_interval_msec * 2) * 1000;
+    close = DoCloseSMSession(close_time_usec,
+        close_time_usec - (1.5 * last_close_interval_usec),
+        last_close_interval_usec, &close_interval_msec);
+    EXPECT_TRUE(close);
+    EXPECT_EQ((last_close_interval_usec * 2)/1000, close_interval_msec);
+    // Close event time is between 2 * last close interval and 4 * last close
+    // interval
+    last_close_interval_usec = (initial_close_interval_msec * 3) * 1000;
+    close = DoCloseSMSession(close_time_usec,
+        close_time_usec - (3 * last_close_interval_usec),
+        last_close_interval_usec, &close_interval_msec);
+    EXPECT_TRUE(close);
+    EXPECT_EQ(last_close_interval_usec/1000, close_interval_msec);
+    // Close event ime is beyond 4 * last close interval
+    last_close_interval_usec = (initial_close_interval_msec * 2) * 1000;
+    close = DoCloseSMSession(close_time_usec,
+        close_time_usec - (5 * last_close_interval_usec),
+        last_close_interval_usec, &close_interval_msec);
+    EXPECT_TRUE(close);
+    EXPECT_EQ(initial_close_interval_msec, close_interval_msec);
+    // Maximum close interval
+    last_close_interval_usec =
+        (SandeshClient::kMaxSMSessionCloseIntervalMSec * 1000)/2;
+    close = DoCloseSMSession(close_time_usec,
+        close_time_usec - (1.5 * last_close_interval_usec),
+        last_close_interval_usec, &close_interval_msec);
+    EXPECT_TRUE(close);
+    EXPECT_EQ(static_cast<int>(SandeshClient::kMaxSMSessionCloseIntervalMSec),
+        close_interval_msec);
+}
+
 int main(int argc, char **argv) {
     LoggingInit();
     ::testing::InitGoogleTest(&argc, argv);

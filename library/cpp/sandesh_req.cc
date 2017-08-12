@@ -28,15 +28,21 @@ void SandeshMessageStatsReq::HandleRequest() const {
     SandeshGeneratorStats sandesh_stats;
     sandesh_stats.set_type_stats(mtype_stats);
     sandesh_stats.set_aggregate_stats(magg_stats);
-    SandeshClient *client = Sandesh::client();
-    if (client && client->IsSession()) {
-        SandeshQueueStats qstats;
-        qstats.set_enqueues(client->session()->send_queue()->NumEnqueues());
-        qstats.set_count(client->session()->send_queue()->Length());
-        qstats.set_max_count(client->session()->send_queue()->max_queue_len());
-        sandesh_stats.set_send_queue_stats(qstats);
+    SandeshClient *client(Sandesh::client());
+    if (client) {
+        resp->set_session_close_interval_msec(
+            client->session_close_interval_msec());
+        resp->set_session_close_timestamp(client->session_close_time_usec());
+        SandeshSession *ssession(client->session());
+        if (ssession) {
+            SandeshQueueStats qstats;
+            qstats.set_enqueues(ssession->send_queue()->NumEnqueues());
+            qstats.set_count(ssession->send_queue()->Length());
+            qstats.set_max_count(ssession->send_queue()->max_queue_len());
+            resp->set_send_queue_stats(qstats);
+            resp->set_sending_level(LevelToString(ssession->SendingLevel()));
+        }
     }
-
     resp->set_stats(sandesh_stats);
     resp->set_context(context());
     resp->Response();

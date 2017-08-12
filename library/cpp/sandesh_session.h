@@ -209,6 +209,7 @@ public:
     }
     void SetSendQueueWaterMark(Sandesh::QueueWaterMarkInfo &wm_info);
     void ResetSendQueueWaterMark();
+    SandeshLevel::type SendingLevel() const;
 
 protected:
     virtual int reader_task_id() const {
@@ -228,6 +229,7 @@ private:
     bool SendMsg(SandeshElement element);
     bool SendBuffer(boost::shared_ptr<TMemoryBuffer> sbuffer);
     bool SessionSendReady();
+    void SetSendingLevel(size_t count, SandeshLevel::type level);
 
     int instance_;
     boost::scoped_ptr<SandeshWriter> writer_;
@@ -242,6 +244,7 @@ private:
     int keepalive_probes_;
     int tcp_user_timeout_;
     int reader_task_id_;
+    SandeshLevel::type sending_level_;
 
     // Session statistics
     SandeshSessionStats sstats_;

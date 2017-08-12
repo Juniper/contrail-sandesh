@@ -47,7 +47,6 @@ bool Sandesh::enable_trace_print_ = false;
 bool Sandesh::send_queue_enabled_ = true;
 bool Sandesh::connect_to_collector_ = false;
 bool Sandesh::disable_flow_collection_ = false;
-SandeshLevel::type Sandesh::sending_level_ = SandeshLevel::INVALID;
 SandeshClient *Sandesh::client_ = NULL;
 std::auto_ptr<Sandesh::SandeshRxQueue> Sandesh::recv_queue_;
 std::string Sandesh::module_;
@@ -448,15 +447,6 @@ void Sandesh::SetTracePrint(bool enable_trace_print) {
     }
 }
 
-void Sandesh::SetSendingLevel(size_t count, SandeshLevel::type level) {
-    if (sending_level_ != level) {
-        SANDESH_LOG(INFO, "SANDESH: Sending: LEVEL: " << "[ " <<
-            LevelToString(sending_level_) << " ] -> [ " <<
-            LevelToString(level) << " ] : " << count);
-        sending_level_ = level;
-    }
-}
-
 void Sandesh::SetFlowLogging(bool enable_flow_log) {
     if (enable_flow_log_ != enable_flow_log) {
         SANDESH_LOG(INFO, "SANDESH: Flow Logging: " <<
@@ -660,6 +650,15 @@ bool SandeshUVE::Dispatch(SandeshConnection * sconn) {
         return true;
     }
     if (client_) {
+        // SandeshUVE has an implicit send level of SandeshLevel::SYS_UVE
+        // which is irrespective of the level set by the user in the Send.
+        // This is needed so that the send queue does not grow unbounded.
+        // Once the send queue's sending level reaches SandeshLevel::SYS_UVE
+        // we will reset the connection to the collector to initiate resync
+        // of the UVE cache
+        if (SandeshLevel::SYS_UVE >= SendingLevel()) {
+            client_->CloseSMSession();
+        }
         if (!client_->SendSandeshUVE(this)) {
             SANDESH_LOG(ERROR, "SandeshUVE : Send FAILED: " << ToString());
             UpdateTxMsgFailStats(Name(), 0,
@@ -840,6 +839,14 @@ bool Sandesh::HandleTest(SandeshLevel::type level,
         return true;
     }
     return false;
+}
+
+SandeshLevel::type Sandesh::SendingLevel() {
+    if (client_ && client_->IsSession()) {
+        SandeshSession *sess = client_->session();
+        return sess->SendingLevel();
+    }
+    return SandeshLevel::INVALID;
 }
 
 template<>

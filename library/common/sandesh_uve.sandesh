@@ -88,13 +88,11 @@ struct SandeshQueueStats {
 struct SandeshGeneratorStats {
     1: list<SandeshMessageTypeStats> type_stats;
     2: SandeshMessageStats aggregate_stats;
-    3: SandeshQueueStats send_queue_stats;
 }
 
 struct SandeshGeneratorBasicStats {
     1: list<SandeshMessageTypeBasicStats> type_stats;
     2: SandeshMessageBasicStats aggregate_stats;
-    3: SandeshQueueStats send_queue_stats;
 }
 
 request sandesh SandeshMessageStatsReq {
@@ -102,6 +100,10 @@ request sandesh SandeshMessageStatsReq {
 
 response sandesh SandeshMessageStatsResp {
     1: SandeshGeneratorStats stats;
+    2: SandeshQueueStats send_queue_stats;
+    3: string sending_level;
+    4: u64 session_close_interval_msec;
+    5: u64 session_close_timestamp;
 }
 
 request sandesh SandeshLoggingParamsSet {

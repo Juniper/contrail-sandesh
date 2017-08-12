@@ -27,6 +27,7 @@ enum SandeshLevel {
     /*
      * Syslog severity levels
      */
+    SYS_UVE = -100,
     SYS_EMERG = 0, 
     SYS_ALERT = 1,
     SYS_CRIT = 2,
