@@ -30,7 +30,8 @@ test_modules = [
                 'conn_info_test.py',
                 'sandesh_stats_test.py',
                 'sandesh_client_test.py',
-                'work_queue_test.py'
+                'work_queue_test.py',
+                'sandesh_uve_analytics_api_info.py'
                ]
 
 test_modules_rules = []
@@ -47,6 +48,7 @@ gen_test_pkg += env.SandeshGenPy('#tools/sandesh/library/common/sandesh_alarm_ba
 gen_test_pkg += env.SandeshGenPy('#controller/src/base/sandesh/nodeinfo.sandesh')
 gen_test_pkg += env.SandeshGenPy('#controller/src/base/sandesh/process_info.sandesh', 'gen_py/nodeinfo/', False)
 gen_test_pkg += env.SandeshGenPy('#controller/src/base/sandesh/cpuinfo.sandesh', 'gen_py/nodeinfo/', False)
+gen_test_pkg += env.SandeshGenPy('#controller/src/opserver/analytics_api_info.sandesh')
 env.Depends(test_modules_rules, gen_test_pkg)
 
 venv = env.setup_venv('pysandesh_test', 'pysandesh_test')
