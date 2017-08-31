@@ -2,6 +2,8 @@
  * Copyright (c) 2014 Juniper Networks, Inc. All rights reserved.
  */
 
+#include <boost/asio/ip/address.hpp>
+#include <boost/asio.hpp>
 #include <sandesh/sandesh_message_builder.h>
 
 using namespace pugi;
@@ -29,6 +31,7 @@ SandeshXMLMessage::~SandeshXMLMessage() {
 
 bool SandeshXMLMessage::ParseHeader(const xml_node& root,
     SandeshHeader& header) {
+    boost::asio::ip::address ip_address;
     for (xml_node node = root.first_child(); node;
          node = node.next_sibling()) {
         const char *name(node.name());
@@ -87,7 +90,9 @@ bool SandeshXMLMessage::ParseHeader(const xml_node& root,
             header.set_InstanceId(node.child_value());
             break;
         case 14:
-            header.set_IPAddress(node.child_value());
+            ip_address
+                = boost::asio::ip::address_v4::from_string(node.child_value());
+            header.set_IPAddress(ip_address);
             break;
         case 15:
             int Pid;
