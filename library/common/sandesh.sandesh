@@ -20,7 +20,8 @@ enum SandeshType {
     FLOW = 8,
     TRACE_OBJECT = 9,
     SYSLOG = 10,
-    ALARM = 11
+    ALARM = 11,
+    SESSION = 12
 }
 
 enum SandeshLevel {

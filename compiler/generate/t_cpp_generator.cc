@@ -1818,12 +1818,22 @@ string generate_sandesh_base_name(t_sandesh* tsandesh, bool type) {
             return "SandeshObject";
         }
     } else if (((t_base_type *)t)->is_sandesh_flow()) {
-        if (type) {
-            return "SandeshType::FLOW";
-        } else {
-            return "SandeshFlow";
+        if (((t_base_type *)t)->is_sandesh_session()) {
+            if (type) {
+                return "SandeshType::SESSION";
+            } else {
+                return "SandeshFlowSession";
+            }
+        }
+        else {
+            if (type) {
+                return "SandeshType::FLOW";
+            } else {
+                return "SandeshFlow";
+            }
         }
     }
+
 }
 
 /**
@@ -1938,6 +1948,7 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
     bool is_system = ((t_base_type *)t)->is_sandesh_system();
     bool is_object = ((t_base_type *)t)->is_sandesh_object();
     bool is_flow = ((t_base_type *)t)->is_sandesh_flow();
+    bool is_session = ((t_base_type *)t)->is_sandesh_session();
     string extends;
     if (is_request) {
         extends = " : public SandeshRequest";
@@ -1956,7 +1967,11 @@ void t_cpp_generator::generate_sandesh_definition(ofstream& out,
     } else if (is_object) {
         extends = " : public SandeshObject";
     } else if (is_flow) {
-        extends = " : public SandeshFlow";
+        if (is_session) {
+            extends = " : public SandeshFlowSession";
+        } else {
+            extends = " : public SandeshFlow";
+        }
     }
 
     // Get members
@@ -8597,6 +8612,7 @@ string t_cpp_generator::type_to_enum(t_type* type) {
     case t_base_type::TYPE_SANDESH_ALARM:
     case t_base_type::TYPE_SANDESH_OBJECT:
     case t_base_type::TYPE_SANDESH_FLOW:
+    case t_base_type::TYPE_SANDESH_SESSION:
       return "::contrail::sandesh::protocol::T_STRING";
 #endif
     }

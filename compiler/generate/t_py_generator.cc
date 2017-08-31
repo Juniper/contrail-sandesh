@@ -1319,7 +1319,11 @@ void t_py_generator::generate_py_sandesh_definition(ofstream& out,
   } else if (sandesh_type->is_sandesh_object()) {
     base_class = "sandesh_base.SandeshObject";
   } else if (sandesh_type->is_sandesh_flow()) {
-    base_class = "sandesh_base.SandeshFlow";
+    if (sandesh_type->is_sandesh_session()) {
+        base_class = "sandesh_base.SandeshFlowSession";
+    } else {
+        base_class = "sandesh_base.SandeshFlow";
+    }
   } else if (sandesh_type->is_sandesh_request()) {
     base_class = "sandesh_base.SandeshRequest";
   } else if (sandesh_type->is_sandesh_response()) {
@@ -4113,6 +4117,8 @@ string t_py_generator::type_to_enum(t_type* type) {
     case t_base_type::TYPE_SANDESH_OBJECT:
       return "TTytpe.STRING";
     case t_base_type::TYPE_SANDESH_FLOW:
+      return "TTytpe.STRING";
+    case t_base_type::TYPE_SANDESH_SESSION:
       return "TTytpe.STRING";
 #endif
     }

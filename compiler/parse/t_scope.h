@@ -178,6 +178,8 @@ class t_scope {
               break;
             case t_base_type::TYPE_SANDESH_FLOW:
               break;
+            case t_base_type::TYPE_SANDESH_SESSION:
+              break;
 #endif
           }
         } else if (const_type->is_map()) {
