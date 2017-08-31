@@ -534,6 +534,12 @@ protected:
         Sandesh(SandeshType::FLOW, name, seqno) {}
 };
 
+class SandeshFlowSession : public Sandesh {
+protected:
+    SandeshFlowSession(const std::string& name, uint32_t seqno) :
+        Sandesh(SandeshType::SESSION, name, seqno) {}
+};
+
 class SandeshUVE : public Sandesh {
 public:
     const bool get_more() const { return more_; }

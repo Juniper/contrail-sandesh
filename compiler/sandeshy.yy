@@ -174,6 +174,7 @@ const int struct_is_union = 1;
  %token tok_dynamic_uve
  %token tok_trace_object
  %token tok_alarm
+ %token tok_session
 
 /**
  * Thrift language keywords
@@ -921,6 +922,11 @@ SandeshType:
   tok_alarm
     {
       $$ = g_type_sandesh_alarm;
+    }
+|
+  tok_session
+    {
+      $$ = g_type_sandesh_session;
     }
 
 Service:

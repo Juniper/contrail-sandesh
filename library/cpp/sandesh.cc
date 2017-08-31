@@ -799,7 +799,7 @@ bool Sandesh::IsLevelCategoryLoggingAllowed(SandeshType::type type,
 }
 
 bool Sandesh::IsLoggingAllowed() const {
-    if (type_ == SandeshType::FLOW) {
+    if (type_ == SandeshType::FLOW || type_ == SandeshType::SESSION) {
         return enable_flow_log_;
     } else {
         return IsLocalLoggingEnabled() &&
@@ -808,7 +808,7 @@ bool Sandesh::IsLoggingAllowed() const {
 }
 
 bool Sandesh::IsLoggingDroppedAllowed(SandeshType::type type) {
-    if (type == SandeshType::FLOW) {
+    if (type == SandeshType::FLOW || type == SandeshType::SESSION) {
         return enable_flow_log_;
     } else {
         return true;
@@ -895,7 +895,8 @@ bool DoDropSandeshMessage(const SandeshHeader &header,
     SandeshType::type stype(header.get_Type());
     if (stype == SandeshType::SYSTEM ||
         stype == SandeshType::OBJECT ||
-        stype == SandeshType::FLOW) {
+        stype == SandeshType::FLOW ||
+        stype == SandeshType::SESSION) {
         // Is level above drop level?
         SandeshLevel::type slevel(
             static_cast<SandeshLevel::type>(header.get_Level()));
@@ -904,7 +905,8 @@ bool DoDropSandeshMessage(const SandeshHeader &header,
         }
     }
     // Drop flow message if flow collection is disabled
-    if (Sandesh::IsFlowCollectionDisabled() && stype == SandeshType::FLOW) {
+    if (Sandesh::IsFlowCollectionDisabled() &&
+           (stype == SandeshType::FLOW || stype == SandeshType::SESSION)) {
         return true;
     }
     return false;

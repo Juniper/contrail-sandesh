@@ -320,7 +320,8 @@ class Sandesh(object):
     # end set_logging_file
 
     def is_logging_dropped_allowed(self, sandesh):
-        if sandesh.type() == SandeshType.FLOW:
+        if sandesh.type() == SandeshType.FLOW or
+           sandesh.type() == SandeshType.SESSION:
             return self.is_flow_logging_enabled()
         else:
             if hasattr(sandesh, 'do_rate_limit_drop_log'):
@@ -517,7 +518,8 @@ class Sandesh(object):
         return False
 
     def is_logging_allowed(self, sandesh_init):
-        if self._type == SandeshType.FLOW:
+        if self._type == SandeshType.FLOW
+           self._type == SandeshType.SESSION:
             return sandesh_init.is_flow_logging_enabled()
 
         if not sandesh_init.is_local_logging_enabled():
@@ -946,6 +948,16 @@ class SandeshFlow(SandeshAsync):
     # end __init__
 
 # end class SandeshFlow
+
+
+class SandeshFlowSession(SandeshAsync):
+
+    def __init__(self):
+        SandeshAsync.__init__(self)
+        self._type = SandeshType.SESSION
+    # end __init__
+
+# end class SandeshFlowSession
 
 
 class SandeshRequest(Sandesh):

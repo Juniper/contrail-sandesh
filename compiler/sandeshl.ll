@@ -185,6 +185,7 @@ format_str    (%([1-9]$)?([+-]?[ -#0])?([1-9]+)?(\.[1-9]+)?(hh|h|l|ll|L|z|j|t)?(
 "traceobject"        { return tok_trace_object;         }
 "objectlog"          { return tok_object;               }
 "flowlog"            { return tok_flow;                 } 
+"sessionlog"         { return tok_session;              }
 "buffer"             { return tok_buffer;               }
 "uve"                { return tok_uve;                  }
 "dynamicuve"         { return tok_dynamic_uve;          }

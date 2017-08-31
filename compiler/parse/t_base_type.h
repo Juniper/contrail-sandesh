@@ -49,6 +49,7 @@ class t_base_type : public t_type {
     TYPE_SANDESH_ALARM,
     TYPE_SANDESH_OBJECT,
     TYPE_SANDESH_FLOW,
+    TYPE_SANDESH_SESSION,
 #endif
     TYPE_BOOL,
     TYPE_BYTE,
@@ -144,7 +145,11 @@ class t_base_type : public t_type {
   }
 
   bool is_sandesh_flow() const {
-    return base_ == TYPE_SANDESH_FLOW;
+    return base_ == TYPE_SANDESH_FLOW || base_ == TYPE_SANDESH_SESSION;
+  }
+
+  bool is_sandesh_session() const {
+    return base_ == TYPE_SANDESH_SESSION;
   }
 
   bool is_xml() const {
@@ -238,6 +243,7 @@ class t_base_type : public t_type {
       case TYPE_SANDESH_ALARM    : return       "alarm"; break;
       case TYPE_SANDESH_OBJECT   : return      "object"; break;
       case TYPE_SANDESH_FLOW     : return        "flow"; break;
+      case TYPE_SANDESH_SESSION  : return      "session"; break;
 #endif
       default          : return "(unknown)"; break;
     }

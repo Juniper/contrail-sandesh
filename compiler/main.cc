@@ -94,9 +94,9 @@ t_type* g_type_sandesh_dynamic_uve;
 t_type* g_type_sandesh_alarm;
 t_type* g_type_sandesh_object;
 t_type* g_type_sandesh_flow;
+t_type* g_type_sandesh_session;
 t_type* g_type_xml;
 t_type* g_type_uuid_t;
-
 #endif
 
 
@@ -1398,6 +1398,7 @@ int main(int argc, char** argv) {
   g_type_sandesh_alarm    = new t_base_type("alarm",    t_base_type::TYPE_SANDESH_ALARM);
   g_type_sandesh_object   = new t_base_type("object",   t_base_type::TYPE_SANDESH_OBJECT);
   g_type_sandesh_flow     = new t_base_type("flow",     t_base_type::TYPE_SANDESH_FLOW);
+  g_type_sandesh_session     = new t_base_type("session",     t_base_type::TYPE_SANDESH_SESSION);
 #endif
 
   // Parse it!
@@ -1443,6 +1444,7 @@ int main(int argc, char** argv) {
   delete g_type_sandesh_alarm;
   delete g_type_sandesh_object;
   delete g_type_sandesh_flow;
+  delete g_type_sandesh_session;
   delete g_type_xml;
   delete g_type_uuid_t;
 
