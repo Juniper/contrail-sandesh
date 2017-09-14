@@ -937,9 +937,11 @@ bool Sandesh::HandleTest(SandeshLevel::type level,
 }
 
 SandeshLevel::type Sandesh::SendingLevel() {
-    if (client_ && client_->IsSession()) {
+    if (client_) {
         SandeshSession *sess = client_->session();
-        return sess->SendingLevel();
+        if (sess) {
+            return sess->SendingLevel();
+        }
     }
     return SandeshLevel::INVALID;
 }
