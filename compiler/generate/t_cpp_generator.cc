@@ -3947,7 +3947,7 @@ void t_cpp_generator::generate_sandesh_updater(ofstream& out,
       indent(out) <<  "}" << endl << endl;
     }
   }
-  indent(out) <<  "if (stype == ST_PERIODIC) return is_periodic_attr;" << endl;
+  indent(out) <<  "if (stype == ST_PERIODIC) return ((is_periodic_attr) || (data.get_deleted()));" << endl;
   indent(out) <<  "else return true;" << endl;
   indent_down();
   indent(out) <<  "}" << endl << endl;

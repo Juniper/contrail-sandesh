@@ -169,6 +169,11 @@ public:
         }
 
         typename uve_table_map::iterator imapentry = a->second.find(table); 
+        if (TM != 0) {
+            // If we get an update , mark this UVE so that it is not 
+            // deleted during the next round of periodic processing
+            imapentry->second->data.set_deleted(false);
+        }
         if (imapentry == a->second.end()) {
             std::auto_ptr<UVEMapEntry> ume(new
                     UVEMapEntry(data.table_, seqnum, level));
@@ -179,11 +184,6 @@ public:
             send = T::UpdateUVE(data, imapentry->second->data, mono_usec,
                                 level);
             imapentry->second->seqno = seqnum;
-        }
-        if (TM != 0) {
-            // If we get an update , mark this UVE so that it is not 
-            // deleted during the next round of periodic processing
-            imapentry->second->data.set_deleted(false);
         }
         if (data.get_deleted()) {
             a->second.erase(imapentry);
