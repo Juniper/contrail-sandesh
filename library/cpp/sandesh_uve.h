@@ -176,14 +176,14 @@ public:
             send = T::UpdateUVE(data, ume->data, mono_usec, level);
             imapentry = a->second.insert(table, ume).first;
         } else {
+            if (TM != 0) {
+                // If we get an update , mark this UVE so that it is not 
+                // deleted during the next round of periodic processing
+                imapentry->second->data.set_deleted(false);
+            }
             send = T::UpdateUVE(data, imapentry->second->data, mono_usec,
                                 level);
             imapentry->second->seqno = seqnum;
-        }
-        if (TM != 0) {
-            // If we get an update , mark this UVE so that it is not 
-            // deleted during the next round of periodic processing
-            imapentry->second->data.set_deleted(false);
         }
         if (data.get_deleted()) {
             a->second.erase(imapentry);
