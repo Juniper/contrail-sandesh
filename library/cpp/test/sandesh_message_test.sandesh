@@ -77,6 +77,7 @@ struct TestAggStruct {
 struct SandeshUVEData {
     1: string name (key="ObjectGeneratorInfo")
     2: optional bool deleted
+   25: optional string proxy
     3: optional map<string,TestAggStruct> z (metric="agg")
     4: optional map<string,TestAggStruct> diff_z (mstats="z:DSNone:")
     5: optional TestAggStruct fz

@@ -931,6 +931,47 @@ protected:
 "<deleted type=\"bool\" identifier=\"2\">true</deleted>");
                 break;
             }
+            case 30:
+            {
+                EXPECT_EQ(11, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
+                EXPECT_STREQ("<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>", mm["name"].c_str());
+                EXPECT_STREQ("<proxy type=\"string\" identifier=\"25\">uve1-proxy</proxy>", mm["proxy"].c_str());
+                break;
+            }
+            case 31:
+            {
+                EXPECT_EQ(12, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
+                EXPECT_STREQ("<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>", mm["name"].c_str());
+                EXPECT_STREQ("<proxy type=\"string\" identifier=\"25\">uve1-proxy</proxy>", mm["proxy"].c_str());
+                EXPECT_STREQ(mm["z"].c_str(),
+"<z type=\"map\" identifier=\"3\" metric=\"agg\"><map key=\"string\" value=\"struct\" size=\"2\"><element>idx1</element><TestAggStruct><count type=\"i32\" identifier=\"1\">55</count></TestAggStruct><element>idx2</element><TestAggStruct><count type=\"i32\" identifier=\"1\">20</count></TestAggStruct></map></z>");
+                break;
+            }
+            case 32:
+            {
+                EXPECT_EQ(13, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
+                EXPECT_STREQ(mm["name"].c_str(),
+"<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>");
+                EXPECT_STREQ(mm["deleted"].c_str(),
+"<deleted type=\"bool\" identifier=\"2\">true</deleted>");
+                EXPECT_STREQ("<proxy type=\"string\" identifier=\"25\">uve1-proxy</proxy>", mm["proxy"].c_str());
+                break;
+            }
+            case 33:
+            {
+                EXPECT_EQ(14, header.get_SequenceNum());
+                EXPECT_EQ(SandeshType::UVE, header.get_Type());
+                EXPECT_EQ(SandeshUVETest::sversionsig(), header.get_VersionSig());
+                EXPECT_STREQ("<name type=\"string\" identifier=\"1\" key=\"ObjectGeneratorInfo\">uve1</name>", mm["name"].c_str());
+                EXPECT_STREQ("<proxy type=\"string\" identifier=\"25\">uve1-proxy</proxy>", mm["proxy"].c_str());
+                break;
+            }
             default:
                 EXPECT_FALSE(true);
         }
@@ -1239,9 +1280,46 @@ TEST_F(SandeshUVEAlarmTest, UVEAlarm) {
         SandeshPeriodicTest::Send(uve_data2, SandeshLevel::SYS_INFO,
             "ObjectGeneratorInfo", 0, 4);
         ASSERT_EQ(SandeshUVETypeMaps::Clear("ABC", 4), 1);
-
     }    
-    TASK_UTIL_EXPECT_TRUE(msg_num_ == 29);
+
+    // add Proxy UVEs in generator (with central config)
+    // case 30
+    SandeshUVEData uve_data30;
+    uve_data30.set_name("uve1");
+    uve_data30.set_proxy("uve1-proxy");
+    SandeshUVETest::Send(uve_data30);
+
+    // update uve
+    // case 31
+    SandeshUVEData uve_data31;
+    uve_data31.set_name("uve1");
+    uve_data31.set_proxy("uve1-proxy");
+    std::map<std::string,TestAggStruct> mtas31;
+    TestAggStruct tas31;
+    tas31.set_count(55);
+    mtas31.insert(std::make_pair("idx1", tas31));
+    tas31.set_count(20);
+    mtas31.insert(std::make_pair("idx2", tas31));
+    uve_data31.set_z(mtas31);
+    uve_data31.set_fz(tas31);
+    SandeshUVETest::Send(uve_data31);
+
+    // delete uve
+    // case 32 
+    SandeshUVEData uve_data32;
+    uve_data32.set_name("uve1");
+    uve_data32.set_proxy("uve1-proxy");
+    uve_data32.set_deleted(true);
+	SandeshUVETest::Send(uve_data32);
+
+    // re-add Proxy UVEs in generator (with central config)
+    // case 33
+    SandeshUVEData uve_data33;
+    uve_data33.set_name("uve1");
+    uve_data33.set_proxy("uve1-proxy");
+    SandeshUVETest::Send(uve_data33);
+
+    TASK_UTIL_EXPECT_TRUE(msg_num_ == 33);
 }
 
 class SandeshBaseFactoryTest : public ::testing::Test {
