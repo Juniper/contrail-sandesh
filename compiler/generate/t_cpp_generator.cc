@@ -3557,8 +3557,7 @@ void t_cpp_generator::generate_sandesh_http_reader(ofstream& out,
 	const vector<t_field*>& fields = tsandesh->get_members();
 	vector<t_field*>::const_iterator f_iter;
 
-        indent(out) << tsandesh->get_name() <<
-        "_reference = " << program_name_ << "_marker;" << endl; 
+        indent(out) << program_name_ << "_marker = 0;" << endl;
 	// Declare stack tmp variables
 	out << endl << 
             indent() << "using std::string;"  << endl <<
@@ -4252,8 +4251,6 @@ void t_cpp_generator::generate_sandesh_creator(ofstream& out,
     // Creator function name
     if (((t_base_type *)t)->is_sandesh_request()) {
         indent(out) << "extern int " << program_name_ << "_marker;" << endl;
-        indent(out) << "static int " << tsandesh->get_name() << 
-        "_reference;" << endl; 
         // Request registration
         indent(out) << "SANDESH_REGISTER_DEF_TYPE(" << tsandesh->get_name() <<
                 ");" << endl << endl;
