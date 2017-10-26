@@ -1596,7 +1596,7 @@ void t_cpp_generator::generate_sandesh_flow_send_fn(ofstream &out,
         "\", 0, SandeshTxDropReason::SendingToSyslog);" << endl;
     const t_type *t = tsandesh->get_type();
     if (((t_base_type *)t)->is_sandesh_session()) {
-        out << indent() << "//LogUnrolled" <<
+        out << indent() << "LogUnrolled" <<
             generate_sandesh_async_creator(tsandesh, false,
                 false, false, "", "", false, false, false) << ";" << endl;
     } else {
