@@ -49,13 +49,13 @@ const std::string SandeshClient::kSessionReaderTask = "sandesh::SandeshClientRea
 bool SandeshClient::task_policy_set_ = false;
 const std::vector<Sandesh::QueueWaterMarkInfo> 
     SandeshClient::kSessionWaterMarkInfo = boost::assign::tuple_list_of
-                                               (15*1024*1024, SandeshLevel::SYS_UVE, true, false)
-                                               (100*1024, SandeshLevel::SYS_EMERG, true, false)
-                                               (50*1024, SandeshLevel::SYS_ERR, true, false)
-                                               (10*1024, SandeshLevel::SYS_DEBUG, true, false)
-                                               (5*1024*1024, SandeshLevel::SYS_EMERG, false, false)
-                                               (75*1024, SandeshLevel::SYS_ERR, false, false)
-                                               (30*1024, SandeshLevel::SYS_DEBUG, false, false)
+                                               (50*1024*1024, SandeshLevel::SYS_UVE, true, false)
+                                               (30*1024*1024, SandeshLevel::SYS_EMERG, true, false)
+                                               (20*1024*1024, SandeshLevel::SYS_ERR, true, false)
+                                               (1*1024*1024, SandeshLevel::SYS_DEBUG, true, false)
+                                               (35*1024*1024, SandeshLevel::SYS_EMERG, false, false)
+                                               (25*1024*1024, SandeshLevel::SYS_ERR, false, false)
+                                               (15*1024*1024, SandeshLevel::SYS_DEBUG, false, false)
                                                (2*1024, SandeshLevel::INVALID, false, false);
 
 SandeshClient::SandeshClient(EventManager *evm,
