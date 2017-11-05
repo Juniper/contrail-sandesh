@@ -237,13 +237,13 @@ class SandeshSendQueue(WorkQueue):
 
     _SENDQ_WATERMARKS = [
         # (size, sandesh_level, is_high_watermark)
-        (15*1024*1024, SandeshLevel.SYS_UVE,True),
-        (100*1024, SandeshLevel.SYS_EMERG, True),
-        (50*1024, SandeshLevel.SYS_ERR, True),
-        (10*1024, SandeshLevel.SYS_DEBUG, True),
-        (5*1024*1024, SandeshLevel.SYS_EMERG, False),
-        (75*1024, SandeshLevel.SYS_ERR, False),
-        (30*1024, SandeshLevel.SYS_DEBUG, False),
+        (50*1024*1024, SandeshLevel.SYS_UVE,True),
+        (30*1024*1024, SandeshLevel.SYS_EMERG, True),
+        (20*1024*1024, SandeshLevel.SYS_ERR, True),
+        (1*1024*1024, SandeshLevel.SYS_DEBUG, True),
+        (35*1024*1024, SandeshLevel.SYS_EMERG, False),
+        (25*1024*1024, SandeshLevel.SYS_ERR, False),
+        (15*1024*1024, SandeshLevel.SYS_DEBUG, False),
         (2*1024, SandeshLevel.INVALID, False)]
 
     class Element(object):
