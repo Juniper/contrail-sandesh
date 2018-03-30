@@ -45,6 +45,7 @@ public:
 
     SandeshSession *session() const;
     SandeshStateMachine *state_machine() const;
+    boost::shared_ptr<SandeshStateMachine> shared_state_machine() const;
 
     std::string StateName() const { return state_machine_->StateName(); }
 
@@ -91,8 +92,8 @@ private:
     SandeshSession *session_;
     int task_instance_;
     int task_id_;
-    boost::scoped_ptr<SandeshStateMachine> state_machine_;
-    
+    boost::shared_ptr<SandeshStateMachine> state_machine_;
+
     DISALLOW_COPY_AND_ASSIGN(SandeshConnection);
 };
 

@@ -99,6 +99,11 @@ SandeshStateMachine *SandeshConnection::state_machine() const {
     return state_machine_.get();
 }
 
+boost::shared_ptr<SandeshStateMachine>
+SandeshConnection::shared_state_machine() const {
+    return state_machine_;
+}
+
 void SandeshConnection::SetAdminState(bool down) {
     if (admin_down_ != down) {
         admin_down_ = down;
