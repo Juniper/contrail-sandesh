@@ -91,7 +91,7 @@ private:
     SandeshSession *session_;
     int task_instance_;
     int task_id_;
-    boost::scoped_ptr<SandeshStateMachine> state_machine_;
+    boost::shared_ptr<SandeshStateMachine> state_machine_;
     
     DISALLOW_COPY_AND_ASSIGN(SandeshConnection);
 };
