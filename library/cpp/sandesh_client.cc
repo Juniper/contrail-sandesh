@@ -23,6 +23,7 @@
 #include <sandesh/sandesh.h>
 #include <sandesh/sandesh_trace.h>
 #include <sandesh/sandesh_session.h>
+#include <sandesh/sandesh_http.h>
 
 #include "sandesh_state_machine.h"
 
@@ -517,5 +518,5 @@ void SandeshClient::SetDscpValue(uint8_t value) {
     if (sess) {
         sess->SetDscpSocketOption(value);
     }
-
+    SandeshHttp::UpdateDscp(value);
 }

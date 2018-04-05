@@ -31,6 +31,7 @@ public:
         short port, RequestCallbackFn reqcb, int *hport,
         const SandeshConfig &config = SandeshConfig());
     static void Uninit(void);
+    static void UpdateDscp(uint8_t dscp);
 
     class HtmlInfo {
     public:

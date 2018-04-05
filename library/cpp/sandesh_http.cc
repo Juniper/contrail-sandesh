@@ -361,12 +361,17 @@ SandeshHttp::Init(EventManager *evm, const string module,
     SANDESH_TRACE_TEXT_TRACE(httpbuf, "<Initializing httpbuf");
     SANDESH_TRACE_TEXT_TRACE(httpbuf, "Size 100");
 
+    uint8_t dscp = 0;
+    SandeshClient *client = Sandesh::client();
+    if (client) {
+        dscp = client->dscp_value();
+    }
     struct SslConfig sslConfig;
     sslConfig.ssl_enabled = config.introspect_ssl_enable;
     sslConfig.ca_cert = config.ca_cert;
     sslConfig.certfile = config.certfile;
     sslConfig.keyfile = config.keyfile;
-    hServ_ = new HttpServer(evm, sslConfig);
+    hServ_ = new HttpServer(evm, sslConfig, dscp);
     httpreqcb = reqcb;
     index_ss << "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\"" << 
         " \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">" << endl;
@@ -416,6 +421,9 @@ SandeshHttp::Init(EventManager *evm, const string module,
             << port);
         return false;
     }
+    if (dscp) {
+        hServ_->SetListenSocketDscp(dscp);
+    }
 }
 
 // Function to shut down HTTP Server 
@@ -439,3 +447,9 @@ SandeshHttp::Uninit(void) {
     hServ_ = NULL;
 }
 
+void
+SandeshHttp::UpdateDscp(uint8_t dscp) {
+    if (!hServ_) return;
+    hServ_->UpdateDscp(dscp);
+    hServ_->UpdateSessionsDscp(dscp);
+}
