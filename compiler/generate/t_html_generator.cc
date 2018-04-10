@@ -15,6 +15,9 @@
  * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
+ *
+ * Copyright 2006-2017 The Apache Software Foundation.
+ * https://github.com/apache/thrift
  */
 
 #include <string>
