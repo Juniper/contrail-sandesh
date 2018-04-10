@@ -137,6 +137,11 @@ namespace {
 
 using namespace std;
 
+/*
+ * License: Curl
+ * Copyright (C) 1998 - 2015, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * https://curl.haxx.se/libcurl/c/getinmemory.html
+ */
 struct MemoryStruct {
   char *memory;
   size_t size;
