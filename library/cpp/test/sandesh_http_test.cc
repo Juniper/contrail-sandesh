@@ -2,6 +2,12 @@
  * Copyright (c) 2013 Juniper Networks, Inc. All rights reserved.
  */
 
+/*
+ * License: Curl
+ * Copyright (C) 1998 - 2015, Daniel Stenberg, <daniel@haxx.se>, et al.
+ * https://curl.haxx.se/libcurl/c/getinmemory.html
+ */
+
 //
 // sandesh_http_test.cc
 //
