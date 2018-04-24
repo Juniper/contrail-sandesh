@@ -73,7 +73,7 @@ extern int vrouter_dbg;
 #define os_log(level, format, arg...)    syslog(level, format, ##arg)
 #endif /* __KERNEL__ */
 
-typedef unsigned char ct_uuid_t[16];
+typedef unsigned char uuid_t[16];
 
 typedef struct ipaddr_s {
     uint8_t iptype; // AF_INET or AF_INET6

@@ -55,7 +55,7 @@ static uint32_t inner_f(4294967295u);
 static uint64_t inner_g(18446744073709551615ull);
 static std::string inner_h("abc");
 static uint32_t inner_i(4294967295u);
-static ct_uuid_t inner_j = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
+static uuid_t inner_j = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
     0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
 static std::string inner_k("20.1.1.2");
 static std::string inner_l("2001:abce::4");
@@ -93,7 +93,7 @@ static void ValidateAbcInner(abc_inner *inner) {
     EXPECT_STREQ(inner->inner_h, inner_h.c_str());
     EXPECT_EQ(inner->inner_i, inner_i);
     EXPECT_EQ(0, memcmp(inner->inner_j,
-        inner_j, sizeof(ct_uuid_t)));
+        inner_j, sizeof(uuid_t)));
     ipaddr_t inner_k_v4;
     inner_k_v4.iptype = AF_INET;
     int success(inet_pton(AF_INET, inner_k.c_str(), &inner_k_v4.ipv4));
@@ -135,7 +135,7 @@ static void CompareAbcInner(abc_inner *actual, abc_inner *expected) {
     EXPECT_STREQ(actual->inner_h, expected->inner_h);
     EXPECT_EQ(actual->inner_i, expected->inner_i);
     EXPECT_EQ(0, memcmp(actual->inner_j,
-        expected->inner_j, sizeof(ct_uuid_t)));
+        expected->inner_j, sizeof(uuid_t)));
     EXPECT_EQ(actual->inner_k.iptype, expected->inner_k.iptype);
     EXPECT_EQ(0, memcmp(&actual->inner_k.ipv4,
                         &expected->inner_k.ipv4, 4));
@@ -496,7 +496,7 @@ abc_sandesh_process (void *pabc) {
 void
 buffer_test_process (void *ptr) {
     int i;
-    ct_uuid_t uuid_value =
+    uuid_t uuid_value =
            {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,
             0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
     BufferTest *psandesh = (BufferTest *)ptr;
@@ -507,18 +507,18 @@ buffer_test_process (void *ptr) {
     for (i = 0; i < 5; i++) {
         EXPECT_EQ(psandesh->listElem1[i], i);
         EXPECT_EQ(psandesh->listElem2[i], i);
-        ct_uuid_t uuid_temp =
+        uuid_t uuid_temp =
                {0x00+i,0x00+i,0x01+i,0x01+i,0x02+i,0x02+i,0x03+i,0x03+i,
                 0x04+i,0x04+i,0x05+i,0x05+i,0x06+i,0x06+i,0x07+i,0x07+i};
         EXPECT_EQ(0, memcmp(psandesh->listElem3[i],
-             uuid_temp, sizeof(ct_uuid_t)));
+             uuid_temp, sizeof(uuid_t)));
     }
     EXPECT_EQ(psandesh->u16Elem1, 65535);
     EXPECT_EQ(psandesh->u32Elem1, 4294967295u);
     EXPECT_EQ(psandesh->u64Elem1, 18446744073709551615ull);
     EXPECT_STREQ(psandesh->xmlElem1, "xmlElem1");
     EXPECT_EQ(psandesh->ipv4Elem1, 4294967295u);
-    EXPECT_EQ(0, memcmp(psandesh->uuidElem1, uuid_value, sizeof(ct_uuid_t)));
+    EXPECT_EQ(0, memcmp(psandesh->uuidElem1, uuid_value, sizeof(uuid_t)));
     ipaddr_t ipaddr1;
     inet_pton(AF_INET, "11.11.11.3", &ipaddr1.ipv4);
     EXPECT_EQ(psandesh->ipaddrElem1.iptype, AF_INET);
