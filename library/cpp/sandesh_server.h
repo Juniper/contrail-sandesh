@@ -53,6 +53,8 @@ public:
         const SandeshMessage *msg, bool resource) = 0;
     virtual bool ReceiveSandeshCtrlMsg(SandeshStateMachine *state_machine,
             SandeshSession *session, const Sandesh *sandesh);
+    virtual bool ReceiveSandeshCtrlMsg(shared_ptr<SandeshStateMachine> state_machine,
+            SandeshSession *session, const Sandesh *sandesh);
     virtual void DisconnectSession(SandeshSession *session) {}
     size_t ConnectionsCount() { return connection_.size(); }
     int AllocConnectionIndex();

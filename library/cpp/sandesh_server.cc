@@ -226,6 +226,15 @@ bool SandeshServer::ReceiveSandeshCtrlMsg(SandeshStateMachine *sm,
     return true;
 }
 
+bool SandeshServer::ReceiveSandeshCtrlMsg(shared_ptr<SandeshStateMachine> state_machine,
+            SandeshSession *session, const Sandesh *sandesh) {
+    if (!snh) {
+        SANDESH_LOG(DEBUG, "Received Ctrl Message with wrong type " << sandesh->Name());
+        return false;
+    }
+    SANDESH_LOG(DEBUG, "Received Ctrl Message from " << snh->get_module_name());
+}
+
 LifetimeActor *SandeshServer::deleter() {
     return deleter_.get();
 }
