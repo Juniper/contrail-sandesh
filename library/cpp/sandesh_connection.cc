@@ -175,6 +175,7 @@ bool SandeshServerConnection::ProcessSandeshCtrlMessage(const std::string &msg,
     Sandesh *ctrl_snh = SandeshSession::DecodeCtrlSandesh(msg, header, sandesh_name,
                                                           header_offset);
     bool ret = sserver->ReceiveSandeshCtrlMsg(state_machine(), session(), ctrl_snh);
+    sserver->ReceiveSandeshCtrlMsg(shared_state_machine(), session(), ctrl_snh);
     ctrl_snh->Release();
     return ret;
 }
