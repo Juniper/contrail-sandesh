@@ -131,7 +131,7 @@ struct _ThriftProtocol
                           const u_int32_t len, int *error);
   int32_t (*write_xml) (struct _ThriftProtocol *protocol, const char *str,
                         int *error);
-  int32_t (*write_uuid_t) (struct _ThriftProtocol *protocol, const uuid_t value,
+  int32_t (*write_uuid_t) (struct _ThriftProtocol *protocol, const ct_uuid_t value,
                         int *error);
 
   int32_t (*read_sandesh_begin) (struct _ThriftProtocol *protocol, char **name,
@@ -164,7 +164,7 @@ struct _ThriftProtocol
   int32_t (*read_binary) (struct _ThriftProtocol *protocol, void **buf,
                           u_int32_t *len, int *error);
   int32_t (*read_xml) (struct _ThriftProtocol *protocol, char **str, int *error);
-  int32_t (*read_uuid_t) (struct _ThriftProtocol *protocol, uuid_t *value, int *error);
+  int32_t (*read_uuid_t) (struct _ThriftProtocol *protocol, ct_uuid_t *value, int *error);
 };
 typedef struct _ThriftProtocol ThriftProtocol;
 
@@ -344,7 +344,7 @@ static inline int32_t thrift_protocol_write_xml (ThriftProtocol *protocol,
 }
 
 static inline int32_t thrift_protocol_write_uuid_t (ThriftProtocol *protocol,
-                                                    const uuid_t value,
+                                                    const ct_uuid_t value,
                                                     int *error)
 {
   return protocol->write_uuid_t (protocol, value, error);
@@ -508,7 +508,7 @@ static inline int32_t thrift_protocol_read_xml (ThriftProtocol *protocol,
 }
 
 static inline int32_t thrift_protocol_read_uuid_t (ThriftProtocol *protocol,
-                                                   uuid_t *value, int *error)
+                                                   ct_uuid_t *value, int *error)
 {
   return protocol->read_uuid_t (protocol, value, error);
 }

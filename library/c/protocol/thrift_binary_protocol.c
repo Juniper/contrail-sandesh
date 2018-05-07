@@ -284,7 +284,7 @@ thrift_binary_protocol_write_ipaddr (ThriftProtocol *protocol,
 }
 
 int32_t
-thrift_binary_protocol_write_uuid_t (ThriftProtocol *protocol, const uuid_t value,
+thrift_binary_protocol_write_uuid_t (ThriftProtocol *protocol, const ct_uuid_t value,
                                   int *error)
 {
   if (thrift_transport_write (protocol->transport,
@@ -650,7 +650,7 @@ thrift_binary_protocol_read_ipaddr (ThriftProtocol *protocol, ipaddr_t *value,
 }
 
 int32_t
-thrift_binary_protocol_read_uuid_t (ThriftProtocol *protocol, uuid_t *value,
+thrift_binary_protocol_read_uuid_t (ThriftProtocol *protocol, ct_uuid_t *value,
                                  int *error)
 {
   int32_t ret;
