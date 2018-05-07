@@ -103,7 +103,7 @@ thrift_protocol_skip (ThriftProtocol *protocol, ThriftType type, int *error)
       }
     case T_UUID:
       {
-        uuid_t uuid;
+        ct_uuid_t uuid;
         return thrift_protocol_read_uuid_t (protocol, &uuid, error);
       }
     case T_STRUCT:
