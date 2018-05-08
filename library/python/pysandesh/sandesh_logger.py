@@ -58,7 +58,7 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
             # add the handler only once
             self._logging_file_handler = logging.StreamHandler()
             log_format = logging.Formatter(
-                '%(asctime)s [%(name)s]: %(message)s',
+                '%(asctime)s [%(name)s] [%(levelname)s]: %(message)s',
                 datefmt='%m/%d/%Y %I:%M:%S %p')
             self._logging_file_handler.setFormatter(log_format)
             self._logger.addHandler(self._logging_file_handler)
@@ -114,7 +114,7 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
                         filename=file, maxBytes=maxBytes,
                         backupCount=backupCount))
             log_format = logging.Formatter(
-                '%(asctime)s [%(name)s]: %(message)s',
+                '%(asctime)s [%(name)s] [%(levelname)s]: %(message)s',
                 datefmt='%m/%d/%Y %I:%M:%S %p')
             logging_file_handler.setFormatter(log_format)
             logger.addHandler(logging_file_handler)
@@ -170,7 +170,7 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
                         filename=file, maxBytes=maxBytes,
                         backupCount=backupCount))
             log_format = logging.Formatter(
-                '%(asctime)s [%(name)s]: %(message)s',
+                '%(asctime)s [%(name)s] [%(levelname)s]: %(message)s',
                 datefmt='%m/%d/%Y %I:%M:%S %p')
             self._logging_file_handler.setFormatter(log_format)
             self._logger.addHandler(self._logging_file_handler)
