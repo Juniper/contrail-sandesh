@@ -28,15 +28,23 @@ class ConnectionState(object):
     def _send_uve():
         if not ConnectionState._status_cb:
             return
+        state_value = ProcessState.FUNCTIONAL
+        description = ''
+        if ConnectionState._parent_status_cb:
+            state_value, description = ConnectionState._parent_status_cb()
         conn_infos = ConnectionState._connection_map.values()
-        (process_state, message) = \
+        (conn_state_value, conn_description) = \
             ConnectionState._status_cb(conn_infos)
+        if (conn_state_value == ProcessState.NON_FUNCTIONAL):
+            state_value = conn_state_value
+        description += conn_description
+
         process_status = ProcessStatus(
             module_id = ConnectionState._module_id,
             instance_id = ConnectionState._instance_id,
-            state = ProcessStateNames[process_state],
+            state = ProcessStateNames[state_value],
             connection_infos = conn_infos,
-            description = message)
+            description = description)
         uve_data = ConnectionState._uve_data_type_cls(
             name = ConnectionState._hostname,
             process_status = [process_status])
@@ -49,7 +57,8 @@ class ConnectionState(object):
 
     @staticmethod
     def init(sandesh, hostname, module_id, instance_id, status_cb,
-             uve_type_cls, uve_data_type_cls, table = None):
+             uve_type_cls, uve_data_type_cls, table = None,
+             parent_status_cb = None):
         ConnectionState._sandesh = sandesh
         ConnectionState._hostname = hostname
         ConnectionState._module_id = module_id
@@ -58,6 +67,7 @@ class ConnectionState(object):
         ConnectionState._uve_type_cls = uve_type_cls
         ConnectionState._uve_data_type_cls = uve_data_type_cls
         ConnectionState._table = table
+        ConnectionState._parent_status_cb = parent_status_cb
     #end init
 
     @staticmethod
