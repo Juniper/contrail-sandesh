@@ -32,12 +32,12 @@ class ConnInfoTest(unittest.TestCase):
             'Test', 'Test', None, 'conn_info_test_ctxt', http_port)
     #end setUp
 
-    def _check_process_status_cb(self, vcinfos):
+    def _check_conn_status_cb(self, vcinfos):
         self._expected_vcinfos.sort()
         vcinfos.sort()
         self.assertEqual(self._expected_vcinfos, vcinfos)
         return (ProcessState.FUNCTIONAL, '')
-    #end _check_process_status_cb
+    #end _check_conn_status_cb
 
     def _update_conn_info(self, name, status, description, vcinfos):
         cinfo = ConnectionInfo()
@@ -67,7 +67,7 @@ class ConnInfoTest(unittest.TestCase):
     def test_basic(self):
         ConnectionState.init(sandesh = self._sandesh, hostname = "TestHost",
             module_id = "TestModule", instance_id = "0",
-            status_cb = self._check_process_status_cb,
+            conn_status_cb = self._check_conn_status_cb,
             uve_type_cls = NodeStatusUVE,
             uve_data_type_cls = NodeStatus)
         vcinfos = []
@@ -87,17 +87,17 @@ class ConnInfoTest(unittest.TestCase):
         vcinfos = []
         self._update_conn_info("Test1", ConnectionStatus.UP, "Test1 UP",
             vcinfos);
-        (pstate, message) = ConnectionState.get_process_state_cb(vcinfos)
+        (pstate, message) = ConnectionState.get_conn_state_cb(vcinfos)
         self.assertEqual(ProcessState.FUNCTIONAL, pstate)
         self.assertEqual('', message)
         self._update_conn_info("Test2", ConnectionStatus.DOWN, "Test2 DOWN",
             vcinfos);
-        (pstate, message) = ConnectionState.get_process_state_cb(vcinfos)
+        (pstate, message) = ConnectionState.get_conn_state_cb(vcinfos)
         self.assertEqual(ProcessState.NON_FUNCTIONAL, pstate)
         self.assertEqual("Test:Test2[Test2 DOWN] connection down", message);
         self._update_conn_info("Test3", ConnectionStatus.DOWN, "Test3 DOWN",
             vcinfos);
-        (pstate, message) = ConnectionState.get_process_state_cb(vcinfos);
+        (pstate, message) = ConnectionState.get_conn_state_cb(vcinfos);
         self.assertEqual(ProcessState.NON_FUNCTIONAL, pstate);
         self.assertEqual("Test:Test2[Test2 DOWN], Test:Test3[Test3 DOWN] connection down", message);
     #end test_callback
