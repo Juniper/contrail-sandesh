@@ -319,6 +319,28 @@ public:
     static const char* LevelToString(SandeshLevel::type level);
     static SandeshLevel::type StringToLevel(std::string level);
     static log4cplus::Logger& logger() { return logger_; }
+    static log4cplus::Logger& slo_logger() { return slo_logger_; }
+    static log4cplus::Logger& sample_logger() { return sample_logger_; }
+    static void set_sample_logger_appender(const std::string &file_name,
+                             long max_file_size,
+                             int maxBackupIndex,
+                             const std::string &syslogFacility,
+                             const std::vector<std::string> &sample_destn,
+                             const std::string &ident);
+
+    static void set_slo_logger_appender(const std::string &file_name,
+                             long max_file_size,
+                             int maxBackupIndex,
+                             const std::string &syslogFacility,
+                             const std::vector<std::string> &slo_destn,
+                             const std::string &ident);
+    static void set_send_2_collector_flags(
+                             const std::vector<std::string> &sample_destn,
+                             const std::vector<std::string> &slo_destn);
+    static bool is_send_slo_2_collector_enabled() { return slo_2_collector_; }
+    static bool is_send_sampled_2_collector_enabled() { return sample_2_collector_; }
+    static bool is_send_slo_2_logger_enabled() { return slo_2_logger_; }
+    static bool is_send_sampled_2_logger_enabled() { return sample_2_logger_; }
 
 protected:
     void set_timestamp(time_t timestamp) { timestamp_ = timestamp; }
@@ -407,6 +429,8 @@ private:
     static SandeshMessageStatistics msg_stats_;
     static tbb::mutex stats_mutex_;
     static log4cplus::Logger logger_;
+    static log4cplus::Logger slo_logger_;
+    static log4cplus::Logger sample_logger_;
     static bool disable_flow_collection_; // disable flow collection
     static SandeshConfig config_;
     static bool disable_sending_all_;
@@ -423,6 +447,10 @@ private:
     std::string category_;
     std::string name_;
     static tbb::atomic<uint32_t> sandesh_send_ratelimit_;
+    static bool slo_2_collector_;
+    static bool sample_2_collector_;
+    static bool slo_2_logger_;
+    static bool sample_2_logger_;
 };
 
 struct SandeshElement {

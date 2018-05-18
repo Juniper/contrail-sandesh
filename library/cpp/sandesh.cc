@@ -10,6 +10,8 @@
 
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
+#include <boost/format.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <base/logging.h>
 #include <base/parse_object.h>
 #include <base/queue_task.h>
@@ -33,11 +35,17 @@
 #include "sandesh_connection.h"
 #include "sandesh_state_machine.h"
 
+#include <log4cplus/helpers/pointer.h>
+#include <log4cplus/configurator.h>
+#include <log4cplus/fileappender.h>
+#include <log4cplus/syslogappender.h>
+
 using boost::asio::ip::tcp;
 using boost::asio::ip::address;
 
 using namespace contrail::sandesh::protocol;
 using namespace contrail::sandesh::transport;
+using namespace log4cplus;
 
 // Statics
 Sandesh::SandeshRole::type Sandesh::role_ = SandeshRole::Invalid;
@@ -51,6 +59,10 @@ bool Sandesh::disable_flow_collection_ = false;
 bool Sandesh::disable_sending_all_ = false;
 bool Sandesh::disable_sending_object_logs_ = false;
 bool Sandesh::disable_sending_flows_ = false;
+bool Sandesh::slo_2_collector_ = false;
+bool Sandesh::sample_2_collector_ = false;
+bool Sandesh::slo_2_logger_ = false;
+bool Sandesh::sample_2_logger_ = false;
 SandeshClient *Sandesh::client_ = NULL;
 SandeshConfig Sandesh::config_;
 std::auto_ptr<Sandesh::SandeshRxQueue> Sandesh::recv_queue_;
@@ -70,9 +82,16 @@ SandeshMessageStatistics Sandesh::msg_stats_;
 tbb::mutex Sandesh::stats_mutex_;
 log4cplus::Logger Sandesh::logger_ =
     log4cplus::Logger::getInstance(LOG4CPLUS_TEXT("SANDESH"));
+log4cplus::Logger Sandesh::slo_logger_ =
+    log4cplus::Logger::getInstance(LOG4CPLUS_TEXT("SLO_SESSION"));
+log4cplus::Logger Sandesh::sample_logger_ =
+    log4cplus::Logger::getInstance(LOG4CPLUS_TEXT("SAMPLE_SESSION"));
 
 Sandesh::ModuleContextMap Sandesh::module_context_;
 tbb::atomic<uint32_t> Sandesh::sandesh_send_ratelimit_;
+
+const char *loggingPattern = "%D{%Y-%m-%d %a %H:%M:%S:%Q %Z} "
+                             " %h [Thread %t, Pid %i]: %m%n";
 
 const char * Sandesh::SandeshRoleToString(SandeshRole::type role) {
     switch (role) {
@@ -961,4 +980,101 @@ size_t Sandesh::SandeshQueue::AtomicDecrementQueueCount(
     SandeshElement *element) {
         size_t sandesh_size = element->GetSize();
         return count_.fetch_and_add((size_t)(0-sandesh_size)) - sandesh_size;
+}
+
+/*
+ * Add the configured appenders for the sample logger
+ */
+void Sandesh::set_sample_logger_appender(const std::string &file_name, long max_file_size,
+                             int max_backup_index,
+                             const std::string &syslogFacility,
+                             const std::vector<std::string> &sample_destn,
+                             const std::string &ident) {
+    log4cplus::Logger sample_logger = Sandesh::sample_logger();
+    sample_logger.setAdditivity(false);
+    // Session messages log level is
+    sample_logger.setLogLevel(SandeshLevel::SYS_NOTICE);
+    // Local logging for SLO logger
+    if (std::find(sample_destn.begin(), sample_destn.end(), "file") !=
+            sample_destn.end()) {
+        // Append file appender to SLO logger
+        SharedAppenderPtr fileappender(new RollingFileAppender(file_name,
+                                           max_file_size, max_backup_index));
+        sample_logger.addAppender(fileappender);
+        Sandesh::sample_2_logger_ = true;
+    }
+    // SYSLOG appender for SLO logger
+    if (std::find(sample_destn.begin(), sample_destn.end(), "syslog") !=
+            sample_destn.end()) {
+        helpers::Properties props;
+        std::string syslogident = boost::str(
+            boost::format("%1%[%2%]") % ident % getpid());
+        props.setProperty(LOG4CPLUS_TEXT("facility"),
+                          boost::starts_with(syslogFacility, "LOG_")
+                        ? syslogFacility.substr(4)
+                        : syslogFacility);
+        props.setProperty(LOG4CPLUS_TEXT("ident"), syslogident);
+        props.setProperty(LOG4CPLUS_TEXT("additivity"), "false");
+        SharedAppenderPtr syslogappender(new SysLogAppender(props));
+        std::auto_ptr<Layout> syslog_layout_ptr(new PatternLayout(
+                                                    loggingPattern));
+        syslogappender->setLayout(syslog_layout_ptr);
+        sample_logger.addAppender(syslogappender);
+        Sandesh::sample_2_logger_ = true;
+    }
+}
+
+/*
+ * Add the configured appenders for the SLO logger
+ */
+void Sandesh::set_slo_logger_appender(const std::string &file_name, long max_file_size,
+                             int max_backup_index,
+                             const std::string &syslogFacility,
+                             const std::vector<std::string> &slo_destn,
+                             const std::string &ident) {
+    log4cplus::Logger slo_logger = Sandesh::slo_logger();
+    slo_logger.setAdditivity(false);
+    // Session messages log level is
+    slo_logger.setLogLevel(SandeshLevel::SYS_NOTICE);
+    // Local logging for SLO logger
+    if (std::find(slo_destn.begin(), slo_destn.end(), "file") !=
+            slo_destn.end()) {
+        // Append file appender to SLO logger
+        SharedAppenderPtr fileappender(new RollingFileAppender(file_name,
+                                           max_file_size, max_backup_index));
+        slo_logger.addAppender(fileappender);
+        Sandesh::slo_2_logger_ = true;
+    }
+    // SYSLOG appender for SLO logger
+    if (std::find(slo_destn.begin(), slo_destn.end(), "syslog") !=
+            slo_destn.end()) {
+        helpers::Properties props;
+        std::string syslogident = boost::str(
+            boost::format("%1%[%2%]") % ident % getpid());
+        props.setProperty(LOG4CPLUS_TEXT("facility"),
+                          boost::starts_with(syslogFacility, "LOG_")
+                        ? syslogFacility.substr(4)
+                        : syslogFacility);
+        props.setProperty(LOG4CPLUS_TEXT("ident"), syslogident);
+        props.setProperty(LOG4CPLUS_TEXT("additivity"), "false");
+        SharedAppenderPtr syslogappender(new SysLogAppender(props));
+        std::auto_ptr<Layout> syslog_layout_ptr(new PatternLayout(
+                                                    loggingPattern));
+        syslogappender->setLayout(syslog_layout_ptr);
+        slo_logger.addAppender(syslogappender);
+        Sandesh::slo_2_logger_ = true;
+    }
+}
+
+void Sandesh::set_send_2_collector_flags(
+    const std::vector<std::string> &sample_destn,
+    const std::vector<std::string> &slo_destn) {
+    if (std::find(slo_destn.begin(), slo_destn.end(), "collector") !=
+            slo_destn.end()) {
+        Sandesh::slo_2_collector_ = true;
+    }
+    if (std::find(sample_destn.begin(), sample_destn.end(), "collector") !=
+            sample_destn.end()) {
+        Sandesh::sample_2_collector_ = true;
+    }
 }
