@@ -26,6 +26,9 @@ void SandeshMessageStatistics::Get(DetailStatsMap *m_detail_type_stats,
 
 void SandeshMessageStatistics::Get(DetailStatsList *v_detail_type_stats,
     SandeshMessageStats *detail_agg_stats) const {
+    if (deleted_) {
+        return;
+    }
     BOOST_FOREACH(DetailStatsMap::const_iterator::value_type it,
         detail_type_stats_map_) {
         v_detail_type_stats->push_back(*it.second);
@@ -54,6 +57,9 @@ static void PopulateBasicTypeStats(const SandeshMessageTypeStats &detail_stats,
 
 void SandeshMessageStatistics::Get(BasicStatsList *v_basic_type_stats,
     SandeshMessageBasicStats *basic_agg_stats) const {
+    if (deleted_) {
+        return;
+    }
     BOOST_FOREACH(DetailStatsMap::const_iterator::value_type it,
         detail_type_stats_map_) {
         const SandeshMessageTypeStats *detail_stats(it.second);
@@ -216,6 +222,9 @@ void SandeshMessageStatistics::UpdateInternal(const std::string &msg_name,
     uint64_t bytes, bool is_tx, bool dropped,
     SandeshTxDropReason::type send_dreason,
     SandeshRxDropReason::type recv_dreason) {
+    if (deleted_) {
+        return;
+    }
     // Update detail stats
     DetailStatsMap::iterator it = detail_type_stats_map_.find(msg_name);
     if (it == detail_type_stats_map_.end()) {
@@ -252,11 +261,17 @@ void SandeshMessageStatistics::UpdateInternal(const std::string &msg_name,
     }
 }
 
+void SandeshMessageStatistics::Shutdown() {
+    deleted_ = true;
+}
 //
 // SandeshEventStatistics
 //
 void SandeshEventStatistics::Get(
     std::vector<SandeshStateMachineEvStats> *ev_stats) const {
+    if (deleted_) {
+        return;
+    }
     BOOST_FOREACH(EventStatsMap::const_iterator::value_type it,
         event_stats_) {
         ev_stats->push_back(*it.second);
@@ -266,6 +281,9 @@ void SandeshEventStatistics::Get(
 
 void SandeshEventStatistics::Update(std::string &event_name, bool enqueue,
     bool fail) {
+    if (deleted_) {
+        return;
+    }
     EventStatsMap::iterator it = event_stats_.find(event_name);
     if (it == event_stats_.end()) {
         it = (event_stats_.insert(event_name, new SandeshStateMachineEvStats)).first;
@@ -289,4 +307,8 @@ void SandeshEventStatistics::Update(std::string &event_name, bool enqueue,
             agg_stats_.set_dequeues(agg_stats_.get_dequeues() + 1);
         }
     }
+}
+
+void SandeshEventStatistics::Shutdown() {
+    deleted_ = true;
 }
