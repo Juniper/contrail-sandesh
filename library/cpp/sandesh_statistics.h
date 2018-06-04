@@ -10,7 +10,7 @@
 
 class SandeshMessageStatistics {
 public:
-    SandeshMessageStatistics() {}
+    SandeshMessageStatistics() {deleted_ = false;}
 
     void UpdateSend(const std::string &msg_name, uint64_t bytes);
     void UpdateSendFailed(const std::string &msg_name, uint64_t bytes,
@@ -35,8 +35,10 @@ public:
 
     void Get(BasicStatsList *v_basic_type_stats,
         SandeshMessageBasicStats *basic_agg_stats) const;
+    void Shutdown();
 
 private:
+    bool deleted_;
     void UpdateInternal(const std::string &msg_name,
                         uint64_t bytes, bool is_tx, bool dropped,
                         SandeshTxDropReason::type send_dreason,
@@ -48,14 +50,17 @@ private:
 
 class SandeshEventStatistics {
 public:
-    SandeshEventStatistics() {}
+    SandeshEventStatistics() {deleted_ = false;}
 
     void Update(std::string &event_name, bool enqueue, bool fail);
     void Get(std::vector<SandeshStateMachineEvStats> *ev_stats) const;
+    void Shutdown();
 
     typedef boost::ptr_map<std::string, SandeshStateMachineEvStats> EventStatsMap;
     EventStatsMap event_stats_;
     SandeshStateMachineEvStats agg_stats_;
+private:
+    bool deleted_;
 };
     
 #endif // __SANDESH_STATISTICS_H__
