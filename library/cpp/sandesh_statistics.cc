@@ -271,6 +271,9 @@ void SandeshMessageStatistics::UpdateInternal(const std::string &msg_name,
 //
 void SandeshEventStatistics::Get(
     std::vector<SandeshStateMachineEvStats> *ev_stats) const {
+    if (deleted_) {
+        return;
+    }
     BOOST_FOREACH(EventStatsMap::const_iterator::value_type it,
         event_stats_) {
         ev_stats->push_back(*it.second);
@@ -280,6 +283,9 @@ void SandeshEventStatistics::Get(
 
 void SandeshEventStatistics::Update(std::string &event_name, bool enqueue,
     bool fail) {
+    if (deleted_) {
+        return;
+    }
     EventStatsMap::iterator it = event_stats_.find(event_name);
     if (it == event_stats_.end()) {
         it = (event_stats_.insert(event_name, new SandeshStateMachineEvStats)).first;
@@ -303,4 +309,8 @@ void SandeshEventStatistics::Update(std::string &event_name, bool enqueue,
             agg_stats_.set_dequeues(agg_stats_.get_dequeues() + 1);
         }
     }
+}
+
+void SandeshEventStatistics::Shutdown() {
+    deleted_ = true;
 }
