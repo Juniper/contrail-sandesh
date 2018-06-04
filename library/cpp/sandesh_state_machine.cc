@@ -405,6 +405,8 @@ SandeshStateMachine::~SandeshStateMachine() {
     deleted_ = true;
 
     work_queue_.Shutdown();
+    event_stats_.Shutdown();
+    message_stats_.Shutdown();
 
     assert(session() == NULL);
 
