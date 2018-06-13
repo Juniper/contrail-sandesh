@@ -319,6 +319,22 @@ public:
     static const char* LevelToString(SandeshLevel::type level);
     static SandeshLevel::type StringToLevel(std::string level);
     static log4cplus::Logger& logger() { return logger_; }
+    static log4cplus::Logger& slo_logger() { return slo_logger_; }
+    static log4cplus::Logger& sampled_logger() { return sampled_logger_; }
+    static void set_logger_appender(const std::string &file_name,
+                             long max_file_size,
+                             int max_backup_index,
+                             const std::string &syslog_facility,
+                             const std::vector<std::string> &destn,
+                             const std::string &ident,
+                             bool is_sampled_logger);
+    static void set_send_to_collector_flags(
+                             const std::vector<std::string> &sampled_destination,
+                             const std::vector<std::string> &slo_destination);
+    static bool is_send_slo_to_collector_enabled() { return slo_to_collector_; }
+    static bool is_send_sampled_to_collector_enabled() { return sampled_to_collector_; }
+    static bool is_send_slo_to_logger_enabled() { return slo_to_logger_; }
+    static bool is_send_sampled_to_logger_enabled() { return sampled_to_logger_; }
 
 protected:
     void set_timestamp(time_t timestamp) { timestamp_ = timestamp; }
@@ -407,6 +423,8 @@ private:
     static SandeshMessageStatistics msg_stats_;
     static tbb::mutex stats_mutex_;
     static log4cplus::Logger logger_;
+    static log4cplus::Logger slo_logger_;
+    static log4cplus::Logger sampled_logger_;
     static bool disable_flow_collection_; // disable flow collection
     static SandeshConfig config_;
     static bool disable_sending_all_;
@@ -423,6 +441,10 @@ private:
     std::string category_;
     std::string name_;
     static tbb::atomic<uint32_t> sandesh_send_ratelimit_;
+    static bool slo_to_collector_;
+    static bool sampled_to_collector_;
+    static bool slo_to_logger_;
+    static bool sampled_to_logger_;
 };
 
 struct SandeshElement {
