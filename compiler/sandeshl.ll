@@ -160,7 +160,7 @@ format_str    (%([1-9]$)?([+-]?[ -#0])?([1-9]+)?(\.[1-9]+)?(hh|h|l|ll|L|z|j|t)?(
 "string"             { return tok_string;               }
 "binary"             { return tok_binary;               }
 "xml"                { return tok_xml;                  }
-"uuid_t"             { return tok_uuid_t;               }
+"ct_uuid_t"          { return tok_uuid_t;               }
 "slist"              { return tok_slist;                }
 "senum"              { return tok_senum;                }
 "map"                { return tok_map;                  }

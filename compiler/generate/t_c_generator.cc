@@ -633,7 +633,7 @@ string t_c_generator::base_type_name(t_base_type *type) {
     case t_base_type::TYPE_IPADDR:
       return "ipaddr_t";
     case t_base_type::TYPE_UUID:
-      return "uuid_t";
+      return "ct_uuid_t";
     default:
       throw "compiler error: no C base type name for base type "
             + t_base_type::t_base_name (tbase);
