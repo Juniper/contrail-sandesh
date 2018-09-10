@@ -329,9 +329,6 @@ void SandeshSession::ResetSendQueueWaterMark() {
 
 void SandeshSession::SetSendingLevel(size_t count, SandeshLevel::type level) {
     if (sending_level_ != level) {
-        SANDESH_LOG(INFO, "SANDESH: Sending: LEVEL: " << "[ " <<
-            Sandesh::LevelToString(sending_level_) << " ] -> [ " <<
-            Sandesh::LevelToString(level) << " ] : " << count);
         sending_level_ = level;
     }
 }
