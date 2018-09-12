@@ -59,7 +59,7 @@ class SandeshLogger(sandesh_base_logger.SandeshBaseLogger):
             self._logging_file_handler = logging.StreamHandler()
             log_format = logging.Formatter(
                 '%(asctime)s [%(name)s]: %(message)s',
-                datefmt='%m/%d/%Y %I:%M:%S %p')
+                datefmt='%Y-%m-%d %H:%M:%S')
             self._logging_file_handler.setFormatter(log_format)
             self._logger.addHandler(self._logging_file_handler)
         else:
