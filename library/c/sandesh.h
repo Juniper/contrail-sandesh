@@ -24,6 +24,7 @@ extern "C" {
 #include <linux/types.h>
 #include <linux/in.h>
 #include <linux/in6.h>
+#include <linux/version.h>
 
 #define OS_LOG_ERR KERN_ERR
 #define OS_LOG_DEBUG KERN_DEBUG
@@ -73,7 +74,17 @@ extern int vrouter_dbg;
 #define os_log(level, format, arg...)    syslog(level, format, ##arg)
 #endif /* __KERNEL__ */
 
+#if defined(__KERNEL__) && defined(__linux__)
+#if !defined(_LINUX_UUID_H_) || (defined(RHEL_MAJOR) && RHEL_MAJOR < 7) || \
+    (!defined(RHEL_MAJOR) && LINUX_VERSION_CODE < KERNEL_VERSION(4,13,0))
+/* Kernel includes do not define uuid_t. */
 typedef unsigned char uuid_t[16];
+#endif
+/* Kernel headers have defined uuid_t. Do not redefine. */
+#else
+/* Not in linux kernel context, define uuid_t. */
+typedef unsigned char uuid_t[16];
+#endif
 
 typedef struct ipaddr_s {
     uint8_t iptype; // AF_INET or AF_INET6
