@@ -11,6 +11,6 @@ request sandesh SandeshHttpRequest {
     1: i32         testID;
     2: string      teststring1;
     3: string      teststring2;
-    4: uuid_t      testUuid1;
+    4: ct_uuid_t   testUuid1;
     5: ipaddr      testIpaddr1;
 }

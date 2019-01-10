@@ -15,6 +15,7 @@
 #include <map>
 #include <vector>
 #include <boost/ptr_container/ptr_map.hpp>
+#include <boost/assign/ptr_map_inserter.hpp>
 #include <sandesh/sandesh_types.h>
 #include <sandesh/sandesh.h>
 #include <tbb/mutex.h>
@@ -289,4 +290,134 @@ private:
     std::map<std::string, std::string> dsconf_;
     mutable tbb::mutex uve_mutex_;
 };
+
+/*
+#define SANDESH_UVE_DEF(x,y,z,w) \
+    static SandeshUVEPerTypeMapGroup<x, y, z, w> uvemap ## x(#y)
+
+template<typename T, typename U, int P, int TM>
+class SandeshUVEPerTypeMapGroup: public SandeshUVEPerTypeMap {
+public:
+    SandeshUVEPerTypeMapGroup(char const * u_name) {
+        SandeshUVETypeMaps::RegisterType(u_name, this, P);
+    }
+    
+    typedef SandeshUVEPerTypeMapImpl<T,U,P,TM> uve_emap;
+
+    // One UVE Type Map per partition
+    typedef boost::ptr_map<int, uve_emap> uve_pmap;
+
+    // One set of per-partition UVE Type Maps for each proxy group
+    typedef boost::ptr_map<string, uve_pmap> uve_gmap;
+
+    // Get the partition UVE Type maps for the given proxy group
+    uve_pmap * GetGMap(const std::string& proxy) {
+        tbb::mutex::scoped_lock lock(gmutex_);
+        if (group_map_.find(proxy) == group_map_.end()) {
+            uve_pmap* up = new uve_pmap;
+            std::string kstring(proxy);
+            for (size_t idx=0; idx<SandeshUVETypeMaps::kProxyPartitions; idx++) {
+                boost::assign::ptr_map_insert(*up)(idx);
+            }
+            group_map_.insert(kstring ,up);
+        }
+        return &(group_map_.at(proxy));
+    }
+   
+    // Get the partition UVE Type maps for all proxy groups 
+    std::vector<uve_pmap *> GetGMaps(void) {
+        tbb::mutex::scoped_lock lock(gmutex_);
+        std::vector<uve_pmap *> pv;
+        for (typename uve_gmap::iterator ugi = group_map_.begin();
+                ugi != group_map_.end(); ugi++) {
+            pv.push_back(ugi->second);
+        }
+        return pv;
+    }
+
+    // This function can be used by the Sandesh Session state machine
+    // to get the seq num of the last message sent for this SandeshUVE type
+    uint32_t TypeSeq(void) const {
+        return T::lseqnum();
+    }
+
+    int GetTimeout(void) const {
+        return TM;
+    }
+
+    // Sync UVEs for both the native UVE Map and the proxy groups
+    uint32_t SyncUVE(const std::string &table,
+            SandeshUVE::SendType st,
+            uint32_t seqno, uint32_t cycle,
+            const std::string &ctx) {
+        uint32_t count=0;
+        count += native_map_.SyncUVE(table, st, seqno, cycle, ctx);
+        std::vector<uve_pmap *> pv = GetGMaps();
+        
+        for (size_t jdx=0; jdx<pv.size(); jdx++) {
+            for (size_t idx=0; idx<SandeshUVETypeMaps::kProxyPartitions; idx++) {
+                count += pv[jdx]->at(idx).SyncUVE(table, st, seqno, cycle, ctx);
+            }
+        }
+        return count; 
+    }
+
+    // DerivedStats for proxy groups cannot be re-configured
+    // at InitGenerator time or from Introspect
+    // The Proxy group configuration should be changed instead
+    bool InitDerivedStats(
+            const std::map<std::string,std::string> & dsconf) {
+        return native_map_.InitDerivedStats(dsconf);
+    }
+
+    // Send the given UVE, for the native UVE Type map, as
+    // well as proxy groups
+    bool SendUVE(const std::string& table, const std::string& name,
+            const std::string& ctx) const {
+        bool sent = false;
+        if (native_map_.SendUVE(table, name, ctx)) sent = true;
+        std::vector<uve_pmap *> pv =
+                const_cast<SandeshUVEPerTypeMapGroup<T,U,P,TM> * >(this)->GetGMaps();
+        for (size_t jdx=0; jdx<pv.size(); jdx++) {
+            for (size_t idx=0; idx<SandeshUVETypeMaps::kProxyPartitions; idx++) {
+                if (pv[jdx]->at(idx).SendUVE(table, name, ctx)) sent = true;
+            }
+        }
+        return sent;
+    }
+
+    std::map<std::string, std::string> GetDSConf(void) const {
+        return native_map_.GetDSConf();
+    }
+
+    bool UpdateUVE(U& data, uint32_t seqnum,
+            uint64_t mono_usec, int partition) {
+        if (partition == -1) {
+            return native_map_.UpdateUVE(data, seqnum, mono_usec);
+        } else {
+            std::string proxy = SandeshStructProxyTrait<U>::get(data);
+            assert(partition < SandeshUVETypeMaps::kProxyPartitions);
+            uve_pmap * pp = GetGMap(proxy);
+            return pp->at(partition).UpdateUVE(data, seqnum, mono_usec);
+        }
+    }
+
+    // Delete all UVEs for the given partition for the given proxy group
+    uint32_t ClearUVEs(const std::string& proxy, int partition) {
+        tbb::mutex::scoped_lock lock(gmutex_);
+        typename uve_gmap::iterator gi = group_map_.find(proxy);
+        if (gi != group_map_.end()) {
+            assert(partition < SandeshUVETypeMaps::kProxyPartitions);
+            return gi->second->at(partition).ClearUVEs();
+        }
+        return 0;
+    }
+
+private:
+    mutable tbb::mutex gmutex_;
+    uve_gmap group_map_;
+    SandeshUVEPerTypeMapImpl<T, U, P, TM> native_map_;
+};
+*/
+
 #endif

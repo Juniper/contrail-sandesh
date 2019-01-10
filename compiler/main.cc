@@ -821,7 +821,7 @@ void validate_const_rec(std::string name, t_type* type, t_const_value* value) {
       break;
     case t_base_type::TYPE_UUID:
       if (value->get_type() != t_const_value::CV_STRING) {
-        throw "type error: const \"" + name + "\" was declared as uuid_t";
+        throw "type error: const \"" + name + "\" was declared as ct_uuid_t";
       }
       break;
     case t_base_type::TYPE_IPADDR:
@@ -1385,7 +1385,7 @@ int main(int argc, char** argv) {
   g_type_ipv4    = new t_base_type("ipv4", t_base_type::TYPE_IPV4);
   g_type_ipaddr  = new t_base_type("ipaddr", t_base_type::TYPE_IPADDR);
   g_type_xml    = new t_base_type("xml", t_base_type::TYPE_XML);
-  g_type_uuid_t    = new t_base_type("uuid_t", t_base_type::TYPE_UUID);
+  g_type_uuid_t    = new t_base_type("ct_uuid_t", t_base_type::TYPE_UUID);
   g_type_static_const_string = new t_base_type("static const string", t_base_type::TYPE_STATIC_CONST_STRING);
   g_type_sandesh_system   = new t_base_type("system",   t_base_type::TYPE_SANDESH_SYSTEM);
   g_type_sandesh_request  = new t_base_type("request",  t_base_type::TYPE_SANDESH_REQUEST);
