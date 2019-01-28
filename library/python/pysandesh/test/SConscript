@@ -60,7 +60,7 @@ sandesh_pkgs = [
                  env['TOP']+'/tools/sandesh/library/python'
                ]
 env.Requires(env['pysandesh_test'],
-             env['TOP']+'/tools/sandesh/library/python/dist/sandesh-0.1dev.tar.gz')
+             env['TOP']+'/tools/sandesh/library/python/dist/sandesh-0.1.dev0.tar.gz')
 env.Requires(env['pysandesh_test'],
              env['TOP']+'/sandesh/common/dist/')
 
