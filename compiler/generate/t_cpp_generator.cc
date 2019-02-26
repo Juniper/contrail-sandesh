@@ -3795,76 +3795,162 @@ void t_cpp_generator::generate_sandesh_http_reader(ofstream& out,
     indent(out) << "#include <boost/tokenizer.hpp>" << endl;
     indent(out) << "#include <base/util.h>" << endl << endl;
     indent(out) << "bool " << tsandesh->get_name() << "::RequestFromHttp" <<
-            "(const std::string& ctx, const std::string& snh_query) {" << endl;
+        "(const std::string& ctx, const std::string& snh_query) {" << endl;
 
-	indent_up();
+    indent_up();
 
-	const vector<t_field*>& fields = tsandesh->get_members();
-	vector<t_field*>::const_iterator f_iter;
+    const vector<t_field*>& fields = tsandesh->get_members();
+    vector<t_field*>::const_iterator f_iter;
 
-        indent(out) << program_name_ << "_marker = 0;" << endl;
-	// Declare stack tmp variables
-	out << endl << 
-            indent() << "using std::string;"  << endl <<
-            indent() << "boost::char_separator<char> sep(\"&\");"  << endl <<
-            indent() << "boost::char_separator<char> varsep(\"=\");" << endl <<
-            endl <<
-            indent() << "CURL * cr = curl_easy_init();" <<
-            indent() << "boost::tokenizer<boost::char_separator<char> >" << 
+    indent(out) << program_name_ << "_marker = 0;" << endl;
+    // Declare stack tmp variables
+    out << endl << 
+    indent() << "using std::string;"  << endl <<
+    indent() << "boost::char_separator<char> sep(\"&\");"  << endl <<
+    indent() << "boost::char_separator<char> varsep(\"=\");" << endl <<
+    endl <<
+    indent() << "CURL * cr = curl_easy_init();" <<
+    indent() << "boost::tokenizer<boost::char_separator<char> >" <<
             "tokens(snh_query, sep);" << endl <<
-            indent() << "boost::tokenizer<boost::char_separator<char> >" <<
+    indent() << "boost::tokenizer<boost::char_separator<char> >" <<
             "::iterator it1 = tokens.begin();" << endl << endl;
 
+    indent(out) << "string entity_name;"  << endl;
+    indent(out) << "int fields_vector_size =" << fields.size() << ";" << endl;
 
-	// Required variables aren't in __isset, so we need tmp vars to check them.
-	for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
-	    indent(out) << "if (it1 != tokens.end())" << endl;
-	    scope_up(out);
-	    indent(out) << "string tok = (*it1++).c_str();" << endl ;
 
-	    indent(out) << "boost::tokenizer<boost::char_separator<char> >" <<
-	            " var(tok, varsep);" << endl;
-	    indent(out) << "boost::tokenizer<boost::char_separator<char> >" <<
-	            "::iterator it2 = var.begin();" << endl << endl;
+    // Required variables aren't in __isset, so we need tmp vars to check them.
+    indent(out) << "for(int i =0; i < fields_vector_size; i++)" << endl;
+    scope_up(out);
+    indent(out) << "if (it1 != tokens.end())" << endl;
+    scope_up(out);
+    indent(out) << "string tok = (*it1++).c_str();" << endl ;
+    indent(out) << "boost::tokenizer<boost::char_separator<char> >" <<
+                   " var(tok, varsep);" << endl;
+    indent(out) << "boost::tokenizer<boost::char_separator<char> >" <<
+                   "::iterator it2 = var.begin();" << endl << endl;
+ 
+    indent(out) << "string tok_new = (*it2).c_str();" << endl;   
+    indent(out) << "if (it2 != var.end()&& ++it2 != var.end()) " << endl;
+    scope_up(out);
 
-	    t_type *ftype = (*f_iter)->get_type();
-	    if (ftype->is_base_type()) {
-	        t_base_type *btype = static_cast<t_base_type *>(ftype);
-	        indent(out) << "if (it2 != var.end()&& ++it2 != var.end()) " << endl;
-	        scope_up(out);
-	        if ((*f_iter)->get_req() == t_field::T_OPTIONAL) {
-	            indent(out) << "__isset." << (*f_iter)->get_name() << " = true;" << endl;
-	        }
-	        if (btype->is_string() || btype->is_xml()) {
-	            indent(out) << "char * unescaped = curl_easy_unescape(cr, (*it2).c_str(), 0, NULL);" << endl;
-	            indent(out) << "std::string tmpstr(unescaped);" << endl;
-	            indent(out) << (*f_iter)->get_name() << " = boost::lexical_cast<std::string>((tmpstr));" << endl;
-	            indent(out) << "curl_free(unescaped);" << endl;
-	        } else if (btype->is_uuid()) {
+
+    indent(out) << "char *unescaped = NULL;" << endl;
+    indent(out) << "unescaped =  (char*) (malloc(sizeof(char)*1024));" <<endl;
+    
+    indent(out) << "std::string tmpstr;" << endl;
+	
+    for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter)
+    {
+        t_type *ftype = (*f_iter)->get_type();
+        if (ftype->is_base_type())  
+        {
+            t_base_type *btype = static_cast<t_base_type *>(ftype);
+            if (btype->is_string() || btype->is_xml())
+	    {  
+                indent(out) << "entity_name=\""  << (*f_iter)->get_name() << "\";" <<  endl;
+                indent(out) << "if((tok_new.substr(0,(entity_name.length()))).compare(entity_name) == 0)" << endl;
+                scope_up(out);
+                indent(out) << "unescaped = curl_easy_unescape(cr, (*it2).c_str(), 0, NULL);" << endl;
+                indent(out) << "tmpstr=unescaped;" << endl;
+                indent(out) << (*f_iter)->get_name() << " = boost::lexical_cast<std::string>((tmpstr));" << endl; 
+                indent(out) << "curl_free(unescaped);" << endl;
+                // delete[] unescaped;
+                indent(out) << "continue;" << endl;
+                scope_down(out); 
+            }
+            else if (btype->is_uuid())
+            {
+                indent(out) << "entity_name=\""  << (*f_iter)->get_name() << "\";" <<  endl;
+                indent(out) << "if((tok_new.substr(0,(entity_name.length()))).compare(entity_name) == 0)" << endl;
+                scope_up(out);
                 indent(out) << "std::stringstream ss;" << endl;
                 indent(out) << "ss << *it2;" << endl;
                 indent(out) << "ss >> " << (*f_iter)->get_name() << ";" << endl;
-            } else if (btype->is_ipaddr()) {
+                indent(out) << "continue;" << endl;
+                scope_down(out); 
+            }
+            else if (btype->is_ipaddr())
+            {
+                indent(out) << "entity_name=\""  << (*f_iter)->get_name() << "\";" <<  endl;
+                indent(out) << "if((tok_new.substr(0,(entity_name.length()))).compare(entity_name) == 0)" << endl;
+                scope_up(out);
                 indent(out) << "boost::system::error_code ec;" << endl;
                 indent(out) << (*f_iter)->get_name() <<
                     " = boost::asio::ip::address::from_string((*it2), ec);" << endl;
-            } else {
-	            assert(btype->is_integer());
-	            indent(out) << "stringToInteger((*it2), " << (*f_iter)->get_name() << ");" << endl;
-	        }
-	        scope_down(out);
-	    } else {
-	        // Ignore this field
-	        indent(out) << "++it2;" << endl;
-	    }
-	    scope_down(out);
-	}
+                indent(out) << "continue;" << endl;
+                scope_down(out);
+            }
+            else
+            {
+                indent(out) << "entity_name=\""  << (*f_iter)->get_name() << "\";" <<  endl;
+                indent(out) << "if((tok_new.substr(0,(entity_name.length()))).compare(entity_name) == 0)" << endl;
+                scope_up(out);
+                assert(btype->is_integer());
+                indent(out) << "stringToInteger((*it2), " << (*f_iter)->get_name() << ");" << endl;
+                indent(out) << "continue;" << endl;
+                scope_down(out);
+            }
+        }
+        else 
+        {
+            // Ignore this field
+            indent(out) << "++it2;" << endl;
+        }
+    }
+    vector<t_field*>::const_iterator f_iter2 = fields.begin();
+    if (f_iter2 != fields.end())
+    {   
+        t_type *ftype = (*f_iter2)->get_type();
+        if (ftype->is_base_type())
+        {
+            t_base_type *btype = static_cast<t_base_type *>(ftype);
+            if (btype->is_string() || btype->is_xml())
+            {
+                indent(out) << "entity_name=\""  << (*f_iter2)->get_name() << "\";" <<  endl;
+                indent(out) << "unescaped = curl_easy_unescape(cr, (*it2).c_str(), 0, NULL);" << endl;
+                indent(out) << "tmpstr=unescaped;" << endl;
+                indent(out) << (*f_iter2)->get_name() << " = boost::lexical_cast<std::string>((tmpstr));" << endl;
+                indent(out) << "curl_free(unescaped);" << endl;
+                indent(out) << "continue;" << endl;
 
-	indent(out) << "set_context(ctx);" << endl;
-  indent(out) << "curl_easy_cleanup(cr);" << endl;
-	indent(out) << "return true;" << endl;
-	indent_down();
-	indent(out) <<  "}" << endl << endl;
+            }
+            else if (btype->is_uuid())
+            {
+                indent(out) << "entity_name=\""  << (*f_iter2)->get_name() << "\";" <<  endl;
+                indent(out) << "std::stringstream ss;" << endl;
+                indent(out) << "ss << *it2;" << endl;
+                indent(out) << "ss >> " << (*f_iter2)->get_name() << ";" << endl;
+                indent(out) << "continue;" << endl;
+            }
+            else if (btype->is_ipaddr())
+            {
+                indent(out) << "entity_name=\""  << (*f_iter2)->get_name() << "\";" <<  endl;
+                indent(out) << "boost::system::error_code ec;" << endl;
+                indent(out) << (*f_iter2)->get_name() <<
+                    " = boost::asio::ip::address::from_string((*it2), ec);" << endl;
+                indent(out) << "continue;" << endl;
+            }
+            else
+            {
+                indent(out) << "entity_name=\""  << (*f_iter2)->get_name() << "\";" <<  endl;
+                assert(btype->is_integer());
+                indent(out) << "stringToInteger((*it2), " << (*f_iter2)->get_name() << ");" << endl;
+                indent(out) << "continue;" << endl;
+            }
+        }
+    }
+    indent(out) << "free(unescaped);" << endl;    
+    scope_down(out);
+    scope_down(out);
+    scope_down(out);
+
+
+    indent(out) << "set_context(ctx);" << endl;
+    indent(out) << "curl_easy_cleanup(cr);" << endl;
+    indent(out) << "return true;" << endl;
+    indent_down();
+    indent(out) <<  "}" << endl << endl;
 }
 
 
