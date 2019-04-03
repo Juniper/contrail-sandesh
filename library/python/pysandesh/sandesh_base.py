@@ -33,6 +33,87 @@ from sandesh_client import SandeshClient
 from sandesh_uve import SandeshUVETypeMaps, SandeshUVEPerTypeMap
 from work_queue import WorkQueue
 
+class SandeshConfig(object):
+
+    def __init__(self, tcp_keepalive_enable=True, tcp_keepalive_idle_time=7200,
+                tcp_keepalive_interval=75, tcp_keepalive_probes=9):
+        self.tcp_keepalive_enable = tcp_keepalive_enable
+        self.tcp_keepalive_idle_time = tcp_keepalive_idle_time
+        self.tcp_keepalive_interval = tcp_keepalive_interval
+        self.tcp_keepalive_probes= tcp_keepalive_probes
+    # end __init__
+
+    @staticmethod
+    def get_default_options(sections=['SANDESH']):
+        sandeshopts = {}
+        for section in sections:
+            if section == 'SANDESH':
+                sandeshopts.update({
+		    'tcp_keepalive_enable': True,
+		    'tcp_keepalive_idle_time': 7200,
+		    'tcp_keepalive_interval': 75,
+		    'tcp_keepalive_probes': 9,
+                    })
+
+        return sandeshopts
+    # end get_default_options
+
+    @classmethod
+    def from_parser_arguments(cls, parser_args=None):
+        default_opts = SandeshConfig.get_default_options(
+                sections=['SANDESH'])
+        sandesh_config = cls(
+	    tcp_keepalive_enable =
+		parser_args.tcp_keepalive_enable if parser_args and \
+		parser_args.tcp_keepalive_enable is not None else \
+		default_opts['tcp_keepalive_enable'],
+	    tcp_keepalive_idle_time =
+		parser_args.tcp_keepalive_idle_time if parser_args and \
+		parser_args.tcp_keepalive_idle_time is not None else \
+		default_opts['tcp_keepalive_idle_time'],
+	    tcp_keepalive_interval =
+		parser_args.tcp_keepalive_interval if parser_args and \
+		parser_args.tcp_keepalive_interval is not None else \
+		default_opts['tcp_keepalive_interval'],
+	    tcp_keepalive_probes =
+		parser_args.tcp_keepalive_probes if parser_args and \
+		parser_args.tcp_keepalive_probes is not None else \
+		default_opts['tcp_keepalive_probes'])
+
+        return sandesh_config
+    # end get_sandesh_config
+
+    @staticmethod
+    def add_parser_arguments(parser):
+        parser.add_argument("--tcp_keepalive_enable", action="store_true",
+	    help="Enable keepalive for tcp connection")
+        parser.add_argument("--tcp_keepalive_idle_time", type=int,
+            help="set the keepalive timer in seconds")
+        parser.add_argument("--tcp_keepalive_interval", type=int,
+            help="specify the tcp keepalive interval time")
+        parser.add_argument("--tcp_keepalive_probes", type=int,
+            help="specify the tcp keepalive probes")
+    # end add_parser_arguments
+
+    @staticmethod
+    def update_options(sandeshopts, config):
+        if 'SANDESH' in config.sections():
+            sandeshopts.update(dict(config.items('SANDESH')))
+            if 'tcp_keepalive_enable' in config.options('SANDESH'):
+                sandeshopts['tcp_keepalive_enable'] = config.getboolean(
+                    'SANDESH', 'tcp_keepalive_enable')
+            if 'tcp_keepalive_idle_time' in config.options('SANDESH'):
+                sandeshopts['tcp_keepalive_idle_time'] = config.getint(
+                    'SANDESH', 'tcp_keepalive_idle_time')
+            if 'tcp_keepalive_interval' in config.options('SANDESH'):
+                sandeshopts['tcp_keepalive_interval'] = config.getint(
+                    'SANDESH', 'tcp_keepalive_interval')
+            if 'tcp_keepalive_probes' in config.options('SANDESH'):
+                sandeshopts['tcp_keepalive_probes'] = config.getint(
+                    'SANDESH', 'tcp_keepalive_probes')
+    # end update_options
+
+# end class SandeshConfig
 
 class Sandesh(object):
     _DEFAULT_LOG_FILE = sand_logger.SandeshLogger._DEFAULT_LOG_FILE
@@ -74,7 +155,8 @@ class Sandesh(object):
                        http_port, sandesh_req_uve_pkg_list=None,
                        discovery_client=None, connect_to_collector=True,
                        logger_class=None, logger_config_file=None,
-                       host_ip='127.0.0.1', alarm_ack_callback=None):
+                       host_ip='127.0.0.1', alarm_ack_callback=None,
+                       config=None):
         self._role = self.SandeshRole.GENERATOR
         self._module = module
         self._source = source
@@ -95,6 +177,7 @@ class Sandesh(object):
         self._trace = trace.Trace()
         self._sandesh_request_map = {}
         self._alarm_ack_callback = alarm_ack_callback
+        self._config = config or SandeshConfig.from_parser_arguments()
         self._uve_type_maps = SandeshUVETypeMaps(self._logger)
         # Initialize the request handling
         # Import here to break the cyclic import dependency
@@ -123,7 +206,8 @@ class Sandesh(object):
     def run_introspect_server(self, http_port):
         self._http_server = SandeshHttp(
             self, self._module, http_port,
-            self._sandesh_req_uve_pkg_list)
+            self._sandesh_req_uve_pkg_list,
+            self._config)
         self._gev_httpd = gevent.spawn(self._http_server.start_http_server)
     # end run_introspect_server
 
