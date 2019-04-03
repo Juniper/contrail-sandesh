@@ -37,10 +37,14 @@ class SandeshStdLog(object):
 
 class SandeshHttp(object):
 
+    _KEEPALIVE_IDLE_TIME = 30  # in secs
+    _KEEPALIVE_INTERVAL = 10  # in secs
+    _KEEPALIVE_PROBES = 5
     _HTTP_SERVER_IP = '0.0.0.0'
     _http_response = None
     _http_response_context = None
     _logger = None
+    _sock = None
 
     WebFilesList = [
     '/css/bootstrap.min.css',
@@ -116,9 +120,44 @@ class SandeshHttp(object):
             self._sandesh.record_port("http", self._http_port)
             self._logger.error('Starting Introspect on HTTP Port %d' %
                 self._http_port)
+            self.set_socketOptions(sock)
+            SandeshHttp._sock = sock
             self._http_server = WSGIServer(sock, self._http_app, log=self._std_log)
             self._http_server.serve_forever()
     # end start_http_server
+
+    #Setting KeepIdle because KeepIdle is same as KeepAlive
+    @staticmethod
+    def set_keepAliveIdle(keepAliveIdle):
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            sock = SandeshHttp._sock
+            self._KEEPALIVE_IDLE_TIME = keepAliveIdle
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, keepAliveIdle)
+
+    @staticmethod
+    def set_keepAliveIntvl(keepAliveIntvl):
+        if hasattr(socket, 'TCP_KEEPINTVL'):
+            sock = SandeshHttp._sock
+            self._KEEPALIVE_INTERVAL = keepAliveIntvl
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, keepAliveIntvl)
+
+    @staticmethod
+    def set_keepAliveProbes(keepAliveProbes):
+        if hasattr(socket, 'TCP_KEEPCNT'):
+            sock = SandeshHttp._sock
+            self._KEEPALIVE_PROBES = keepAliveProbes
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, keepAliveProbes)
+
+    def set_socketOptions(self, sock):
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, self._KEEPALIVE_IDLE_TIME)
+        if hasattr(socket, 'TCP_KEEPINTVL'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, self._KEEPALIVE_INTERVAL)
+        if hasattr(socket, 'TCP_KEEPCNT'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, self._KEEPALIVE_PROBES)
+
+     #end set_socketOptions
 
     def get_port(self):
         return self._http_port
