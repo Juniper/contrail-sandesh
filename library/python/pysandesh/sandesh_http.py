@@ -58,7 +58,7 @@ class SandeshHttp(object):
     '/js/util.js',
     '/universal_parse.xsl']
 
-    def __init__(self, sandesh, module, port, pkg_list):
+    def __init__(self, sandesh, module, port, pkg_list, sandesh_config=None):
         self._sandesh = sandesh
         self._logger = sandesh.logger()
         self._module = module
@@ -77,6 +77,7 @@ class SandeshHttp(object):
         self._jquery_collapse_js_path = None
         self._jquery_1_8_1_js_path = None
         self._http_server = None
+        self._sandesh_config = sandesh_config
         self._std_log = SandeshStdLog("Introspect", self._http_port)
 
         try:
@@ -116,9 +117,27 @@ class SandeshHttp(object):
             self._sandesh.record_port("http", self._http_port)
             self._logger.error('Starting Introspect on HTTP Port %d' %
                 self._http_port)
+            if self._sandesh_config and \
+                    self._sandesh_config.tcp_keepalive_enable:
+                self.set_socketOptions(sock)
             self._http_server = WSGIServer(sock, self._http_app, log=self._std_log)
             self._http_server.serve_forever()
     # end start_http_server
+
+    def set_socketOptions(self, sock):
+        if hasattr(socket, 'SO_KEEPALIVE'):
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        if hasattr(socket, 'TCP_KEEPIDLE'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE,
+                   self._sandesh_config.tcp_keepalive_idle_time)
+        if hasattr(socket, 'TCP_KEEPINTVL'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL,
+                   self._sandesh_config.tcp_keepalive_interval)
+        if hasattr(socket, 'TCP_KEEPCNT'):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT,
+                   self._sandesh_config.tcp_keepalive_probes)
+
+     #end set_socketOptions
 
     def get_port(self):
         return self._http_port
