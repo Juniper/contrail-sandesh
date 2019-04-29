@@ -27,7 +27,7 @@ public:
 
     static void Response(Sandesh *snh, std::string context);
     static bool Init(EventManager *evm, const std::string module,
-        short port, RequestCallbackFn reqcb, int *hport);
+        short port, RequestCallbackFn reqcb, int *hport, const SandeshConfig &sandesh_config);
     static void Uninit(void);
 
     class HtmlInfo {

@@ -350,7 +350,7 @@ SandeshHttp::Response(Sandesh *snh, std::string context) {
 //
 bool
 SandeshHttp::Init(EventManager *evm, const string module,
-    short port, RequestCallbackFn reqcb, int *hport) {
+    short port, RequestCallbackFn reqcb, int *hport, const SandeshConfig &sandesh_config) {
     if (hServ_) {
         *hport = hServ_->GetPort();
         return true;
@@ -405,6 +405,7 @@ SandeshHttp::Init(EventManager *evm, const string module,
         int lport(hServ_->GetPort());
         SANDESH_LOG(DEBUG, "Sandesh Http Server Port: " << lport);
         *hport = lport;
+        hServ_->SetSocketOptions(sandesh_config);
         return true;
     } else {
         SANDESH_LOG(ERROR, "Failed to initialize Sandesh Http Server Port: "
