@@ -51,6 +51,7 @@ uint32_t Sandesh::disk_usage_high_watermark_ = 0;
 uint32_t Sandesh::disk_usage_ = 0;
 bool Sandesh::disable_flow_collection_ = false;
 SandeshClient *Sandesh::client_ = NULL;
+SandeshConfig Sandesh::sandesh_config_;
 std::auto_ptr<Sandesh::SandeshRxQueue> Sandesh::recv_queue_;
 std::string Sandesh::module_;
 std::string Sandesh::source_;
@@ -120,7 +121,8 @@ bool Sandesh::Initialize(SandeshRole::type role,
                          const std::string &instance_id,
                          EventManager *evm,
                          unsigned short http_port,
-                         SandeshContext *client_context) {
+                         SandeshContext *client_context,
+                         const SandeshConfig &sandesh_config) {
     PullSandeshGenStatsReq = 1;
     PullSandeshUVE = 1;
     PullSandeshTraceReq = 1;
@@ -143,6 +145,7 @@ bool Sandesh::Initialize(SandeshRole::type role,
     instance_id_    = instance_id;
     client_context_ = client_context;
     event_manager_  = evm;
+    sandesh_config_ = sandesh_config;
     //If Sandesh::sandesh_send_ratelimit_ is not defined by client,
     // assign a default value to it
     if (get_send_rate_limit() == 0) {
@@ -151,7 +154,7 @@ bool Sandesh::Initialize(SandeshRole::type role,
 
     InitReceive(Task::kTaskInstanceAny);
     bool success(SandeshHttp::Init(evm, module, http_port,
-        &SandeshHttpCallback, &http_port_));
+        &SandeshHttpCallback, &http_port_, sandesh_config_));
     if (!success) {
         SANDESH_LOG(ERROR, "SANDESH: HTTP INIT FAILED (PORT " <<
             http_port << ")");
@@ -278,11 +281,12 @@ bool Sandesh::InitGenerator(const std::string &module,
                             CollectorSubFn csf,
                             const std::vector<std::string> &collectors,
                             SandeshContext *client_context,
+                            const SandeshConfig &sandesh_config,
                             std::map<std::string,
                                 std::map<std::string,std::string> > ds) {
     assert(SandeshUVETypeMaps::InitDerivedStats(ds));
     bool success(Initialize(SandeshRole::Generator, module, source, node_type,
-                            instance_id, evm, http_port, client_context));
+                            instance_id, evm, http_port, client_context, sandesh_config));
     if (!success) {
         return false;
     }
