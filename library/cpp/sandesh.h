@@ -94,6 +94,7 @@
 #include <sandesh/protocol/TProtocol.h>
 #include <sandesh/transport/TBufferTransports.h>
 #include <discovery/client/discovery_client.h>
+#include <sandesh/sandesh_options.h>
 
 // Forward declaration
 class EventManager;
@@ -154,6 +155,7 @@ public:
             CollectorSubFn csf,
             const std::vector<std::string> &collectors,
             SandeshContext *client_context = NULL,
+            const SandeshConfig &sandesh_config = SandeshConfig(),
             std::map<std::string, std::map<std::string,std::string> > ds = 
                 std::map<std::string, std::map<std::string,std::string> >());
     static bool InitGenerator(const std::string &module,
@@ -378,7 +380,8 @@ private:
             const std::string &instance_id,
             EventManager *evm,
             unsigned short http_port,
-            SandeshContext *client_context = NULL);
+            SandeshContext *client_context = NULL,
+            const SandeshConfig &sandesh_config = SandeshConfig());
 
     static SandeshRole::type role_;
     static std::string module_;
@@ -406,6 +409,7 @@ private:
     static uint32_t disk_usage_high_watermark_;
     static uint32_t disk_usage_;
     static bool disable_flow_collection_; // disable flow collection
+    static SandeshConfig sandesh_config_;
 
     const uint32_t seqnum_;
     std::string context_;
