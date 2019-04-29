@@ -15,6 +15,7 @@
 #define __SANDESH_HTTP_H__
 
 #include "http/http_server.h"
+#include "sandesh_options.h"
 
 class HttpServer;
 class EventManager;
@@ -27,7 +28,7 @@ public:
 
     static void Response(Sandesh *snh, std::string context);
     static bool Init(EventManager *evm, const std::string module,
-        short port, RequestCallbackFn reqcb, int *hport);
+        short port, RequestCallbackFn reqcb, int *hport, const SandeshConfig &sandesh_config);
     static void Uninit(void);
 
     class HtmlInfo {
