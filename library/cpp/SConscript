@@ -103,6 +103,7 @@ libsandesh = env.Library(target = 'sandesh',
                                    'sandesh_uve.cc',
                                    'sandesh_message_builder.cc',
                                    'sandesh_statistics.cc',
+                                   'sandesh_options.cc',
                                    'protocol/TXMLProtocol.cpp',
                                    'transport/TFDTransport.cpp',
                                    'transport/TSimpleFileTransport.cpp',
@@ -130,6 +131,7 @@ env.Install(env['TOP_INCLUDE'] + '/sandesh', 'request_pipeline.h')
 env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_message_builder.h')
 env.Install(env['TOP_INCLUDE'] + '/sandesh', SandeshGenHdrs)
 env.Install(env['TOP_INCLUDE'] + '/sandesh', SandeshTraceGenHdrs)
+env.Install(env['TOP_INCLUDE'] + '/sandesh', 'sandesh_options.h')
 env.Install(env['TOP_INCLUDE'] + '/sandesh/protocol', 'protocol/TProtocol.h')                                  
 env.Install(env['TOP_INCLUDE'] + '/sandesh/protocol', 'protocol/TVirtualProtocol.h')                                  
 env.Install(env['TOP_INCLUDE'] + '/sandesh/protocol', 'protocol/TXMLProtocol.h')                                  
