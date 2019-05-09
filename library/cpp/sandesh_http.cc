@@ -405,7 +405,7 @@ SandeshHttp::Init(EventManager *evm, const string module,
         int lport(hServ_->GetPort());
         SANDESH_LOG(DEBUG, "Sandesh Http Server Port: " << lport);
         *hport = lport;
-        //hServ_->SetSocketOptions(sandesh_config);
+        hServ_->SetSocketOptions(sandesh_config);
         return true;
     } else {
         SANDESH_LOG(ERROR, "Failed to initialize Sandesh Http Server Port: "
