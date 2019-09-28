@@ -26,10 +26,6 @@
 #include <unistd.h>
 #endif
 
-#ifdef _WIN32
-#include <io.h>
-#endif
-
 #include <base/logging.h>
 
 using namespace std;

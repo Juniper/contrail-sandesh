@@ -28,9 +28,6 @@
 #endif
 #include <fcntl.h>
 
-#ifdef _WIN32
-#include <io.h>
-#endif
 
 #include <base/logging.h>
 #include "TSimpleFileTransport.h"
@@ -54,11 +51,7 @@ TSimpleFileTransport(const std::string& path, bool read, bool write)
   if (write) {
     flags |= O_CREAT | O_APPEND;
   }
-#ifndef _WIN32
   mode_t mode = S_IRUSR | S_IWUSR| S_IRGRP | S_IROTH;
-#else
-  int mode = _S_IREAD | _S_IWRITE;
-#endif
   int fd = ::open(path.c_str(),
                   flags,
                   mode);
