@@ -2983,22 +2983,17 @@ void t_py_generator::generate_service_remote(t_service* tservice) {
   // Close service file
   f_remote.close();
 
-#ifndef _MSC_VER
-
   // Make file executable, love that bitwise OR action
   chmod(f_remote_name.c_str(),
           S_IRUSR
         | S_IWUSR
         | S_IXUSR
-#ifndef MINGW
         | S_IRGRP
         | S_IXGRP
         | S_IROTH
         | S_IXOTH
-#endif
   );
 
-#endif // _MSC_VER
 }
 
 /**

@@ -128,9 +128,9 @@ class t_program : public t_doc {
   void set_out_path(std::string out_path, bool out_path_is_absolute) {
     out_path_ = out_path;
     out_path_is_absolute_ = out_path_is_absolute;
-    // Ensure that it ends with a trailing '/' (or '\' for windows machines)
+    // Ensure that it ends with a trailing '/'
     char c = out_path_.at(out_path_.size() - 1);
-    if (!(c == '/' || c == '\\')) {
+    if (!(c == '/')) {
       out_path_.push_back('/');
     }
   }
