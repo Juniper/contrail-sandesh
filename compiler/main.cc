@@ -44,10 +44,6 @@
 #include <errno.h>
 #include <limits.h>
 
-#ifdef MINGW
-# include <windows.h> /* for GetFullPathName */
-#endif
-
 // Careful: must include globals first for extern definitions
 #include "globals.h"
 
@@ -223,33 +219,8 @@ bool gen_delphi = false;
 bool gen_st = false;
 bool gen_recurse = false;
 
-/**
- * MinGW doesn't have realpath, so use fallback implementation in that case,
- * otherwise this just calls through to realpath
- */
 char *saferealpath(const char *path, char *resolved_path) {
-#ifdef MINGW
-  char buf[MAX_PATH];
-  char* basename;
-  DWORD len = GetFullPathName(path, MAX_PATH, buf, &basename);
-  if (len == 0 || len > MAX_PATH - 1){
-    strcpy(resolved_path, path);
-  } else {
-    strcpy(resolved_path, buf);
-  }
-
-  // Replace backslashes with forward slashes so the
-  // rest of the code behaves correctly.
-  size_t resolved_len = strlen(resolved_path);
-  for (size_t i = 0; i < resolved_len; i++) {
-    if (resolved_path[i] == '\\') {
-      resolved_path[i] = '/';
-    }
-  }
-  return resolved_path;
-#else
   return realpath(path, resolved_path);
-#endif
 }
 
 
@@ -459,7 +430,7 @@ void declare_valid_program_doctext() {
  * you will get what you deserve.
  */
 char* clean_up_doctext(char* doctext) {
-  // Convert to C++ string, and remove Windows's carriage returns.
+  // Convert to C++ string.
   string docstring = doctext;
   docstring.erase(
       remove(docstring.begin(), docstring.end(), '\r'),
@@ -1217,15 +1188,6 @@ int main(int argc, char** argv) {
           usage();
         }
         out_path = arg;
-
-#ifdef MINGW
-        //strip out trailing \ on Windows
-        int last = out_path.length()-1;
-        if (out_path[last] == '\\')
-        {
-          out_path.erase(last);
-        }
-#endif
 
         struct stat sb;
         if (stat(out_path.c_str(), &sb) < 0) {
